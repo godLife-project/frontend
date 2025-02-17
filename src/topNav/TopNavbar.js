@@ -23,6 +23,7 @@ const TopNavbar = () => {
           {category.topName}
         </Link>
       ))}
+      <Link to="/join" style={{ marginRight: "15px", color: "white" }}>회원가입</Link>
     </nav>
   );
 };
