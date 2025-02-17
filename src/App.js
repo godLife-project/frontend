@@ -10,6 +10,7 @@ import Rank from './page/Rank';
 import Challenge from './page/Challenge';
 import Contact from './page/Contact';
 import Test from './page/Test';
+import Join from './page/Join';
 
 const App = () => {
     return (
@@ -23,6 +24,7 @@ const App = () => {
                     <Route path="/challenge" element={<Challenge />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/test" element={<Test />} />
+                    <Route path="/join" element={<Join />} />
                     {/* 다른 페이지들을 추가 */}
                 </Routes>
             </div>
