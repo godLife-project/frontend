@@ -23,6 +23,9 @@ const TopNavbar = () => {
           {category.topName}
         </Link>
       ))}
+      <Link to="/login" style={{ marginRight: "15px", color: "white" }}>
+        <button>Login</button>
+      </Link>
     </nav>
   );
 };
