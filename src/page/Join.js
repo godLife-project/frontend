@@ -210,10 +210,10 @@ const Join = () => {
         <label style={styles.label}>성별:</label>
         <div style={styles.radioGroup}>
           <label>
-            <input type="radio" name="userGender" value="1" onChange={handleChange} /> 여성
+            <input type="radio" name="userGender" value="2" onChange={handleChange} /> 여성
           </label>
           <label>
-            <input type="radio" name="userGender" value="0" onChange={handleChange} /> 남성
+            <input type="radio" name="userGender" value="1" onChange={handleChange} /> 남성
           </label>
           {errors.userGender && <div style={{ color: "red" }}>{errors.userGender}</div>}
         </div>
