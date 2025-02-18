@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import axiosInstance from "../api/axiosInstance";
+import { useNavigate } from "react-router-dom";
 
 const Join = () => {
   const [formData, setFormData] = useState({
@@ -23,7 +24,11 @@ const Join = () => {
     userEmail: "",
     userPhone: "",
     userGender: "",
+    jobIdx: "",
+    targetIdx: "",
   });
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     axiosInstance.get("/categories/job")
@@ -95,6 +100,7 @@ const Join = () => {
       try {
         await axiosInstance.post("/user/join", formData);
         alert("회원가입 성공!");
+        navigate("/login"); // 회원가입 성공 후 이동
       } catch (error) {
         console.error("회원가입 실패:", error);
         alert("회원가입에 실패했습니다.");
@@ -110,6 +116,8 @@ const Join = () => {
             userEmail: serverErrors.userEmail || "",
             userPhone: serverErrors.userPhone || "",
             userGender: serverErrors.userGender || "",
+            jobIdx: serverErrors.jobIdx || "",
+            targetIdx: serverErrors.targetIdx || ""
           }));
         }
       }
@@ -178,6 +186,7 @@ const Join = () => {
             <option key={job.jobIdx} value={job.jobIdx}>{job.jobName}</option>
           ))}
         </select>
+        {errors.jobIdx && <div style={{ color: "red" }}>{errors.jobIdx}</div>}
       </div>
 
       <div style={styles.formGroup}>
@@ -188,6 +197,7 @@ const Join = () => {
             <option key={target.targetIdx} value={target.targetIdx}>{target.targetName}</option>
           ))}
         </select>
+        {errors.targetIdx && <div style={{ color: "red" }}>{errors.targetIdx}</div>}
       </div>
 
       <div style={styles.formGroup}>
@@ -205,6 +215,7 @@ const Join = () => {
           <label>
             <input type="radio" name="userGender" value="0" onChange={handleChange} /> 남성
           </label>
+          {errors.userGender && <div style={{ color: "red" }}>{errors.userGender}</div>}
         </div>
       </div>
 
