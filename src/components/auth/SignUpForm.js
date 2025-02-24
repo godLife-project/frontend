@@ -1,7 +1,23 @@
-import React from "react";
+import { React, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+
 function SignUpForm(props) {
+  const [input, setInput] = useState({
+    id: "",
+    name: "",
+    nickname: "",
+    password: "",
+    passwordConfirm: "",
+  });
+  console.log(input);
+  const onChange = (e) => {
+    setInput({
+      ...input,
+      [e.target.name]: e.target.value,
+    });
+  };
+
   return (
     <div className="h-[500px] bg-gray-200 flex items-center justify-center">
       <div className="bg-white p-6 rounded-3xl shadow-md w-full max-w-sm">
@@ -24,25 +40,55 @@ function SignUpForm(props) {
         <div className="pb-7 text-4xl font-bold">Sign up</div>
         <div>
           <h1 className="mt-4 mb-2 text-xs font-semibold">아이디</h1>
-          <Input type="ID" placeholder="ID" />
+          <Input
+            type="ID"
+            name="id"
+            value={input.id}
+            onChange={onChange}
+            placeholder="ID"
+          />
         </div>
         <div className="flex space-x-4">
           <div>
             <h1 className="mt-4 mb-2 text-xs font-semibold">이름</h1>
-            <Input type="name" placeholder="User name" />
+            <Input
+              type="name"
+              name="name"
+              value={input.name}
+              onChange={onChange}
+              placeholder="User name"
+            />
           </div>
           <div>
             <h1 className="mt-4 mb-2 text-xs font-semibold">닉네임</h1>
-            <Input type="nickname" placeholder="Nick name" />
+            <Input
+              type="nickname"
+              name="nickname"
+              value={input.nickname}
+              onChange={onChange}
+              placeholder="Nick name"
+            />
           </div>
         </div>
         <div>
           <h1 className="mt-4 mb-2 text-xs font-semibold">비밀번호</h1>
-          <Input type="password" placeholder="Password" />
+          <Input
+            type="password"
+            name="password"
+            value={input.password}
+            onChange={onChange}
+            placeholder="Password"
+          />
         </div>
         <h1 className="mt-4 mb-2 text-xs font-semibold">비밀번호 확인</h1>
         <div className="flex w-full max-w-sm items-center space-x-2">
-          <Input type="password" placeholder="Password" />
+          <Input
+            type="password"
+            name="password"
+            value={input.passwordConfirm}
+            onChange={onChange}
+            placeholder="Password"
+          />
           <Button
             type="button"
             className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-1 text-xs rounded"
