@@ -12,19 +12,33 @@ const TopNavbar = () => {
   }, []);
 
   return (
-    <nav style={{ padding: "10px", background: "#333", color: "white" }}>
+    <nav style={{
+      padding: "10px",
+      background: "#333",
+      color: "white",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center"
+    }}>
+      {/* 왼쪽 메뉴 */}
+      <div>
         <Link to="/" style={{ marginRight: "15px", color: "white" }}>Main</Link>
-      {categories.map((category) => (
-        <Link
-          key={category.topIdx}
-          to={category.topAddr}
-          style={{ marginRight: "15px", color: "white" }}
-        >
-          {category.topName}
-        </Link>
-      ))}
-      <Link to="/login" style={{ marginRight: "15px", color: "white" }}>로그인</Link>
-      <Link to="/join" style={{ marginRight: "15px", color: "white" }}>회원가입</Link>
+        {categories.map((category) => (
+          <Link
+            key={category.topIdx}
+            to={category.topAddr}
+            style={{ marginRight: "15px", color: "white" }}
+          >
+            {category.topName}
+          </Link>
+        ))}
+      </div>
+
+      {/* 오른쪽 메뉴 */}
+      <div>
+        <Link to="/login" style={{ marginRight: "15px", color: "white" }}>로그인</Link>
+        <Link to="/join" style={{ color: "white" }}>회원가입</Link>
+      </div>
     </nav>
   );
 };
