@@ -26,7 +26,7 @@ const MenuItem = ({ item }) => {
 
   if (item.submenu) {
     return (
-      <Accordion type="single">
+      <Accordion type="single" collapsible>
         <AccordionItem value={item.label} className="border-b">
           <AccordionTrigger className="py-2 hover:no-underline">
             {item.label}
