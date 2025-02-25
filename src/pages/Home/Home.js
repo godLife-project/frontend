@@ -1,25 +1,18 @@
 import React, { useEffect } from 'react';
-import axiosInstance from '../../api/axiosInstance';  // 파일 경로에 맞게 수정
+import { useApi } from '../../hooks/useApi';
 
 function Home() {
+    const { data, loading, error, get } = useApi();
+    
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                // baseURL이 이미 설정되어 있으므로 나머지 경로만 추가
-                const response = await axiosInstance.get('/categories/topMenu');
-                console.log('받은 데이터:', response.data);
-                
-            } catch (error) {
-                console.error('API 호출 에러:', error);
-            }
-        };
-
-        fetchData();
-    }, []);
-
+        get('/categories/topMenu');
+    }, [get]); // get 함수를 의존성 배열에 추가
+    
     return (
         <div>
-            홈
+            {loading ? '로딩 중...' : 
+             error ? `에러 발생: ${error.message}` : 
+             data && <pre>{JSON.stringify(data, null, 2)}</pre>}
         </div>
     );
 }
