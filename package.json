@@ -16,6 +16,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cra-template": "1.2.0",
+    "http-proxy-middleware": "^3.0.3",
     "lucide-react": "^0.475.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -25,7 +26,7 @@
     "web-vitals": "^4.2.4"
   },
   "scripts": {
-    "start": "craco start",
+    "start": "set DANGEROUSLY_DISABLE_HOST_CHECK=true&&craco start",
     "build": "craco build",
     "test": "craco test",
     "eject": "react-scripts eject"
@@ -48,7 +49,6 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:8080",
   "devDependencies": {
     "@shadcn/ui": "^0.0.4",
     "autoprefixer": "^10.4.14",
