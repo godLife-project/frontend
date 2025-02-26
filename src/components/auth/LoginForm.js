@@ -200,7 +200,7 @@ const LoginForm = () => {
                 className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                 onClick={(e) => {
                   e.preventDefault();
-                  navigate("/signup");
+                  navigate("/user/signup");
                 }}
               >
                 회원가입
