@@ -1,5 +1,6 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import Layout from "./components/layout/Layout";
@@ -9,21 +10,25 @@ import Login from "./pages/Auth/Login";
 
 function App() {
   return (
-    <ToastProvider>
-      <Router future={{ 
-      v7_startTransition: true,
-      v7_relativeSplatPath: true 
-    }}>
-        <Layout>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/" element={<Home />} />
-          </Routes>
-        </Layout>
-        <Toaster />
-      </Router>
-    </ToastProvider>
+    <AuthProvider>
+      <ToastProvider>
+        <Router
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
+          <Layout>
+            <Routes>
+              <Route path="/user/login" element={<Login />} />
+              <Route path="/user/signup" element={<Signup />} />
+              <Route path="/" element={<Home />} />
+            </Routes>
+          </Layout>
+          <Toaster />
+        </Router>
+      </ToastProvider>
+    </AuthProvider>
   );
 }
 
