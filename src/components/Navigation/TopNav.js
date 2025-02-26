@@ -1,5 +1,5 @@
-import {React, useEffect} from 'react';
-import { useApi } from '../../hooks/useApi';
+import {React, useEffect, useState} from 'react';
+import axiosInstance from '../../api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button"
 import { 
@@ -44,12 +44,13 @@ const NavItem = ({ item }) => {
 }
 
 const TopNav = () => {
-  const { data, loading, error, get } = useApi();
+  const [categories, setCategories] = useState([]);
   
   useEffect(() => {
-          // 이제 try-catch가 필요 없음
-          get('/categories/topMenu');
-      }, [get]);
+    axiosInstance.get("/categories/topMenu") // 스프링 부트에서 제공하는 API 호출
+      .then((response) => setCategories(response.data))
+      .catch((error) => console.error("Error fetching categories:", error));
+  }, []);
   
 
   return (
@@ -65,7 +66,7 @@ const TopNav = () => {
       {/* Desktop Navigation - 데스크톱에서만 보임 */}
       <nav className="hidden md:flex flex-1 ml-8">
         <ul className="flex items-center gap-6">
-          {data && data.map((item, index) => (
+          {categories.map((item, index) => (
             <li key={item.topId || item.id || index}>
               <NavItem item={item} />
             </li>

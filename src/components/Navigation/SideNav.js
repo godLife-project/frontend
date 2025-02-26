@@ -1,6 +1,6 @@
 // components/Navigation/SideNav.js
-import {React, useEffect} from 'react';
-import { useApi } from '../../hooks/useApi';
+import {React, useEffect, useState} from 'react';
+import axiosInstance from '@/api/axiosInstance';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
@@ -62,12 +62,13 @@ const MenuItem = ({ item }) => {
   )
 }
 const SideNav = () => {
-  const { data, loading, error, get } = useApi();
-    
+  const [categories, setCategories] = useState([]);
+  
   useEffect(() => {
-    // 이제 try-catch가 필요 없음
-    get('/categories/topMenu');
-}, [get]);
+    axiosInstance.get("/categories/topMenu") // 스프링 부트에서 제공하는 API 호출
+      .then((response) => setCategories(response.data))
+      .catch((error) => console.error("Error fetching categories:", error));
+  }, []);
 
   return (
     <div className="md:hidden fixed top-4 right-4 z-50">
@@ -84,8 +85,8 @@ const SideNav = () => {
             </SheetHeader>
             <nav className="flex-1 overflow-y-auto px-6 py-4">
               <ul className="space-y-3">
-                {data && data.map((item, index) => (
-                  <li key={item.href}>
+                {categories.map((item, index) => (
+                  <li key={item.topAddr}>
                     <MenuItem item={item} />
                   </li>
                 ))}

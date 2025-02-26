@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
+import axiosInstance from "@/api/axiosInstance";
+import { useAuth } from "../../context/AuthContext"; 
 import { useNavigate } from "react-router-dom";
-import { useApi } from "../../hooks/useApi";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -35,10 +36,13 @@ const loginFormSchema = z.object({
 
 const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const { data, loading, error, post, headers, getTokens } = useApi();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [data, setData] = useState(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const errorShown = useRef(false);
+  const { login } = useAuth(); // useAuth 훅 사용
 
   const form = useForm({
     resolver: zodResolver(loginFormSchema),
@@ -48,56 +52,73 @@ const LoginForm = () => {
     },
   });
 
-  // 데이터가 변경되면 실행됨
-  useEffect(() => {
-    if (data) {
-      console.log("API 응답 데이터:", data);
+  const getTokens = (responseHeaders) => {
+    if (!responseHeaders) return { accessToken: null, refreshToken: null };
 
-      // 토큰 정보 가져오기
-      const { accessToken, refreshToken } = getTokens();
+    const accessToken = responseHeaders["authorization"] || responseHeaders["Authorization"] || null;
+    const refreshToken = responseHeaders["refresh-token"] || null;
+    
+    const cleanAccessToken = accessToken
+      ? accessToken.startsWith("Bearer ") ? accessToken.substring(7) : accessToken
+      : null;
 
-      // 로그인 성공 처리
-      toast({
-        title: "로그인 성공",
-        description: "환영합니다!",
-      });
+    return {
+      accessToken: cleanAccessToken,
+      refreshToken,
+    };
+  };
 
-      // 토큰 정보를 로컬 스토리지나 상태에 저장 (옵션)
-      if (accessToken) {
-        localStorage.setItem("accessToken", accessToken);
-      }
-
-      // 로그인 성공 후 리다이렉트
-      navigate("/");
-
-      // 에러 표시 상태 초기화
-      errorShown.current = false;
-    }
-  }, [data, navigate, toast, getTokens]);
 
   // 에러가 발생하면 실행됨
-  useEffect(() => {
-    if (error && !errorShown.current) {
-      console.error("로그인 오류:", error);
+  // useEffect 부분 수정
+useEffect(() => {
+  if (data && !errorShown.current) {
+    console.log("API 응답 데이터:", data);
 
-      // 에러 토스트를 한 번만 표시하기 위한 플래그 설정
-      errorShown.current = true;
+    // 로그인 성공 처리 (한 번만 실행)
+    toast({
+      title: "로그인 성공",
+      description: "환영합니다!",
+    });
 
-      toast({
-        variant: "destructive",
-        title: "로그인 실패",
-        description: "아이디 또는 비밀번호를 확인해주세요.",
-      });
+    // 로그인 성공 후 리다이렉트
+    navigate("/");
+
+    // 토스트가 표시되었음을 표시
+    errorShown.current = true;
+  }
+}, [data, navigate, toast]);
+
+// onSubmit 함수 수정
+const onSubmit = async (formData) => {
+  // 새 로그인 시도 시 에러 상태 초기화
+  errorShown.current = false;
+  console.log("로그인 시도:", formData);
+  setLoading(true);
+  
+  try {
+    const response = await axiosInstance.post("/user/login", formData, {
+      withCredentials: true
+    });
+    
+    // 응답 데이터 설정
+    setData(response.data);
+    
+    // 토큰 정보 가져오기 및 저장 (여기서는 토스트 없음)
+    const tokens = getTokens(response.headers);
+    if (response.data && tokens.accessToken) {
+      login(response.data, tokens); // 사용자 데이터와 토큰 전달
     }
-  }, [error, toast]);
-
-  const onSubmit = (formData) => {
-    // 새 로그인 시도 시 에러 표시 상태 초기화
-    errorShown.current = false;
-    console.log("로그인 시도:", formData);
-    // withCredentials를 true로 설정하여 쿠키를 받을 수 있도록 함
-    post("/user/login", formData);
-  };
+    
+    // 에러 상태 초기화
+    setError(null);
+  } catch (err) {
+    console.error("로그인 오류:", err);
+    setError(err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const togglePasswordVisibility = () => {
     setShowPassword((prev) => !prev);

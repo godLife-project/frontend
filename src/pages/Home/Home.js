@@ -1,18 +1,32 @@
-import React, { useEffect } from 'react';
-import { useApi } from '../../hooks/useApi';
+import React, { useEffect, useState } from 'react';
+import axiosInstance from '../../api/axiosInstance';
 
 function Home() {
-    const { data, loading, error, get } = useApi();
+    const [categories, setCategories] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     
     useEffect(() => {
-        get('/categories/topMenu');
-    }, [get]); // get 함수를 의존성 배열에 추가
+        setLoading(true);
+        axiosInstance.get("/categories/topMenu")
+          .then((response) => {
+            setCategories(response.data);
+            setError(null);
+          })
+          .catch((error) => {
+            console.error("Error fetching categories:", error);
+            setError(error);
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+    }, []);
     
     return (
         <div>
             {loading ? '로딩 중...' : 
              error ? `에러 발생: ${error.message}` : 
-             data && <pre>{JSON.stringify(data, null, 2)}</pre>}
+             categories.length > 0 && <pre>{JSON.stringify(categories, null, 2)}</pre>}
         </div>
     );
 }
