@@ -1,6 +1,7 @@
 import React from "react";
 import { User, LogOut, Settings, Bell } from "lucide-react";
-import { useAuth } from "../../context/AuthContext"; // 경로 확인 필요
+import { useAuth } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 import {
   DropdownMenu,
@@ -12,18 +13,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useToast } from "@/components/ui/use-toast";
 
 export function UserNav() {
   const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   // 로그인 여부에 따라 다른 UI 표시
   if (!isAuthenticated) {
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => (window.location.href = "/login")}
-      >
+      <Button size="sm" onClick={() => navigate("/user/login")}>
         로그인
       </Button>
     );
@@ -33,6 +33,22 @@ export function UserNav() {
   const getInitials = () => {
     if (!user || !user.userNick) return "U";
     return user.userNick.charAt(0).toUpperCase();
+  };
+
+  // 로그아웃 처리 함수
+  const handleLogout = () => {
+    // 로그아웃 함수 호출
+    logout();
+
+    // 성공 메시지 표시
+    toast({
+      title: "로그아웃 성공",
+      description: "성공적으로 로그아웃되었습니다.",
+      duration: 3000,
+    });
+
+    // 로그인 페이지로 리다이렉트
+    navigate("/user/login");
   };
 
   return (
@@ -56,16 +72,18 @@ export function UserNav() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate("/user/profile/settings")}>
           <Settings className="mr-2 h-4 w-4" />
           <span>프로필 설정</span>
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => navigate("/user/profile/notifications")}
+        >
           <Bell className="mr-2 h-4 w-4" />
           <span>알림 설정</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={logout}>
+        <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>로그아웃</span>
         </DropdownMenuItem>
