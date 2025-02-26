@@ -174,7 +174,11 @@ const LoginForm = () => {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button
+                  type="submit"
+                  className="w-full bg-blue-500"
+                  disabled={loading}
+                >
                   {loading ? "로그인 중..." : "로그인"}
                 </Button>
               </form>
