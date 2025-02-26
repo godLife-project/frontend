@@ -38,9 +38,16 @@ export function UserNav() {
 
   // 로그아웃 처리 함수
   const handleLogout = async () => {
+    const cookies = document.cookie.split(';');
+const refreshToken = cookies.find(cookie => cookie.trim().startsWith('refresh='))?.split('=')[1];
+
+
     try {
       // 로그아웃 API 호출
       await axiosInstance.post("/user/logout", {}, {
+        headers: {
+          'X-Refresh-Token': refreshToken
+        }
       });
       
       // 성공 메시지 표시

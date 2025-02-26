@@ -7,6 +7,7 @@ import Layout from "./components/layout/Layout";
 import Home from "./pages/Home/Home";
 import Signup from "./pages/Auth/SignUp";
 import Login from "./pages/Auth/Login";
+import RoutineCreator from "./pages/Routine/create";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         >
           <Layout>
             <Routes>
+              <Route path="/routine/create" element={<RoutineCreator />} />
               <Route path="/user/login" element={<Login />} />
               <Route path="/user/signup" element={<Signup />} />
               <Route path="/" element={<Home />} />
