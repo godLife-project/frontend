@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useApi } from '../../hooks/useApi';
+import { useApi } from "../../hooks/useApi";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ const LoginForm = () => {
   const { data, loading, error, post, headers, getTokens } = useApi();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const errorShown = useRef(false);
 
   const form = useForm({
     resolver: zodResolver(loginFormSchema),
@@ -51,38 +52,37 @@ const LoginForm = () => {
   useEffect(() => {
     if (data) {
       console.log("API 응답 데이터:", data);
-      
+
       // 토큰 정보 가져오기
       const { accessToken, refreshToken } = getTokens();
-      console.log("Access Token:", accessToken);
-      console.log("Refresh Token Cookie:", refreshToken);
-      
-      // 모든 쿠키 출력 (확인용)
-      console.log("All Cookies:", document.cookie);
-      
-      // 모든 응답 헤더 출력 (확인용)
-      console.log("Response Headers:", headers);
-      
+
       // 로그인 성공 처리
       toast({
         title: "로그인 성공",
         description: "환영합니다!",
       });
-      
+
       // 토큰 정보를 로컬 스토리지나 상태에 저장 (옵션)
       if (accessToken) {
-        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem("accessToken", accessToken);
       }
-      
+
       // 로그인 성공 후 리다이렉트
       navigate("/");
+
+      // 에러 표시 상태 초기화
+      errorShown.current = false;
     }
-  }, [data, navigate, toast, headers, getTokens]);
+  }, [data, navigate, toast, getTokens]);
 
   // 에러가 발생하면 실행됨
   useEffect(() => {
-    if (error) {
+    if (error && !errorShown.current) {
       console.error("로그인 오류:", error);
+
+      // 에러 토스트를 한 번만 표시하기 위한 플래그 설정
+      errorShown.current = true;
+
       toast({
         variant: "destructive",
         title: "로그인 실패",
@@ -92,9 +92,11 @@ const LoginForm = () => {
   }, [error, toast]);
 
   const onSubmit = (formData) => {
+    // 새 로그인 시도 시 에러 표시 상태 초기화
+    errorShown.current = false;
     console.log("로그인 시도:", formData);
     // withCredentials를 true로 설정하여 쿠키를 받을 수 있도록 함
-    post('/user/login', formData);
+    post("/user/login", formData);
   };
 
   const togglePasswordVisibility = () => {
