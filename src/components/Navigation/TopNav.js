@@ -1,4 +1,6 @@
-import React from 'react'
+import {React, useEffect} from 'react';
+import { useApi } from '../../hooks/useApi';
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button"
 import { 
   DropdownMenu,
@@ -10,22 +12,23 @@ import { ChevronDown } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Bell } from 'lucide-react'
 import { UserNav } from './UserNav'
-import { navItems } from './NavItems'
 
 const NavItem = ({ item }) => {
+  const navigate = useNavigate();
+
   if (item.submenu) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="flex items-center gap-1">
-            {item.label}
+            {item.topName}
             <ChevronDown className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           {item.submenu.map((subItem) => (
-            <DropdownMenuItem key={subItem.href}>
-              {subItem.label}
+            <DropdownMenuItem key={subItem.href} onClick= {()=> navigate(subItem.href)}>
+              {subItem.topName}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
@@ -34,13 +37,21 @@ const NavItem = ({ item }) => {
   }
 
   return (
-    <Button variant="ghost" className="font-medium">
-      {item.label}
+    <Button variant="ghost" className="font-medium" onClick={() => navigate(item.topAddr)}>
+      {item.topName}
     </Button>
   )
 }
 
 const TopNav = () => {
+  const { data, loading, error, get } = useApi();
+  
+  useEffect(() => {
+          // 이제 try-catch가 필요 없음
+          get('/categories/topMenu');
+      }, [get]);
+  
+
   return (
     <div className="h-16 items-center px-4 flex">
       {/* Logo - 모든 화면에서 보임 */}
@@ -54,8 +65,8 @@ const TopNav = () => {
       {/* Desktop Navigation - 데스크톱에서만 보임 */}
       <nav className="hidden md:flex flex-1 ml-8">
         <ul className="flex items-center gap-6">
-          {navItems.map((item) => (
-            <li key={item.href}>
+          {data && data.map((item, index) => (
+            <li key={item.topId || item.id || index}>
               <NavItem item={item} />
             </li>
           ))}

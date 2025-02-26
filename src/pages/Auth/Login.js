@@ -1,1 +1,10 @@
-// 로그인 페이지
+import LoginForm from '@/components/auth/LoginForm';
+import React from 'react';
+
+function Login(props) {
+  return (
+    <LoginForm/>
+  );
+}
+
+export default Login;
