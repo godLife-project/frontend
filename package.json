@@ -36,7 +36,7 @@
   "scripts": {
     "start": "set DANGEROUSLY_DISABLE_HOST_CHECK=true&&craco start",
     "build": "craco build",
-    "test": "craco test",
+    "test": "craco test --verbose",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -59,7 +59,10 @@
   },
   "devDependencies": {
     "@shadcn/ui": "^0.0.4",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
     "autoprefixer": "^10.4.14",
+    "jest": "^27.5.1",
     "postcss": "^8.4.24",
     "postcss-flexbugs-fixes": "^5.0.2",
     "postcss-normalize": "^13.0.1",
