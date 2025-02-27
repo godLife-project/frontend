@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
 import * as z from "zod";
 import { useNavigate } from "react-router-dom";
-import { useApi } from "../../hooks/useApi";
 import { useToast } from "@/components/ui/use-toast";
+import axiosInstance from "@/api/axiosInstance";
 import {
   Form,
   FormField,
@@ -15,8 +15,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -27,25 +27,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// ✅ 유효성 검사 스키마
 const signupSchema = z
   .object({
     userId: z.string().min(1, { message: "아이디를 입력해주세요." }),
-    userPw: z
-      .string()
-      .min(4, { message: "비밀번호는 최소 4자 이상이어야 합니다." }),
-    userPwConfirm: z
-      .string()
-      .min(4, { message: "비밀번호 확인을 입력해주세요." }),
-    userName: z.string().min(2, { message: "이름을 입력해주세요." }),
-    userNick: z.string().min(1, { message: "닉네임을 입력해주세요." }),
-    userEmail: z
-      .string()
-      .email({ message: "올바른 이메일 주소를 입력해주세요." }),
-    userGender: z.enum(["1", "2", "0"], {
-      message: "성별을 선택해주세요.",
-    }),
-    jobIdx: z.string().min(1, { message: "직업을 선택해주세요." }),
-    userBirth: z.string().min(1, { message: "생년월일을 선택해주세요." }),
+    userPw: z.string(),
+    userPwConfirm: z.string(),
+    userName: z.string(),
+    userNick: z.string(),
+    userEmail: z.string().email(),
+    userGender: z.enum(["1", "2", "0"]),
+    jobIdx: z.string().min(1),
   })
   .refine((data) => data.userPw === data.userPwConfirm, {
     message: "비밀번호가 일치하지 않습니다.",
@@ -53,39 +45,58 @@ const signupSchema = z
   });
 
 const SignUpForm = () => {
+  const userIdInputRef = useRef(null); // 아이디 입력란 Ref
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false); // 로딩 상태 추가
-  const [isIdValid, setIsIdValid] = useState(null); // 아이디 중복 여부 상태 추가
-  const { data, error, post } = useApi();
+  const [loading, setLoading] = useState(false);
+  const [isIdValid, setIsIdValid] = useState(null);
   const { toast } = useToast();
+  const form = useForm({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      userId: "",
+      userPw: "",
+      userPwConfirm: "",
+      userName: "",
+      userNick: "",
+      // userEmail: "",
+      userGender: "",
+      jobIdx: "",
+      userBirth: "",
+    },
+  });
 
-  useEffect(() => {
-    if (data) {
-      console.log("회원가입 응답 데이터:", data);
+  const checkPassdMatch = () => {
+    // form.getValues()로 현재 입력된 값을 가져옵니다.
+    const password = form.getValues("userPw").trim();
+    const confirmPassword = form.getValues("userPwConfirm").trim();
 
-      toast({
-        title: "회원가입 성공",
-        description: "로그인 페이지로 이동합니다.",
-      });
-      setTimeout(() => {
-        navigate("/login");
-      }, 2000);
+    if (!password || !confirmPassword) {
+      alert("비밀번호를 입력해주세요.");
+      return;
     }
-  }, [data, navigate, toast]);
 
+    if (password !== confirmPassword) {
+      alert("비밀번호가 일치하지 않습니다.");
+    } else {
+      alert("비밀번호가 일치합니다.");
+    }
+  };
+
+  //아이디 중복 확인 함수
   const checkDuplicateId = async () => {
-    const userId = form.getValues("userId");
+    const userId = form.getValues("userId").trim();
     if (!userId) {
       alert("아이디를 입력해주세요.");
       return;
     }
 
-    setLoading(true); // 로딩 시작
+    setLoading(true);
     try {
-      const response = await fetch(`/api/check-id?userId=${userId}`);
-      const data = await response.json();
+      const response = await axiosInstance.get(`user/checkId/${userId}`);
 
-      if (data.isDuplicate) {
+      console.log("중복 확인 응답 데이터:", response.data);
+
+      if (response.data === true) {
         setIsIdValid(false);
         alert("이미 사용 중인 아이디입니다.");
       } else {
@@ -96,37 +107,39 @@ const SignUpForm = () => {
       console.error("아이디 중복 확인 오류:", error);
       alert("중복 확인 중 오류가 발생했습니다.");
     } finally {
-      setLoading(false); // 로딩 종료
+      setLoading(false);
     }
   };
 
-  const form = useForm({
-    resolver: zodResolver(signupSchema),
-    defaultValues: {
-      userId: "",
-      userPw: "",
-      userPwConfirm: "",
-      userName: "",
-      userNick: "",
-      userEmail: "",
-      userGender: "",
-      jobIdx: "",
-      userBirth: "",
-    },
-  });
+  // 회원가입 API 요청 함수
+  const onSubmit = async (data) => {
+    const formData = form.getValues();
+    console.log("회원가입 버튼 클릭됨, 전달된 데이터:", data);
+    if (!isIdValid) {
+      alert("아이디 중복 확인을 완료해주세요.");
+      userIdInputRef.current?.focus();
+      return;
+    }
 
-  //  회원가입 처리 함수
-  const onSubmit = async (formData) => {
+    if (formData.userPw !== formData.userPwConfirm) {
+      alert("비밀번호가 일치하지 않습니다.");
+      return;
+    }
+
     setLoading(true);
     try {
-      console.log("회원가입 데이터:", formData);
-      // TODO: 회원가입 API 요청 (백엔드 연동)
-      setTimeout(() => {
-        alert("회원가입 성공");
-        navigate("/login"); // 로그인 페이지로 이동
-      }, 2000);
+      const response = await axiosInstance.post(`/user/join`, formData);
+      console.log("회원가입 응답:", response.formData);
+
+      if (response.data.success) {
+        alert("회원가입 성공!");
+        navigate("/login");
+      } else {
+        alert("회원가입 실패: " + response.data.message);
+      }
     } catch (error) {
       console.error("회원가입 실패:", error);
+      alert("회원가입에 실패했습니다.");
     } finally {
       setLoading(false);
     }
@@ -195,7 +208,7 @@ const SignUpForm = () => {
 
                 <FormField
                   control={form.control}
-                  name="nickName"
+                  name="userNick"
                   render={({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>닉네임</FormLabel>
@@ -226,7 +239,7 @@ const SignUpForm = () => {
               />
               <FormField
                 control={form.control}
-                name="userPW"
+                name="userPwConfirm"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>비밀번호 확인</FormLabel>
@@ -240,7 +253,7 @@ const SignUpForm = () => {
                         <Button
                           type="button"
                           className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 text-xs rounded"
-                          onClick={checkDuplicateId}
+                          onClick={checkPassdMatch}
                         >
                           비밀번호 확인
                         </Button>
@@ -259,8 +272,8 @@ const SignUpForm = () => {
                     <FormLabel>성별</FormLabel>
                     <FormControl>
                       <RadioGroup
-                        onValueChange={field.onChange} // ✅ React Hook Form과 연결
-                        value={field.value} // ✅ 현재 선택된 값
+                        onValueChange={field.onChange}
+                        value={field.value}
                         className="flex space-x-4"
                       >
                         <FormItem>
@@ -290,7 +303,7 @@ const SignUpForm = () => {
               <div className="flex space-x-4">
                 <FormField
                   control={form.control}
-                  name="job"
+                  name="jobIdx"
                   render={({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>직업</FormLabel>
@@ -334,7 +347,7 @@ const SignUpForm = () => {
                 className="w-full bg-blue-500 text-white"
                 disabled={loading}
               >
-                {loading ? "회원가입 중..." : "Sign up"}
+                {loading ? "회원가입 중..." : "회원가입"}
               </Button>
             </form>
           </Form>

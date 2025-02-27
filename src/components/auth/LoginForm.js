@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useApi } from '../../hooks/useApi';
+import { useApi } from "../../hooks/useApi";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -51,29 +51,29 @@ const LoginForm = () => {
   useEffect(() => {
     if (data) {
       console.log("API 응답 데이터:", data);
-      
+
       // 토큰 정보 가져오기
       const { accessToken, refreshToken } = getTokens();
       console.log("Access Token:", accessToken);
       console.log("Refresh Token Cookie:", refreshToken);
-      
+
       // 모든 쿠키 출력 (확인용)
       console.log("All Cookies:", document.cookie);
-      
+
       // 모든 응답 헤더 출력 (확인용)
       console.log("Response Headers:", headers);
-      
+
       // 로그인 성공 처리
       toast({
         title: "로그인 성공",
         description: "환영합니다!",
       });
-      
+
       // 토큰 정보를 로컬 스토리지나 상태에 저장 (옵션)
       if (accessToken) {
-        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem("accessToken", accessToken);
       }
-      
+
       // 로그인 성공 후 리다이렉트
       navigate("/");
     }
@@ -94,7 +94,7 @@ const LoginForm = () => {
   const onSubmit = (formData) => {
     console.log("로그인 시도:", formData);
     // withCredentials를 true로 설정하여 쿠키를 받을 수 있도록 함
-    post('/user/login', formData);
+    post("/user/login", formData);
   };
 
   const togglePasswordVisibility = () => {
