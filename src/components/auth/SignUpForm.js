@@ -35,7 +35,7 @@ const signupSchema = z
     userPwConfirm: z.string(),
     userName: z.string(),
     userNick: z.string(),
-    userEmail: z.string().email(),
+    // userEmail: z.string().email(),
     userGender: z.enum(["1", "2", "0"]),
     jobIdx: z.string().min(1),
   })
@@ -63,6 +63,8 @@ const SignUpForm = () => {
       jobIdx: "",
       userBirth: "",
     },
+
+    
   });
 
   const checkPassdMatch = () => {
@@ -113,8 +115,18 @@ const SignUpForm = () => {
 
   // 회원가입 API 요청 함수
   const onSubmit = async (data) => {
+    const { userPwConfirm, ...apiData } = data;
+    // const submitData = {
+    //   ...data,
+    //   jobIdx: parseInt(data.jobIdx, 10),
+    //   userGender: parseInt(data.userGender, 10) // 문자열을 정수로 변환
+    // };
+    const submitData = {
+      ...data,
+      userGender: parseInt(data.userGender, 10) // 문자열을 정수로 변환
+    };
     const formData = form.getValues();
-    console.log("회원가입 버튼 클릭됨, 전달된 데이터:", data);
+    console.log("회원가입 버튼 클릭됨, 전달된 데이터:", submitData);
     if (!isIdValid) {
       alert("아이디 중복 확인을 완료해주세요.");
       userIdInputRef.current?.focus();
@@ -128,8 +140,9 @@ const SignUpForm = () => {
 
     setLoading(true);
     try {
-      const response = await axiosInstance.post(`/user/join`, formData);
-      console.log("회원가입 응답:", response.formData);
+      const response = await axiosInstance.post(`/user/join`, submitData);
+      console.log("응답 객체:", response);
+      console.log("회원가입 응답:", response.data);
 
       if (response.data.success) {
         alert("회원가입 성공!");
@@ -318,8 +331,8 @@ const SignUpForm = () => {
                           <SelectContent>
                             <SelectGroup>
                               <SelectLabel>직업 선택</SelectLabel>
-                              <SelectItem value="developer">개발자</SelectItem>
-                              <SelectItem value="designer">디자이너</SelectItem>
+                              <SelectItem value="1">개발자</SelectItem>
+                              <SelectItem value="2">디자이너</SelectItem>
                             </SelectGroup>
                           </SelectContent>
                         </Select>
@@ -328,7 +341,7 @@ const SignUpForm = () => {
                     </FormItem>
                   )}
                 />
-                <FormField
+                {/* <FormField
                   control={form.control}
                   name="userBirth"
                   render={({ field }) => (
@@ -340,7 +353,7 @@ const SignUpForm = () => {
                       <FormMessage />
                     </FormItem>
                   )}
-                />
+                /> */}
               </div>
               <Button
                 type="submit"
