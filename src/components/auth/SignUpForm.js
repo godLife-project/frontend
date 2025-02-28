@@ -30,7 +30,7 @@ import {
 // ✅ 유효성 검사 스키마
 const signupSchema = z
   .object({
-    userId: z.string().min(1, { message: "아이디를 입력해주세요." }),
+    userId: z.string(),
     userPw: z.string(),
     userPwConfirm: z.string(),
     userName: z.string(),
@@ -38,6 +38,8 @@ const signupSchema = z
     userEmail: z.string().email(),
     userGender: z.enum(["1", "2", "0"]),
     jobIdx: z.string().min(1),
+    usePhone: z.string(),
+    targetIdx: z.enum(["1", "2", "0"]),
   })
   .refine((data) => data.userPw === data.userPwConfirm, {
     message: "비밀번호가 일치하지 않습니다.",
@@ -58,10 +60,12 @@ const SignUpForm = () => {
       userPwConfirm: "",
       userName: "",
       userNick: "",
-      // userEmail: "",
+      userEmail: "",
       userGender: "",
       jobIdx: "",
-      userBirth: "",
+      targetIdx: "",
+      usePhone: "",
+      // userBirth: "",
     },
   });
 
@@ -113,8 +117,18 @@ const SignUpForm = () => {
 
   // 회원가입 API 요청 함수
   const onSubmit = async (data) => {
+    const { userPwConfirm, ...apiData } = data;
+    // const submitData = {
+    //   ...data,
+    //   jobIdx: parseInt(data.jobIdx, 10),
+    //   userGender: parseInt(data.userGender, 10) // 문자열을 정수로 변환
+    // };
+    const submitData = {
+      ...data,
+      userGender: parseInt(data.userGender, 10), // 문자열을 정수로 변환
+    };
     const formData = form.getValues();
-    console.log("회원가입 버튼 클릭됨, 전달된 데이터:", data);
+    console.log("회원가입 버튼 클릭됨, 전달된 데이터:", submitData);
     if (!isIdValid) {
       alert("아이디 중복 확인을 완료해주세요.");
       userIdInputRef.current?.focus();
@@ -128,8 +142,9 @@ const SignUpForm = () => {
 
     setLoading(true);
     try {
-      const response = await axiosInstance.post(`/user/join`, formData);
-      console.log("회원가입 응답:", response.formData);
+      const response = await axiosInstance.post(`/user/join`, submitData);
+      console.log("응답 객체:", response);
+      console.log("회원가입 응답:", response.data);
 
       if (response.data.success) {
         alert("회원가입 성공!");
@@ -169,6 +184,19 @@ const SignUpForm = () => {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="userEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>이메일</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="Email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="userId"
@@ -220,6 +248,24 @@ const SignUpForm = () => {
                   )}
                 />
               </div>
+              <FormField
+                control={form.control}
+                name="userPhone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>휴대폰</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="tel"
+                        placeholder="Email"
+                        pattern="[0-9]{3}-[0-9]{4}-[0-9]{4}"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="userPw"
@@ -315,11 +361,11 @@ const SignUpForm = () => {
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="선택" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-white">
                             <SelectGroup>
-                              <SelectLabel>직업 선택</SelectLabel>
-                              <SelectItem value="developer">개발자</SelectItem>
-                              <SelectItem value="designer">디자이너</SelectItem>
+                              <SelectItem value="1">개발자</SelectItem>
+                              <SelectItem value="2">디자이너</SelectItem>
+                              <SelectItem value="0">선택안함</SelectItem>
                             </SelectGroup>
                           </SelectContent>
                         </Select>
@@ -329,6 +375,33 @@ const SignUpForm = () => {
                   )}
                 />
                 <FormField
+                  control={form.control}
+                  name="targetIdx"
+                  render={({ field }) => (
+                    <FormItem className="w-full">
+                      <FormLabel>관심사</FormLabel>
+                      <FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="선택" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white">
+                            <SelectGroup>
+                              <SelectItem value="1">미라클모닝</SelectItem>
+                              <SelectItem value="2">운동</SelectItem>
+                              <SelectItem value="0">선택안함</SelectItem>
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {/* <FormField
                   control={form.control}
                   name="userBirth"
                   render={({ field }) => (
@@ -340,11 +413,11 @@ const SignUpForm = () => {
                       <FormMessage />
                     </FormItem>
                   )}
-                />
+                /> */}
               </div>
               <Button
                 type="submit"
-                className="w-full bg-blue-500 text-white"
+                className="w-full bg-black text-white"
                 disabled={loading}
               >
                 {loading ? "회원가입 중..." : "회원가입"}
