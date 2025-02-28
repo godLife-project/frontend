@@ -35,7 +35,7 @@ const signupSchema = z
     userPwConfirm: z.string(),
     userName: z.string(),
     userNick: z.string(),
-    userEmail: z.string().email(),
+    // userEmail: z.string().email(),
     userGender: z.enum(["1", "2", "0"]),
     jobIdx: z.string().min(1),
     usePhone: z.string(),
@@ -125,6 +125,7 @@ const SignUpForm = () => {
     // };
     const submitData = {
       ...data,
+
       userGender: parseInt(data.userGender, 10), // 문자열을 정수로 변환
     };
     const formData = form.getValues();
@@ -374,7 +375,7 @@ const SignUpForm = () => {
                     </FormItem>
                   )}
                 />
-                <FormField
+                {/* <FormField
                   control={form.control}
                   name="targetIdx"
                   render={({ field }) => (
