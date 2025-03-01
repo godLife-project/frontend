@@ -1,6 +1,13 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 
+// API 모듈만 모킹
+jest.mock("../../api/axiosInstance", () => ({
+  default: {
+    get: jest.fn().mockImplementation(() => Promise.resolve({ data: [] }))
+  }
+}));
+
 // 모킹을 먼저 정의 (중요: import 문 이후, 다른 코드 이전에 정의)
 jest.mock("./Header", () => {
   return function MockHeader() {
