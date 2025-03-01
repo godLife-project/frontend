@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// ✅ 유효성 검사 스키마
+//유효성 검사 스키마
 const signupSchema = z
   .object({
     userId: z.string(),
@@ -36,10 +36,10 @@ const signupSchema = z
     userName: z.string(),
     userNick: z.string(),
     userEmail: z.string().email(),
-    userGender: z.enum(["1", "2", "0"]),
-    jobIdx: z.string().min(1),
-    usePhone: z.string(),
-    targetIdx: z.enum(["1", "2", "0"]),
+    userGender: z.enum(["1", "2", "3"]),
+    jobIdx: z.string(),
+    userPhone: z.string(),
+    targetIdx: z.string(),
   })
   .refine((data) => data.userPw === data.userPwConfirm, {
     message: "비밀번호가 일치하지 않습니다.",
@@ -51,7 +51,11 @@ const SignUpForm = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [isIdValid, setIsIdValid] = useState(null);
+  const [serverError, setServerError] = useState(""); // 서버 오류 메시지를 저장할 상태 변수
+  const [jobCategories, setJobCategories] = useState([]);
+  const [targetCategories, setTargetCategories] = useState([]);
   const { toast } = useToast();
+
   const form = useForm({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -64,10 +68,39 @@ const SignUpForm = () => {
       userGender: "",
       jobIdx: "",
       targetIdx: "",
-      usePhone: "",
-      // userBirth: "",
+      userPhone: "",
     },
   });
+
+  //직업 카테고리
+  useEffect(() => {
+    const fetchJobCategories = async () => {
+      try {
+        const response = await axiosInstance.get(`categories/job`);
+        console.log("직업 카테고리 데이터:", response.data);
+        setJobCategories(response.data);
+      } catch (error) {
+        console.error("직업 카테고리 데이터 가져오기 실패:", error);
+      }
+    };
+
+    fetchJobCategories();
+  }, []);
+
+  //관심사 카테고리
+  useEffect(() => {
+    const fetchTargetCategories = async () => {
+      try {
+        const response = await axiosInstance.get(`categories/target`);
+        console.log("관심사 카테고리 데이터:", response.data);
+        setTargetCategories(response.data);
+      } catch (error) {
+        console.error("관심사 카테고리 데이터 가져오기 실패:", error);
+      }
+    };
+
+    fetchTargetCategories();
+  }, []);
 
   const checkPassdMatch = () => {
     // form.getValues()로 현재 입력된 값을 가져옵니다.
@@ -118,18 +151,13 @@ const SignUpForm = () => {
   // 회원가입 API 요청 함수
   const onSubmit = async (data) => {
     const { userPwConfirm, ...apiData } = data;
-    // const submitData = {
-    //   ...data,
-    //   jobIdx: parseInt(data.jobIdx, 10),
-    //   userGender: parseInt(data.userGender, 10) // 문자열을 정수로 변환
-    // };
     const submitData = {
-      ...data,
-
+      ...apiData,
       userGender: parseInt(data.userGender, 10), // 문자열을 정수로 변환
     };
     const formData = form.getValues();
     console.log("회원가입 버튼 클릭됨, 전달된 데이터:", submitData);
+
     if (!isIdValid) {
       alert("아이디 중복 확인을 완료해주세요.");
       userIdInputRef.current?.focus();
@@ -142,20 +170,75 @@ const SignUpForm = () => {
     }
 
     setLoading(true);
+    setServerError(""); // 기존 서버 오류 초기화
+
     try {
       const response = await axiosInstance.post(`/user/join`, submitData);
       console.log("응답 객체:", response);
       console.log("회원가입 응답:", response.data);
 
-      if (response.data.success) {
-        alert("회원가입 성공!");
-        navigate("/login");
+      if (response.data.success === false) {
+        // 서버에서 반환한 오류 메시지를 그대로 표시
+        if (response.data.message) {
+          setServerError(response.data.message);
+          toast({
+            variant: "destructive",
+            title: "회원가입 실패",
+            description: response.data.message,
+          });
+        }
       } else {
-        alert("회원가입 실패: " + response.data.message);
+        toast({
+          title: "회원가입 성공",
+          description: "로그인 페이지로 이동합니다.",
+        });
+        navigate("/login");
       }
     } catch (error) {
       console.error("회원가입 실패:", error);
-      alert("회원가입에 실패했습니다.");
+
+      // 서버 응답에서 오류 메시지 확인
+      if (error.response && error.response.data) {
+        let errorMessage = "";
+
+        // 오류 메시지 추출 (백엔드 응답 구조에 따라 조정 필요)
+        if (typeof error.response.data === "string") {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        } else {
+          // 객체인 경우 첫 번째 오류 메시지 사용
+          const errorObj = error.response.data;
+          for (const key in errorObj) {
+            if (errorObj[key]) {
+              errorMessage = errorObj[key];
+              break;
+            }
+          }
+        }
+
+        // 오류 메시지가 없으면 기본 메시지 사용
+        if (!errorMessage) {
+          errorMessage = "회원가입에 실패했습니다.";
+        }
+
+        setServerError(errorMessage);
+
+        toast({
+          variant: "destructive",
+          title: "회원가입 실패",
+          description: errorMessage,
+        });
+      } else {
+        setServerError("회원가입에 실패했습니다.");
+        toast({
+          variant: "destructive",
+          title: "회원가입 실패",
+          description: "회원가입 처리 중 오류가 발생했습니다.",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -185,6 +268,13 @@ const SignUpForm = () => {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {/* 서버에서 반환된 오류 메시지 표시 */}
+              {serverError && (
+                <div className="text-red-500 text-sm p-2 bg-red-50 rounded-md">
+                  {serverError}
+                </div>
+              )}
+
               <FormField
                 control={form.control}
                 name="userEmail"
@@ -206,7 +296,11 @@ const SignUpForm = () => {
                     <FormLabel>아이디</FormLabel>
                     <FormControl>
                       <div className="flex items-center space-x-2">
-                        <Input placeholder="ID" {...field} />
+                        <Input
+                          placeholder="ID"
+                          {...field}
+                          ref={userIdInputRef}
+                        />
                         <Button
                           type="button"
                           className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 text-xs rounded"
@@ -258,7 +352,7 @@ const SignUpForm = () => {
                     <FormControl>
                       <Input
                         type="tel"
-                        placeholder="Email"
+                        placeholder=""
                         pattern="[0-9]{3}-[0-9]{4}-[0-9]{4}"
                         {...field}
                       />
@@ -337,7 +431,7 @@ const SignUpForm = () => {
                         </FormItem>
                         <FormItem>
                           <FormControl>
-                            <RadioGroupItem value="0" />
+                            <RadioGroupItem value="3" />
                           </FormControl>
                           <FormLabel>비밀</FormLabel>
                         </FormItem>
@@ -364,9 +458,22 @@ const SignUpForm = () => {
                           </SelectTrigger>
                           <SelectContent className="bg-white">
                             <SelectGroup>
-                              <SelectItem value="1">개발자</SelectItem>
-                              <SelectItem value="2">디자이너</SelectItem>
-                              <SelectItem value="0">선택안함</SelectItem>
+                              {jobCategories.length > 0 ? (
+                                jobCategories.map((job) => (
+                                  <SelectItem
+                                    key={job.jobIdx}
+                                    value={job.jobIdx.toString()}
+                                  >
+                                    {job.jobName}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <>
+                                  {/* <SelectItem value="1">개발자</SelectItem>
+                                  <SelectItem value="2">디자이너</SelectItem>
+                                  <SelectItem value="0">선택안함</SelectItem> */}
+                                </>
+                              )}
                             </SelectGroup>
                           </SelectContent>
                         </Select>
@@ -375,7 +482,7 @@ const SignUpForm = () => {
                     </FormItem>
                   )}
                 />
-                {/* <FormField
+                <FormField
                   control={form.control}
                   name="targetIdx"
                   render={({ field }) => (
@@ -391,9 +498,22 @@ const SignUpForm = () => {
                           </SelectTrigger>
                           <SelectContent className="bg-white">
                             <SelectGroup>
-                              <SelectItem value="1">미라클모닝</SelectItem>
+                              {targetCategories.length > 0 ? (
+                                targetCategories.map((target) => (
+                                  <SelectItem
+                                    key={target.targetIdx}
+                                    value={target.targetIdx.toString()}
+                                  >
+                                    {target.targetName}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <>
+                                  {/* <SelectItem value="1">미라클모닝</SelectItem>
                               <SelectItem value="2">운동</SelectItem>
-                              <SelectItem value="0">선택안함</SelectItem>
+                              <SelectItem value="0">선택안함</SelectItem> */}
+                                </>
+                              )}
                             </SelectGroup>
                           </SelectContent>
                         </Select>
@@ -402,19 +522,6 @@ const SignUpForm = () => {
                     </FormItem>
                   )}
                 />
-                {/* <FormField
-                  control={form.control}
-                  name="userBirth"
-                  render={({ field }) => (
-                    <FormItem className="w-full">
-                      <FormLabel>생년월일</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} className="w-full" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                /> */}
               </div>
               <Button
                 type="submit"
