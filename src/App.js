@@ -7,7 +7,9 @@ import Layout from "./components/layout/Layout";
 import Home from "./pages/Home/Home";
 import Signup from "./pages/Auth/SignUp";
 import Login from "./pages/Auth/Login";
-import RoutineCreator from "./pages/Routine/create";
+import RoutineCreator from "./pages/Routine/Create";
+import RoutineCreator2 from "./pages/Routine/Create copy 2";
+import RoutineCreatePage from "./pages/Routine/create copy";
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
         >
           <Layout>
             <Routes>
+              <Route path="/routine/create3" element={<RoutineCreatePage />} />
+              <Route path="/routine/create2" element={<RoutineCreator2 />} />
               <Route path="/routine/create" element={<RoutineCreator />} />
               <Route path="/user/login" element={<Login />} />
               <Route path="/user/signup" element={<Signup />} />
