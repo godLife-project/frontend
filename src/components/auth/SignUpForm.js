@@ -48,7 +48,17 @@ const signupSchema = z
 
 const SignUpForm = () => {
   const userIdInputRef = useRef(null); // 아이디 입력란 Ref
+  const userPwInputRef = useRef(null);
+  const userNameInputRef = useRef(null);
+  const userNickInputRef = useRef(null);
+  const userEmailInputRef = useRef(null);
+  const jobIdxInputRef = useRef(null);
+  const targetIdxInputRef = useRef(null);
+  const userPhoneInputRef = useRef(null);
+  const userGenderInputRef = useRef(null);
+
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(false);
   const [isIdValid, setIsIdValid] = useState(null);
   const [serverError, setServerError] = useState(""); // 서버 오류 메시지를 저장할 상태 변수
@@ -159,7 +169,7 @@ const SignUpForm = () => {
     console.log("회원가입 버튼 클릭됨, 전달된 데이터:", submitData);
 
     if (!isIdValid) {
-      alert("아이디 중복 확인을 완료해주세요.");
+      // alert("아이디 중복 확인을 완료해주세요.");
       userIdInputRef.current?.focus();
       return;
     }
@@ -200,8 +210,9 @@ const SignUpForm = () => {
       // 서버 응답에서 오류 메시지 확인
       if (error.response && error.response.data) {
         let errorMessage = "";
+        let errorField = "";
 
-        // 오류 메시지 추출 (백엔드 응답 구조에 따라 조정 필요)
+        // 오류 메시지 추출
         if (typeof error.response.data === "string") {
           errorMessage = error.response.data;
         } else if (error.response.data.message) {
@@ -214,6 +225,7 @@ const SignUpForm = () => {
           for (const key in errorObj) {
             if (errorObj[key]) {
               errorMessage = errorObj[key];
+              errorField = key; // 오류 발생한 필드
               break;
             }
           }
@@ -231,6 +243,31 @@ const SignUpForm = () => {
           title: "회원가입 실패",
           description: errorMessage,
         });
+
+        setTimeout(() => {
+          if (errorField === "userId" && userIdInputRef.current) {
+            userIdInputRef.current.focus();
+          } else if (errorField === "userPw" && userPwInputRef.current) {
+            userPwInputRef.current.focus();
+          } else if (errorField === "userName" && userNameInputRef.current) {
+            userNameInputRef.current.focus();
+          } else if (errorField === "userNick" && userNickInputRef.current) {
+            userNickInputRef.current.focus();
+          } else if (errorField === "userEmail" && userEmailInputRef.current) {
+            userEmailInputRef.current.focus();
+          } else if (errorField === "jobIdx" && jobIdxInputRef.current) {
+            jobIdxInputRef.current.focus();
+          } else if (errorField === "targetIdx" && targetIdxInputRef.current) {
+            targetIdxInputRef.current.focus();
+          } else if (errorField === "userPhone" && userPhoneInputRef.current) {
+            userPhoneInputRef.current.focus();
+          } else if (
+            errorField === "userGender" &&
+            userGenderInputRef.current
+          ) {
+            userGenderInputRef.current.focus();
+          }
+        }, 0);
       } else {
         setServerError("회원가입에 실패했습니다.");
         toast({
