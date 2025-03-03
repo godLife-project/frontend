@@ -14,7 +14,6 @@ import {
           name="planTitle"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>제목</FormLabel>
               <FormControl>
                 <Input 
                   placeholder="나만의 루틴 제목을 입력해주세요" 

@@ -1,24 +1,7 @@
-import React, { useState } from 'react';
-import { PlusCircle, Calendar, Star, Repeat, Info } from 'lucide-react';
-import ActivityCard from '../../components/routine/ActivityCard';
-import InterestBadges from '../../components/routine/InterestBadges';
-import WeekdaySelector from '../../components/routine/WeekdaySelector';
+import React from 'react';
 
 // shadcn/ui 컴포넌트
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import JobSelector from '@/components/routine/JobSelector';
 import RoutineForm from '../../components/routine/create/RoutineForm';
 
 const RoutineCreationPage = () => {
