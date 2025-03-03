@@ -9,5 +9,4 @@ const axiosInstance = axios.create({
   },
   withCredentials: true, // 필요한 경우 (JWT, 세션 사용 시)
 });
-
 export default axiosInstance;
