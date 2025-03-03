@@ -40,7 +40,13 @@ import {
   Video,
   MoreHorizontal,
   Book,
-  HandHeart
+  HandHeart,
+  // 타겟 데이터 아이콘
+  Sunrise,
+  Moon,
+  LineChart,
+  UserCog,
+  CalendarDays
 } from "lucide-react";
 
 // 아이콘 매핑 (색상 포함)
@@ -88,12 +94,24 @@ export const iconMap = {
   mic: { icon: Mic, color: "#8A2BE2" },                   // 가수 - 블루 바이올렛
   "pen-tool": { icon: PenTool, color: "#9932CC" },        // 디자이너 - 다크 오키드
   video: { icon: Video, color: "#800080" },               // 크리에이터 - 퍼플
-  "more-horizontal": { icon: MoreHorizontal, color: "#696969" } // 기타 - 딤그레이
+  "more-horizontal": { icon: MoreHorizontal, color: "#696969" }, // 기타 - 딤그레이
+  
+  // 타겟 데이터를 위한 아이콘들
+  sunrise: { icon: Sunrise, color: "#FF9500" },           // 미라클 모닝 - 밝은 오렌지
+  moon: { icon: Moon, color: "#6A5ACD" },                 // 꿀잠 - 슬레이트 블루
+  scale: { icon: Scale, color: "#FF6B6B" },               // 다이어트/체중 관리 - 연한 빨간색
+  dumbbell: { icon: Dumbbell, color: "#4682B4" },         // 운동/피트니스 - 스틸 블루
+  "book-open": { icon: BookOpen, color: "#008080" },      // 공부/자기개발 - 틸
+  flower2: { icon: Flower2, color: "#FF1493" },           // 심신안정/명상 - 딥 핑크
+  "line-chart": { icon: LineChart, color: "#32CD32" },    // 능률 향상 - 라임 그린
+  palette: { icon: Palette, color: "#9932CC" },           // 창의력/취미 - 다크 오키드
+  "user-cog": { icon: UserCog, color: "#4A6FA5" },        // 자기 관리 - 짙은 파란색
+  "calendar-days": { icon: CalendarDays, color: "#8B4513" } // 일반 계획 - 새들 브라운
 };
 
 // 아이콘 컴포넌트 렌더링 헬퍼 함수
 export const renderIcon = (iconKey, size = 16, className = "", isSelected = false) => {
-  const iconData = iconMap[iconKey] || iconMap.briefcase;
+  const iconData = iconMap[iconKey] || iconMap["more-horizontal"];
   const IconComponent = iconData.icon;
   // 선택된 상태일 경우 흰색으로, 아닐 경우 지정된 색상으로 표시
   const color = isSelected ? "#FFFFFF" : iconData.color;
