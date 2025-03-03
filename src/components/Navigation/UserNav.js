@@ -88,7 +88,7 @@ const refreshToken = cookies.find(cookie => cookie.trim().startsWith('refresh=')
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
+      <DropdownMenuContent className="w-56 bg-blue-50 dark:bg-slate-800 shadow-lg" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex space-y-1">
             <p className="text-sm font-medium leading-none">
