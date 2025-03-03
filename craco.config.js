@@ -1,14 +1,17 @@
-const path = require('path');
+const path = require("path");
 
 module.exports = {
   style: {
     postcss: {
-      mode: 'file'
-    }
+      mode: "file",
+    },
   },
   webpack: {
     alias: {
-      '@': path.resolve(__dirname, 'src')
-    }
-  }
-}
+      "@": path.resolve(__dirname, "src"),
+    },
+  },
+  devServer: {
+    allowedHosts: "all",
+  },
+};

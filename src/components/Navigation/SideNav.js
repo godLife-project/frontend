@@ -1,7 +1,7 @@
-// components/Navigation/SideNav.js
-import React, { useState } from 'react'
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button"
-import { ChevronDown, Menu } from "lucide-react"
+import { Menu } from "lucide-react"
 import {
   Sheet,
   SheetContent,
@@ -9,7 +9,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { navItems } from './NavItems'
 
 import {
   Accordion,
@@ -19,17 +18,14 @@ import {
 } from "@/components/ui/accordion"
 
 const MenuItem = ({ item }) => {
-  const handleClick = (e) => {
-    e.preventDefault();
-    window.location.href = item.href;
-  };
-
+  const navigate = useNavigate();
+  
   if (item.submenu) {
     return (
-      <Accordion type="single">
-        <AccordionItem value={item.label} className="border-b">
+      <Accordion type="single" collapsible>
+        <AccordionItem value={item.topName} className="border-b">
           <AccordionTrigger className="py-2 hover:no-underline">
-            {item.label}
+            {item.topName}
           </AccordionTrigger>
           <AccordionContent>
             <div className="pl-4 space-y-2">
@@ -38,8 +34,9 @@ const MenuItem = ({ item }) => {
                   key={subItem.href}
                   variant="ghost"
                   className="w-full justify-start text-sm"
+                  onClick={() => navigate(subItem.href)}
                 >
-                  {subItem.label}
+                  {subItem.label || subItem.topName}
                 </Button>
               ))}
             </div>
@@ -51,19 +48,20 @@ const MenuItem = ({ item }) => {
 
   return (
     <Accordion type="single">
-      <AccordionItem value={item.label} className="border-b">
+      <AccordionItem value={item.topName} className="border-b">
         <AccordionTrigger 
           className="py-2 hover:no-underline"
-          hasSubmenu={false}  // 이 prop을 통해 chevron 숨김
-          onClick={handleClick}
+          hasSubmenu={false}
+          onClick={() => navigate(item.topAddr)}
         >
-          {item.label}
+          {item.topName}
         </AccordionTrigger>
       </AccordionItem>
     </Accordion>
   )
 }
-const SideNav = () => {
+
+const SideNav = ({ categories }) => {
   return (
     <div className="md:hidden fixed top-4 right-4 z-50">
       <Sheet>
@@ -79,8 +77,8 @@ const SideNav = () => {
             </SheetHeader>
             <nav className="flex-1 overflow-y-auto px-6 py-4">
               <ul className="space-y-3">
-                {navItems.map((item) => (
-                  <li key={item.href}>
+                {categories.map((item, index) => (
+                  <li key={item.topAddr || index}>
                     <MenuItem item={item} />
                   </li>
                 ))}
