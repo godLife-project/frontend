@@ -10,12 +10,14 @@ export const formSchema = z.object({
   planImp: z.number().min(1, "중요도를 선택해주세요"),
   jobIdx: z.number().nullable(),
   repeatDays: z.array(z.string()),
-  activities: z.array(
-    z.object({
-      activityName: z.string().min(1, "활동 이름을 입력해주세요"),
-      startTime: z.string(),
-      memo: z.string(),
-      importance: z.number().min(1).max(5).default(3) // 중요도 필드 추가 (1-5 범위, 기본값 3)
-    })
-  ).default([]),
+  activities: z
+    .array(
+      z.object({
+        activityName: z.string().min(1, "활동 이름을 입력해주세요"),
+        setTime: z.string(),
+        description: z.string(),
+        activityImp: z.number().min(1).max(5).default(3), // 중요도 필드 추가 (1-5 범위, 기본값 3)
+      })
+    )
+    .default([]),
 });
