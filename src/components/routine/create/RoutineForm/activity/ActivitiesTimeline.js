@@ -21,7 +21,7 @@ function ActivitiesTimeline({ control }) {
 
     // 모든 시작 시간을 분으로 변환하여 정렬
     const processedActivities = activities.map((activity, index) => {
-      const [hours, minutes] = activity.startTime.split(":").map(Number);
+      const [hours, minutes] = activity.setTime.split(":").map(Number);
       const startMinutes = hours * 60 + minutes;
 
       return {
@@ -41,6 +41,11 @@ function ActivitiesTimeline({ control }) {
 
   // 분 단위를 HH:MM 형식으로 변환
   function formatTime(totalMinutes) {
+    // totalMinutes가 undefined, null, NaN 등인 경우 기본값 제공
+    if (totalMinutes === undefined || totalMinutes === null || isNaN(totalMinutes)) {
+      return "00:00"; // 또는 다른 기본값
+    }
+
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     return `${hours.toString().padStart(2, "0")}:${minutes
@@ -55,11 +60,10 @@ function ActivitiesTimeline({ control }) {
         {[...Array(5)].map((_, i) => (
           <Star
             key={i}
-            className={`h-3 w-3 ${
-              i < importance
+            className={`h-3 w-3 ${i < importance
                 ? "fill-yellow-400 text-yellow-400"
                 : "text-gray-300"
-            }`}
+              }`}
           />
         ))}
       </div>
@@ -68,8 +72,8 @@ function ActivitiesTimeline({ control }) {
 
   // 수직 타임라인 항목 컴포넌트
   const TimelineItem = ({ activity, isLast, index }) => {
-    const hasMemo = activity.memo && activity.memo.trim() !== "";
-    const importance = activity.importance;
+    const hasMemo = activity.description && activity.description.trim() !== "";
+    const importance = activity.activityImp;
 
     // 중요도에 따른 배경색 (더 연한 색상으로 변경)
     const getColor = (importance) => {

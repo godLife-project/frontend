@@ -1,6 +1,6 @@
 // src/components/routine/create/RoutineForm/ActivitiesSection.js
 import React, { useState } from "react";
-import { useFieldArray } from "react-hook-form";
+import { useFieldArray, useFormState  } from "react-hook-form";
 import { Plus, Clock, Trash2, AlarmClock, FileText, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,14 +30,15 @@ function ActivitiesSection({ control }) {
     name: "activities",
   });
 
+  const formState = useFormState({ control });
+
   // 새 활동 추가
   const addActivity = () => {
     append({
       activityName: "",
-      startTime: "08:00",
-      duration: 30,
-      memo: "",
-      importance: 3, // 기본 중요도 3으로 설정
+      setTime: "08:00",
+      description: "",
+      activityImp: 3, // 기본 중요도 3으로 설정
     });
   };
 
@@ -54,6 +55,12 @@ function ActivitiesSection({ control }) {
           <Plus className="h-4 w-4" />새 활동 추가
         </Button>
       </div>
+      {/* 에러 메시지 표시 */}
+      {formState.errors.activities && (
+        <div className="text-red-500 text-sm mt-2">
+          {formState.errors.activities.message}
+        </div>
+      )}
 
       {fields.length === 0 && (
         <div className="text-center py-8 border border-dashed rounded-lg bg-muted/50">
