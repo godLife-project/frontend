@@ -4,8 +4,20 @@ import { useFieldArray } from "react-hook-form";
 import { Plus, Clock, Trash2, AlarmClock, FileText, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -15,9 +27,8 @@ import ActivitiesTimeline from "./ActivitiesTimeline";
 function ActivitiesSection({ control }) {
   const { fields, append, remove } = useFieldArray({
     control,
-    name: "activities"
+    name: "activities",
   });
-  
 
   // 새 활동 추가
   const addActivity = () => {
@@ -26,7 +37,7 @@ function ActivitiesSection({ control }) {
       startTime: "08:00",
       duration: 30,
       memo: "",
-      importance: 3 // 기본 중요도 3으로 설정
+      importance: 3, // 기본 중요도 3으로 설정
     });
   };
 
@@ -40,15 +51,16 @@ function ActivitiesSection({ control }) {
           onClick={addActivity}
           className="flex items-center gap-1 bg-blue-500"
         >
-          <Plus className="h-4 w-4" />
-          새 활동 추가
+          <Plus className="h-4 w-4" />새 활동 추가
         </Button>
       </div>
 
       {fields.length === 0 && (
         <div className="text-center py-8 border border-dashed rounded-lg bg-muted/50">
           <AlarmClock className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-          <p className="text-muted-foreground">활동을 추가하여 루틴을 만들어보세요</p>
+          <p className="text-muted-foreground">
+            활동을 추가하여 루틴을 만들어보세요
+          </p>
         </div>
       )}
 
@@ -87,16 +99,12 @@ function ActivitiesSection({ control }) {
             {/* 시작 시간 */}
             <FormField
               control={control}
-              name={`activities.${index}.startTime`}
+              name={`activities.${index}.setTime`}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>시작 시간</FormLabel>
                   <FormControl>
-                    <Input
-                      type="time"
-                      placeholder="HH:MM"
-                      {...field}
-                    />
+                    <Input type="time" placeholder="HH:MM" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -106,7 +114,7 @@ function ActivitiesSection({ control }) {
             {/* 중요도 표시 */}
             <FormField
               control={control}
-              name={`activities.${index}.importance`}
+              name={`activities.${index}.activityImp`}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-1">
@@ -117,7 +125,7 @@ function ActivitiesSection({ control }) {
                     <div className="pt-1">
                       <StarRating
                         control={control}
-                        name={`activities.${index}.importance`}
+                        name={`activities.${index}.activityImp`}
                         maxRating={5}
                         required={true}
                       />
@@ -132,7 +140,7 @@ function ActivitiesSection({ control }) {
           {/* 한줄 메모 필드 */}
           <FormField
             control={control}
-            name={`activities.${index}.memo`}
+            name={`activities.${index}.description`}
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center gap-1">
