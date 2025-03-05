@@ -1,35 +1,38 @@
-import "./App.css";
-
 import React from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import TopNavbar from "./topNav/TopNavbar"; // TopNav 컴포넌트 임포트
-import MainPage from "./page/MainPage"; // 메인 페이지 컴포넌트 임포트
-import New from "./page/New";
-import Rank from "./page/Rank";
-import Challenge from "./page/Challenge";
-import Contact from "./page/Contact";
-import Test from "./page/Test";
-import Join from "./page/Join";
-import Login from "./page/Login";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import { ToastProvider } from "@/components/ui/use-toast";
+import { Toaster } from "@/components/ui/toaster";
+import Layout from "./components/layout/Layout";
+import Home from "./pages/Home/Home";
+import Signup from "./pages/Auth/SignUp";
+import Login from "./pages/Auth/Login";
+import RoutineCreator from "./pages/Routine/Create";
 
 const App = () => {
   return (
-    <Router>
-      <div>
-        <TopNavbar /> {/* 탑 메뉴 네비게이션을 모든 페이지에 포함 */}
-        <Routes>
-          <Route path="/" element={<MainPage />} />
-          <Route path="/new" element={<New />} />
-          <Route path="/rank" element={<Rank />} />
-          <Route path="/challenge" element={<Challenge />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/test" element={<Test />} />
-          <Route path="/join" element={<Join />} />
-          <Route path="/login" element={<Login />} />
-          {/* 다른 페이지들을 추가 */}
-        </Routes>
-      </div>
-    </Router>
+    <AuthProvider>
+      <ToastProvider>
+        <Router
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
+          <Layout>
+            <Routes>
+              <Route path="/routine/create3" element={<RoutineCreatePage />} />
+              <Route path="/routine/create2" element={<RoutineCreator2 />} />
+              <Route path="/routine/create" element={<RoutineCreator />} />
+              <Route path="/user/login" element={<Login />} />
+              <Route path="/user/signup" element={<Signup />} />
+              <Route path="/" element={<Home />} />
+            </Routes>
+          </Layout>
+          <Toaster />
+        </Router>
+      </ToastProvider>
+    </AuthProvider>
   );
 };
 

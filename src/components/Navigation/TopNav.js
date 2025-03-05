@@ -1,5 +1,9 @@
+<<<<<<< HEAD
 import {React, useEffect} from 'react';
 import { useApi } from '../../hooks/useApi';
+=======
+import React from 'react';
+>>>>>>> 0b1e81d0442bceaf12b056e397eb0acc662bf24d
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button"
 import { 
@@ -9,7 +13,6 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
 import { ChevronDown } from "lucide-react" 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Bell } from 'lucide-react'
 import { UserNav } from './UserNav'
 
@@ -43,6 +46,7 @@ const NavItem = ({ item }) => {
   )
 }
 
+<<<<<<< HEAD
 const TopNav = () => {
   const { data, loading, error, get } = useApi();
   
@@ -52,9 +56,12 @@ const TopNav = () => {
       }, [get]);
   
 
+=======
+const TopNav = ({ categories }) => {
+>>>>>>> 0b1e81d0442bceaf12b056e397eb0acc662bf24d
   return (
     <div className="h-16 items-center px-4 flex">
-      {/* Logo - 모든 화면에서 보임 */}
+      {/* 로고 - 모든 화면에서 보임 */}
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
           <span className="text-white font-semibold">G</span>
@@ -62,7 +69,7 @@ const TopNav = () => {
         <span className="font-semibold text-lg">GodLife</span>
       </div>
 
-      {/* Desktop Navigation - 데스크톱에서만 보임 */}
+      {/* 데스크톱 네비게이션 - 데스크톱에서만 보임 */}
       <nav className="hidden md:flex flex-1 ml-8">
         <ul className="flex items-center gap-6">
           {data && data.map((item, index) => (
@@ -73,7 +80,7 @@ const TopNav = () => {
         </ul>
       </nav>
 
-      {/* Actions - 모든 화면에서 보임 */}
+      {/* 액션 버튼 - 모든 화면에서 보임 */}
       <div className="flex items-center gap-2 ml-auto mr-14 md:mr-0">
         <Button variant="ghost" size="icon">
           <Bell className="h-5 w-5" />

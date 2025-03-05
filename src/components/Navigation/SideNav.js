@@ -1,6 +1,10 @@
+<<<<<<< HEAD
 // components/Navigation/SideNav.js
 import {React, useEffect} from 'react';
 import { useApi } from '../../hooks/useApi';
+=======
+import React from 'react';
+>>>>>>> 0b1e81d0442bceaf12b056e397eb0acc662bf24d
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
@@ -36,8 +40,9 @@ const MenuItem = ({ item }) => {
                   key={subItem.href}
                   variant="ghost"
                   className="w-full justify-start text-sm"
+                  onClick={() => navigate(subItem.href)}
                 >
-                  {subItem.label}
+                  {subItem.label || subItem.topName}
                 </Button>
               ))}
             </div>
@@ -52,7 +57,7 @@ const MenuItem = ({ item }) => {
       <AccordionItem value={item.topName} className="border-b">
         <AccordionTrigger 
           className="py-2 hover:no-underline"
-          hasSubmenu={false}  // 이 prop을 통해 chevron 숨김
+          hasSubmenu={false}
           onClick={() => navigate(item.topAddr)}
         >
           {item.topName}
@@ -61,6 +66,7 @@ const MenuItem = ({ item }) => {
     </Accordion>
   )
 }
+<<<<<<< HEAD
 const SideNav = () => {
   const { data, loading, error, get } = useApi();
     
@@ -68,7 +74,10 @@ const SideNav = () => {
     // 이제 try-catch가 필요 없음
     get('/categories/topMenu');
 }, [get]);
+=======
+>>>>>>> 0b1e81d0442bceaf12b056e397eb0acc662bf24d
 
+const SideNav = ({ categories }) => {
   return (
     <div className="md:hidden fixed top-4 right-4 z-50">
       <Sheet>
@@ -84,8 +93,13 @@ const SideNav = () => {
             </SheetHeader>
             <nav className="flex-1 overflow-y-auto px-6 py-4">
               <ul className="space-y-3">
+<<<<<<< HEAD
                 {data && data.map((item, index) => (
                   <li key={item.href}>
+=======
+                {categories.map((item, index) => (
+                  <li key={item.topAddr || index}>
+>>>>>>> 0b1e81d0442bceaf12b056e397eb0acc662bf24d
                     <MenuItem item={item} />
                   </li>
                 ))}
