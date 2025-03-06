@@ -8,6 +8,7 @@ import Home from "./pages/Home/Home";
 import Signup from "./pages/Auth/SignUp";
 import Login from "./pages/Auth/Login";
 import RoutineCreator from "./pages/Routine/Create";
+import RoutineDetailPage from "./pages/Routine/Detail";
 
 // 인증이 필요한 라우트를 위한 컴포넌트
 function AppRoutes() {
@@ -22,6 +23,7 @@ function AppRoutes() {
   
   return (
     <Routes>
+      <Route path="/routine/detail/:planIdx" element={<RoutineDetailPage />} />
       <Route
         path="/routine/create"
         element={isAuthenticated ? <RoutineCreator /> : <Navigate to="/user/login" replace />}

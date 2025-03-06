@@ -1,6 +1,6 @@
 // src/components/routine/create/RoutineForm/ActivitiesSection.js
 import React, { useState } from "react";
-import { useFieldArray, useFormState  } from "react-hook-form";
+import { useFieldArray, useFormState } from "react-hook-form";
 import { Plus, Clock, Trash2, AlarmClock, FileText, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import StarRating from "@/components/common/starRating/StarRating";
 import ActivitiesTimeline from "./ActivitiesTimeline";
 
-function ActivitiesSection({ control }) {
+function ActivitiesSection({ control, readOnly = false }) {
   const { fields, append, remove } = useFieldArray({
     control,
     name: "activities",
@@ -44,17 +44,20 @@ function ActivitiesSection({ control }) {
 
   return (
     <div className="space-y-4">
-      {/* 헤더 제거하고 버튼만 오른쪽 정렬 */}
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          size="sm"
-          onClick={addActivity}
-          className="flex items-center gap-1 bg-blue-500"
-        >
-          <Plus className="h-4 w-4" />새 활동 추가
-        </Button>
-      </div>
+      {/* 읽기 모드가 아닐 때만 추가 버튼 표시 */}
+      {!readOnly && (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            size="sm"
+            onClick={addActivity}
+            className="flex items-center gap-1 bg-blue-500"
+          >
+            <Plus className="h-4 w-4" />새 활동 추가
+          </Button>
+        </div>
+      )}
+
       {/* 에러 메시지 표시 */}
       {formState.errors.activities && (
         <div className="text-red-500 text-sm mt-2">
@@ -66,7 +69,9 @@ function ActivitiesSection({ control }) {
         <div className="text-center py-8 border border-dashed rounded-lg bg-muted/50">
           <AlarmClock className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
           <p className="text-muted-foreground">
-            활동을 추가하여 루틴을 만들어보세요
+            {readOnly
+              ? "등록된 활동이 없습니다"
+              : "활동을 추가하여 루틴을 만들어보세요"}
           </p>
         </div>
       )}
@@ -75,16 +80,18 @@ function ActivitiesSection({ control }) {
         <Card key={field.id} className="p-4 relative">
           <div className="flex justify-between items-center mb-2">
             <Badge className="bg-blue-500">{index + 1}번 활동</Badge>
-            {/* 삭제 버튼을 오른쪽으로 이동 */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2"
-              onClick={() => remove(index)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {/* 읽기 모드가 아닐 때만 삭제 버튼 표시 */}
+            {!readOnly && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2"
+                onClick={() => remove(index)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -96,7 +103,12 @@ function ActivitiesSection({ control }) {
                 <FormItem className="flex-1">
                   <FormLabel>활동 이름</FormLabel>
                   <FormControl>
-                    <Input placeholder="예: 아침 운동, 독서 등" {...field} />
+                    <Input
+                      placeholder="예: 아침 운동, 독서 등"
+                      {...field}
+                      disabled={readOnly}
+                      readOnly={readOnly}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -111,7 +123,13 @@ function ActivitiesSection({ control }) {
                 <FormItem>
                   <FormLabel>시작 시간</FormLabel>
                   <FormControl>
-                    <Input type="time" placeholder="HH:MM" {...field} />
+                    <Input
+                      type="time"
+                      placeholder="HH:MM"
+                      {...field}
+                      disabled={readOnly}
+                      readOnly={readOnly}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -135,6 +153,7 @@ function ActivitiesSection({ control }) {
                         name={`activities.${index}.activityImp`}
                         maxRating={5}
                         required={true}
+                        readOnly={readOnly}
                       />
                     </div>
                   </FormControl>
@@ -158,6 +177,8 @@ function ActivitiesSection({ control }) {
                   <Input
                     placeholder="활동에 대한 간단한 메모를 남겨보세요"
                     {...field}
+                    disabled={readOnly}
+                    readOnly={readOnly}
                   />
                 </FormControl>
                 <FormMessage />
