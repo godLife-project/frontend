@@ -28,6 +28,7 @@ export default function BadgeSelector({
   availableIcons = [], // 카테고리별 사용 가능한 아이콘 리스트
   maxVisible = 10,
   required = false,
+  allowCustomInput = true, // 직접 입력 기능 활성화 여부 (기본값: true)
   onCustomJobSelected = () => {}, // 직접 입력된 직업 정보를 부모 컴포넌트에 전달하기 위한 콜백 함수
   onChange,
   readOnly = false,
@@ -36,6 +37,7 @@ export default function BadgeSelector({
   const [options, setOptions] = useState(initialOptions);
   // 직접 입력 상태 관리
   const [isCustomInputActive, setIsCustomInputActive] = useState(false);
+  const [customInputError, setCustomInputError] = useState(null); // 에러 메시지 상태 추가
   const [customValue, setCustomValue] = useState("");
   const [selectedIconKey, setSelectedIconKey] = useState(
     availableIcons.length > 0 ? availableIcons[0].iconKey : "briefcase"
@@ -83,14 +85,27 @@ export default function BadgeSelector({
 
   // 커스텀 옵션 추가 함수
   const addCustomOption = (field) => {
-    if (!customValue.trim()) return;
+    // 입력값이 비어있는 경우
+    if (!customValue.trim()) {
+      // 입력 필드로 포커스
+      if (customInputRef.current) {
+        customInputRef.current.focus();
+      }
+
+      // 입력 필드에 에러 메시지 표시 (optional)
+      setCustomInputError("직업명을 입력해주세요");
+      return;
+    }
+
+    // 에러 메시지 초기화
+    setCustomInputError(null);
 
     // 선택된 아이콘에 맞는 색상 가져오기
     const iconColor = getColorForIcon(selectedIconKey);
 
-    // 새로운 옵션 생성 (idx는 항상 100으로 고정)
+    // 새로운 옵션 생성 (idx는 항상 999 고정)
     const newOption = {
-      idx: 100, // 직접 입력시 무조건 100으로 고정
+      idx: 999, // 직접 입력시 무조건 999 고정
       name: customValue,
       iconKey: selectedIconKey,
       color: iconColor,
@@ -101,7 +116,7 @@ export default function BadgeSelector({
     setOptions((prev) => [...prev, newOption]);
 
     // 추가된 옵션 선택
-    field.onChange(100); // 직접 입력 시 무조건 100으로 고정
+    field.onChange(999); // 직접 입력 시 무조건 999 고정
 
     // 부모 컴포넌트로 jobEtcCateDTO 데이터 전달
     onCustomJobSelected({
@@ -111,7 +126,7 @@ export default function BadgeSelector({
 
     // onChange 콜백이 있으면 호출
     if (onChange) {
-      onChange(100);
+      onChange(999);
     }
 
     // 상태 초기화
@@ -147,11 +162,10 @@ export default function BadgeSelector({
                         : field.value === option.idx
                     }
                     onSelect={() => {
-                      // 읽기 전용 모드에서는 선택 작동 안함
-                      if (readOnly) return;
-
-                      // 기존 선택 로직
+                      // 일반 옵션 선택 시에는 단순히 idx 값만 전달
                       field.onChange(option.idx);
+
+                      // 일반 옵션 선택 시 jobEtcCateDTO null로 설정 (100이 아닌 경우)
                       if (option.idx !== 100) {
                         onCustomJobSelected(null);
                       }
@@ -165,27 +179,213 @@ export default function BadgeSelector({
                 ))}
 
                 {/* 드롭다운 메뉴 */}
-                {!readOnly && (
-                  <DropdownMenu>
-                    {/* 기존 드롭다운 메뉴 내용 */}
-                    <DropdownMenuTrigger
-                      className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-full transition-all",
-                        "border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        // 기존 스타일 로직 유지
-                      )}
-                      // 기존 스타일 코드 유지
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-full transition-all",
+                      "border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
+                      field.value &&
+                        options.find(
+                          (opt) =>
+                            opt.idx ===
+                            (field.value &&
+                            typeof field.value === "object" &&
+                            field.value.value !== undefined
+                              ? field.value.value
+                              : field.value)
+                        ) &&
+                        !visibleOptions.find(
+                          (opt) =>
+                            opt.idx ===
+                            (field.value &&
+                            typeof field.value === "object" &&
+                            field.value.value !== undefined
+                              ? field.value.value
+                              : field.value)
+                        )
+                        ? "bg-blue-500 text-white border-transparent"
+                        : "bg-white text-gray-800 border-gray-200 hover:bg-gray-50"
+                    )}
+                    style={
+                      field.value &&
+                      options.find(
+                        (opt) =>
+                          opt.idx ===
+                          (field.value &&
+                          typeof field.value === "object" &&
+                          field.value.value !== undefined
+                            ? field.value.value
+                            : field.value)
+                      ) &&
+                      !visibleOptions.find(
+                        (opt) =>
+                          opt.idx ===
+                          (field.value &&
+                          typeof field.value === "object" &&
+                          field.value.value !== undefined
+                            ? field.value.value
+                            : field.value)
+                      )
+                        ? {
+                            backgroundColor:
+                              options.find(
+                                (opt) =>
+                                  opt.idx ===
+                                  (field.value &&
+                                  typeof field.value === "object" &&
+                                  field.value.value !== undefined
+                                    ? field.value.value
+                                    : field.value)
+                              ).color || "#3B82F6",
+                            color: "white",
+                            borderColor: "transparent",
+                          }
+                        : {}
+                    }
+                  >
+                    {field.value &&
+                    options.find(
+                      (opt) =>
+                        opt.idx ===
+                        (field.value &&
+                        typeof field.value === "object" &&
+                        field.value.value !== undefined
+                          ? field.value.value
+                          : field.value)
+                    ) &&
+                    !visibleOptions.find(
+                      (opt) =>
+                        opt.idx ===
+                        (field.value &&
+                        typeof field.value === "object" &&
+                        field.value.value !== undefined
+                          ? field.value.value
+                          : field.value)
+                    ) ? (
+                      <>
+                        {renderIcon(
+                          options.find(
+                            (opt) =>
+                              opt.idx ===
+                              (field.value &&
+                              typeof field.value === "object" &&
+                              field.value.value !== undefined
+                                ? field.value.value
+                                : field.value)
+                          ).iconKey,
+                          18,
+                          "",
+                          true,
+                          options.find(
+                            (opt) =>
+                              opt.idx ===
+                              (field.value &&
+                              typeof field.value === "object" &&
+                              field.value.value !== undefined
+                                ? field.value.value
+                                : field.value)
+                          ).color
+                        )}
+                        <span>
+                          {
+                            options.find(
+                              (opt) =>
+                                opt.idx ===
+                                (field.value &&
+                                typeof field.value === "object" &&
+                                field.value.value !== undefined
+                                  ? field.value.value
+                                  : field.value)
+                            ).name
+                          }
+                        </span>
+                      </>
+                    ) : (
+                      <span>
+                        {dropdownOptions.length > 0 ? "기타 옵션" : "직접 입력"}
+                      </span>
+                    )}
+                    <ChevronDown className="h-4 w-4 ml-1" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="bg-white border shadow-md rounded-md p-1"
+                  >
+                    {/* 추가 옵션 목록 */}
+                    {dropdownOptions.map((option) => (
+                      <DropdownMenuItem
+                        key={option.idx}
+                        onClick={() => {
+                          field.onChange(option.idx);
+
+                          // 일반 옵션 선택 시 jobEtcCateDTO null로 설정 (100이 아닌 경우)
+                          if (option.idx !== 100) {
+                            onCustomJobSelected(null);
+                          }
+
+                          // onChange 콜백이 있으면 호출
+                          if (onChange) {
+                            onChange(option.idx);
+                          }
+                        }}
+                        className={cn(
+                          "cursor-pointer flex items-center px-2 py-1.5 rounded hover:bg-blue-100 transition-colors"
+                        )}
+                        style={
+                          (
+                            field.value &&
+                            typeof field.value === "object" &&
+                            field.value.value !== undefined
+                              ? field.value.value === option.idx
+                              : field.value === option.idx
+                          )
+                            ? {
+                                backgroundColor: `${option.color}20`,
+                                color: option.color,
+                              }
+                            : {}
+                        }
+                      >
+                        {renderIcon(
+                          option.iconKey,
+                          18,
+                          "mr-2",
+                          field.value &&
+                            typeof field.value === "object" &&
+                            field.value.value !== undefined
+                            ? field.value.value === option.idx
+                            : field.value === option.idx,
+                          option.color
+                        )}
+                        <span>{option.name}</span>
+                        {(field.value &&
+                        typeof field.value === "object" &&
+                        field.value.value !== undefined
+                          ? field.value.value === option.idx
+                          : field.value === option.idx) && (
+                          <Check
+                            className="ml-auto h-4 w-4"
+                            style={{ color: option.color }}
+                          />
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+
+                    {/* 구분선 */}
+                    {dropdownOptions.length > 0 && (
+                      <DropdownMenuSeparator className="my-1 border-t border-gray-300" />
+                    )}
+
+                    {/* 직접 입력 옵션 */}
+                    <DropdownMenuItem
+                      onClick={() => setIsCustomInputActive(true)}
+                      className="cursor-pointer flex items-center px-2 py-1.5 rounded hover:bg-blue-50 transition-colors"
                     >
-                      {/* 기존 트리거 내용 */}
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="bg-white border shadow-md rounded-md p-1"
-                    >
-                      {/* 기존 드롭다운 메뉴 내용 */}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                      <Plus className="h-4 w-4 mr-2" />
+                      <span>직접 입력</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 {/* 직접 입력 필드 */}
                 {isCustomInputActive && !readOnly && (
@@ -247,9 +447,14 @@ export default function BadgeSelector({
                       <Input
                         ref={customInputRef}
                         value={customValue}
-                        onChange={(e) => setCustomValue(e.target.value)}
-                        placeholder="직접 입력하세요"
-                        className="flex-grow"
+                        onChange={(e) => {
+                          setCustomValue(e.target.value);
+                          if (customInputError) setCustomInputError(null); // 입력 시 에러 메시지 제거
+                        }}
+                        placeholder="직업명을 입력하세요"
+                        className={`flex-grow ${
+                          customInputError ? "border-red-500" : ""
+                        }`} // 에러가 있을 때 테두리 색 변경
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
@@ -257,9 +462,17 @@ export default function BadgeSelector({
                           } else if (e.key === "Escape") {
                             setIsCustomInputActive(false);
                             setCustomValue("");
+                            setCustomInputError(null); // 에러 메시지 초기화
                           }
                         }}
                       />
+
+                      {/* 에러 메시지 표시 */}
+                      {customInputError && (
+                        <div className="text-red-500 text-sm mt-1 ml-1">
+                          {customInputError}
+                        </div>
+                      )}
                     </div>
                     <div className="flex flex-col gap-2">
                       <div className="flex gap-2 justify-end">

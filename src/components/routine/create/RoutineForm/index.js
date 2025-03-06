@@ -1,6 +1,7 @@
 // src/components/routine/RoutineForm/index.js
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
@@ -31,6 +32,8 @@ export default function RoutineForm({
   const [isLoading, setIsLoading] = useState(true);
   const [jobIcons, setJobIcons] = useState([]);
   const [targetIcons, setTargetIcons] = useState([]);
+
+  const navigate = useNavigate();
 
   // 기본값 설정 - 읽기 전용 모드에서는 routineData 사용
   const defaultValues = routineData || {
@@ -99,6 +102,7 @@ export default function RoutineForm({
   }, []);
 
   const handleJobChange = (jobIdx) => {
+    // jobIdx가 100이 아닌 경우(일반 옵션 선택) jobEtcCateDTO를 null로 설정
     if (jobIdx !== 100) {
       form.setValue("jobEtcCateDTO", null);
     }
@@ -123,6 +127,7 @@ export default function RoutineForm({
       isActive: 0,
     };
 
+    // jobIdx가 100이 아니고 jobEtcCateDTO가 설정된 경우 null로 변경
     if (requestData.jobIdx !== 100 && requestData.jobEtcCateDTO) {
       requestData.jobEtcCateDTO = null;
     }
@@ -136,6 +141,11 @@ export default function RoutineForm({
       .then((response) => {
         console.log("루틴 생성 성공:", response.data);
         alert("루틴이 성공적으로 생성되었습니다!");
+
+        // 예: 다른 페이지로 이동
+        // window.location.href = "/routines";
+        // 또는 React Router 사용 시
+        // navigate("/routines");
       })
       .catch((error) => {
         console.error("루틴 생성 실패:", error);
@@ -294,8 +304,7 @@ export default function RoutineForm({
                 options={targets}
                 availableIcons={jobIcons}
                 maxVisible={10}
-                required={!isReadOnly}
-                readOnly={isReadOnly}
+                required={true}
               />
             )}
           </CardContent>
