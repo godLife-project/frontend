@@ -1,6 +1,7 @@
 // src/components/routine/create/RoutineForm/index.js
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
@@ -26,7 +27,8 @@ export default function RoutineForm() {
   const [targets, setTargets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [jobIcons, setJobIcons] = useState([]); // 직업용 아이콘 리스트
-  const [targetIcons, setTargetIcons] = useState([]); // 관심사용 아이콘 리스트
+
+  const navigate = useNavigate();
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -92,8 +94,8 @@ export default function RoutineForm() {
 
   // 직업 변경 감지 핸들러
   const handleJobChange = (jobIdx) => {
-    // jobIdx가 100이 아닌 경우(일반 옵션 선택) jobEtcCateDTO를 null로 설정
-    if (jobIdx !== 100) {
+    // jobIdx가 999 아닌 경우(일반 옵션 선택) jobEtcCateDTO를 null로 설정
+    if (jobIdx !== 999) {
       form.setValue('jobEtcCateDTO', null);
     }
   };
@@ -117,8 +119,8 @@ export default function RoutineForm() {
       isActive: 0, // 기본적으로 생성된 루틴은 비활성화 상태로 설정
     };
     
-    // jobIdx가 100이 아니고 jobEtcCateDTO가 설정된 경우 null로 변경
-    if (requestData.jobIdx !== 100 && requestData.jobEtcCateDTO) {
+    // jobIdx가 999 아니고 jobEtcCateDTO가 설정된 경우 null로 변경
+    if (requestData.jobIdx !== 999 && requestData.jobEtcCateDTO) {
       requestData.jobEtcCateDTO = null;
     }
     
@@ -137,7 +139,7 @@ export default function RoutineForm() {
         // 예: 다른 페이지로 이동
         // window.location.href = "/routines";
         // 또는 React Router 사용 시
-        // navigate("/routines");
+        navigate("/routines");
       })
       .catch((error) => {
         console.error("루틴 생성 실패:", error);
@@ -285,6 +287,7 @@ export default function RoutineForm() {
                 options={targets}
                 availableIcons={jobIcons}  // 관심사용 아이콘 리스트 전달
                 maxVisible={10}
+                allowCustomInput={false} 
                 required={true}
               />
             )}
