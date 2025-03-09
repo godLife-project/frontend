@@ -102,14 +102,16 @@ export default function RoutineForm({
   }, []);
 
   const handleJobChange = (jobIdx) => {
-    // jobIdx가 100이 아닌 경우(일반 옵션 선택) jobEtcCateDTO를 null로 설정
-    if (jobIdx !== 100) {
+    // jobIdx가 999가 아닌 경우(일반 옵션 선택) jobEtcCateDTO를 null로 설정
+    if (jobIdx !== 999) {
       form.setValue("jobEtcCateDTO", null);
     }
   };
 
   const handleCustomJobSelected = (jobEtcData) => {
     if (jobEtcData) {
+      // 직접 입력 시에는 jobIdx를 999로 설정
+      form.setValue("jobIdx", 999);
       form.setValue("jobEtcCateDTO", jobEtcData);
     }
   };
@@ -127,8 +129,8 @@ export default function RoutineForm({
       isActive: 0,
     };
 
-    // jobIdx가 100이 아니고 jobEtcCateDTO가 설정된 경우 null로 변경
-    if (requestData.jobIdx !== 100 && requestData.jobEtcCateDTO) {
+    // jobIdx가 999가 아니고 jobEtcCateDTO가 설정된 경우 null로 변경
+    if (requestData.jobIdx !== 999 && requestData.jobEtcCateDTO) {
       requestData.jobEtcCateDTO = null;
     }
 
@@ -213,11 +215,13 @@ export default function RoutineForm({
                 onCustomJobSelected={handleCustomJobSelected}
                 onChange={handleJobChange}
                 readOnly={isReadOnly}
+                customIdxValue={999} // 직접 입력 시 사용할 인덱스 값 지정
               />
             )}
           </CardContent>
         </Card>
 
+        {/* 나머지 코드는 동일 */}
         {/* 루틴 지속 기간과 중요도 섹션 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* 루틴 지속 기간 섹션 */}
@@ -305,6 +309,7 @@ export default function RoutineForm({
                 availableIcons={jobIcons}
                 maxVisible={10}
                 required={true}
+                readOnly={isReadOnly}
               />
             )}
           </CardContent>

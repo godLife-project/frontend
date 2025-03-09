@@ -32,6 +32,7 @@ export default function BadgeSelector({
   onCustomJobSelected = () => {}, // 직접 입력된 직업 정보를 부모 컴포넌트에 전달하기 위한 콜백 함수
   onChange,
   readOnly = false,
+  customIdxValue = 999, // 직접 입력 시 사용할 인덱스 값 (기본값: 999)
 }) {
   // 커스텀 옵션을 포함한 전체 옵션 상태
   const [options, setOptions] = useState(initialOptions);
@@ -103,9 +104,9 @@ export default function BadgeSelector({
     // 선택된 아이콘에 맞는 색상 가져오기
     const iconColor = getColorForIcon(selectedIconKey);
 
-    // 새로운 옵션 생성 (idx는 항상 999 고정)
+    // 새로운 옵션 생성 (idx는 항상 customIdxValue 값으로 설정: 기본값 999)
     const newOption = {
-      idx: 999, // 직접 입력시 무조건 999 고정
+      idx: customIdxValue, // 직접 입력시 customIdxValue 값(기본값 999) 사용
       name: customValue,
       iconKey: selectedIconKey,
       color: iconColor,
@@ -116,7 +117,7 @@ export default function BadgeSelector({
     setOptions((prev) => [...prev, newOption]);
 
     // 추가된 옵션 선택
-    field.onChange(999); // 직접 입력 시 무조건 999 고정
+    field.onChange(customIdxValue);
 
     // 부모 컴포넌트로 jobEtcCateDTO 데이터 전달
     onCustomJobSelected({
@@ -126,7 +127,7 @@ export default function BadgeSelector({
 
     // onChange 콜백이 있으면 호출
     if (onChange) {
-      onChange(999);
+      onChange(customIdxValue);
     }
 
     // 상태 초기화
@@ -165,8 +166,8 @@ export default function BadgeSelector({
                       // 일반 옵션 선택 시에는 단순히 idx 값만 전달
                       field.onChange(option.idx);
 
-                      // 일반 옵션 선택 시 jobEtcCateDTO null로 설정 (100이 아닌 경우)
-                      if (option.idx !== 100) {
+                      // 일반 옵션 선택 시 jobEtcCateDTO null로 설정 (customIdxValue가 아닌 경우)
+                      if (option.idx !== customIdxValue) {
                         onCustomJobSelected(null);
                       }
                       if (onChange) {
@@ -318,8 +319,8 @@ export default function BadgeSelector({
                         onClick={() => {
                           field.onChange(option.idx);
 
-                          // 일반 옵션 선택 시 jobEtcCateDTO null로 설정 (100이 아닌 경우)
-                          if (option.idx !== 100) {
+                          // 일반 옵션 선택 시 jobEtcCateDTO null로 설정 (customIdxValue가 아닌 경우)
+                          if (option.idx !== customIdxValue) {
                             onCustomJobSelected(null);
                           }
 
@@ -372,18 +373,20 @@ export default function BadgeSelector({
                     ))}
 
                     {/* 구분선 */}
-                    {dropdownOptions.length > 0 && (
+                    {dropdownOptions.length > 0 && allowCustomInput && (
                       <DropdownMenuSeparator className="my-1 border-t border-gray-300" />
                     )}
 
-                    {/* 직접 입력 옵션 */}
-                    <DropdownMenuItem
-                      onClick={() => setIsCustomInputActive(true)}
-                      className="cursor-pointer flex items-center px-2 py-1.5 rounded hover:bg-blue-50 transition-colors"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      <span>직접 입력</span>
-                    </DropdownMenuItem>
+                    {/* 직접 입력 옵션 - allowCustomInput이 true일 때만 표시 */}
+                    {allowCustomInput && !readOnly && (
+                      <DropdownMenuItem
+                        onClick={() => setIsCustomInputActive(true)}
+                        className="cursor-pointer flex items-center px-2 py-1.5 rounded hover:bg-blue-50 transition-colors"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        <span>직접 입력</span>
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
 
