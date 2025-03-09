@@ -12,6 +12,14 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formSchema } from "./schema";
 import TitleSection from "./TitleSection";
 import BadgeSelector from "@/components/common/badge-selector";
@@ -32,6 +40,9 @@ export default function RoutineForm({
   const [isLoading, setIsLoading] = useState(true);
   const [jobIcons, setJobIcons] = useState([]);
   const [targetIcons, setTargetIcons] = useState([]);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [createdPlanIdx, setCreatedPlanIdx] = useState(null);
+  const [formData, setFormData] = useState(null);
 
   const navigate = useNavigate();
 
@@ -55,6 +66,32 @@ export default function RoutineForm({
     mode: "onSubmit",
   });
 
+  // 토큰 재발급 함수
+  const reissueToken = async () => {
+    try {
+      // 토큰 재발급 요청
+      const response = await axiosInstance.post("/reissue", {});
+
+      if (response.data && response.data.success) {
+        // 새 토큰 저장
+        const newAccessToken = response.data.accessToken;
+        localStorage.setItem("accessToken", newAccessToken);
+
+        console.log("토큰이 성공적으로 재발급되었습니다.");
+        return newAccessToken;
+      } else {
+        throw new Error("토큰 재발급에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("토큰 재발급 오류:", error);
+      // 로그인 페이지로 리다이렉트하거나 다른 처리를 할 수 있음
+      alert("세션이 만료되었습니다. 다시 로그인해주세요.");
+      // 필요시 로그인 페이지로 리다이렉트
+      // navigate("/login");
+      throw error;
+    }
+  };
+
   // 사용자 정보 로드 (읽기 전용 모드가 아닐 때만)
   useEffect(() => {
     if (!isReadOnly) {
@@ -74,13 +111,16 @@ export default function RoutineForm({
 
   // 카테고리 및 아이콘 데이터 로드
   useEffect(() => {
-    setIsLoading(true);
-    Promise.all([
-      axiosInstance.get("/categories/job"),
-      axiosInstance.get("/categories/target"),
-      axiosInstance.get("/categories/icon"),
-    ])
-      .then(([jobsResponse, targetsResponse, jobIconsResponse]) => {
+    const fetchCategories = async () => {
+      setIsLoading(true);
+      try {
+        const [jobsResponse, targetsResponse, jobIconsResponse] =
+          await Promise.all([
+            axiosInstance.get("/categories/job"),
+            axiosInstance.get("/categories/target"),
+            axiosInstance.get("/categories/icon"),
+          ]);
+
         setJobs(jobsResponse.data);
         setTargets(targetsResponse.data);
         setJobIcons(jobIconsResponse.data);
@@ -94,11 +134,14 @@ export default function RoutineForm({
           JSON.stringify(targetsResponse.data)
         );
         localStorage.setItem("jobIcons", JSON.stringify(jobIconsResponse.data));
-      })
-      .catch((error) => console.error("카테고리 데이터 로드 실패:", error))
-      .finally(() => {
+      } catch (error) {
+        console.error("카테고리 데이터 로드 실패:", error);
+      } finally {
         setIsLoading(false);
-      });
+      }
+    };
+
+    fetchCategories();
   }, []);
 
   const handleJobChange = (jobIdx) => {
@@ -116,17 +159,28 @@ export default function RoutineForm({
     }
   };
 
-  function onSubmit(values) {
+  async function onSubmit(values) {
     // 읽기 전용 모드에서는 제출 불가능
     if (isReadOnly) return;
 
     console.log("제출할 데이터:", values);
 
-    const token = localStorage.getItem("accessToken");
+    // 폼 데이터 저장하고 모달 표시
+    setFormData(values);
+    setShowCreateDialog(true);
+
+    // 여기서 API 호출은 하지 않음
+  }
+
+  // 루틴 생성 함수 (모달에서 선택 시 호출)
+  const handleCreateRoutine = async (startNow) => {
+    setShowCreateDialog(false);
+
+    if (!formData) return;
 
     const requestData = {
-      ...values,
-      isActive: 0,
+      ...formData,
+      isActive: startNow ? 1 : 0, // 시작 여부에 따라 isActive 설정
     };
 
     // jobIdx가 999가 아니고 jobEtcCateDTO가 설정된 경우 null로 변경
@@ -134,40 +188,72 @@ export default function RoutineForm({
       requestData.jobEtcCateDTO = null;
     }
 
-    axiosInstance
-      .post("/plan/auth/write", requestData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      .then((response) => {
-        console.log("루틴 생성 성공:", response.data);
-        alert("루틴이 성공적으로 생성되었습니다!");
+    let token = localStorage.getItem("accessToken");
 
-        // 예: 다른 페이지로 이동
-        // window.location.href = "/routines";
-        // 또는 React Router 사용 시
-        // navigate("/routines");
-      })
-      .catch((error) => {
-        console.error("루틴 생성 실패:", error);
-        if (error.response) {
-          console.error("응답 데이터:", error.response.data);
-          console.error("응답 상태:", error.response.status);
-          alert(
-            `루틴 생성 실패: ${
-              error.response.data.message || "알 수 없는 오류가 발생했습니다."
-            }`
+    try {
+      // 루틴 생성 API 호출 함수
+      const createRoutine = async (authToken) => {
+        try {
+          const response = await axiosInstance.post(
+            "/plan/auth/write",
+            requestData,
+            {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+              },
+            }
           );
-        } else if (error.request) {
-          console.error("요청 실패:", error.request);
-          alert("서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.");
-        } else {
-          console.error("오류 메시지:", error.message);
-          alert("요청 중 오류가 발생했습니다.");
+          return response;
+        } catch (error) {
+          // 토큰 만료 오류 (401) 처리
+          if (error.response && error.response.status === 401) {
+            console.log("토큰이 만료되었습니다. 재발급을 시도합니다.");
+            // 토큰 재발급
+            const newToken = await reissueToken();
+            // 새 토큰으로 다시 요청
+            return await axiosInstance.post("/plan/auth/write", requestData, {
+              headers: {
+                Authorization: `Bearer ${newToken}`,
+              },
+            });
+          }
+          // 다른 오류는 그대로 던지기
+          throw error;
         }
-      });
-  }
+      };
+
+      // API 호출
+      const response = await createRoutine(token);
+      console.log("루틴 생성 성공:", response.data);
+
+      // 성공 메시지
+      alert(
+        startNow
+          ? "루틴이 성공적으로 생성되었고 지금부터 시작됩니다!"
+          : "루틴이 성공적으로 생성되었습니다. 나중에 시작할 수 있습니다."
+      );
+
+      // 루틴 목록 페이지로 이동
+      navigate("/routines");
+    } catch (error) {
+      console.error("루틴 생성 실패:", error);
+      if (error.response) {
+        console.error("응답 데이터:", error.response.data);
+        console.error("응답 상태:", error.response.status);
+        alert(
+          `루틴 생성 실패: ${
+            error.response.data.message || "알 수 없는 오류가 발생했습니다."
+          }`
+        );
+      } else if (error.request) {
+        console.error("요청 실패:", error.request);
+        alert("서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.");
+      } else {
+        console.error("오류 메시지:", error.message);
+        alert("요청 중 오류가 발생했습니다.");
+      }
+    }
+  };
 
   return (
     <Form {...form}>
@@ -221,7 +307,6 @@ export default function RoutineForm({
           </CardContent>
         </Card>
 
-        {/* 나머지 코드는 동일 */}
         {/* 루틴 지속 기간과 중요도 섹션 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* 루틴 지속 기간 섹션 */}
@@ -355,6 +440,30 @@ export default function RoutineForm({
           </Button>
         )}
       </form>
+
+      {/* 루틴 시작 확인 다이얼로그 */}
+      {/* 루틴 시작 확인 다이얼로그 */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>루틴 생성</DialogTitle>
+            <DialogDescription>
+              루틴을 생성하고 바로 시작하시겠습니까?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex items-center justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => handleCreateRoutine(false)}
+            >
+              아니오, 나중에 시작할게요
+            </Button>
+            <Button onClick={() => handleCreateRoutine(true)}>
+              예, 지금 시작합니다
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Form>
   );
 }
