@@ -9,6 +9,8 @@ import { formSchema } from "./schema";
 import useFormSections from "./hooks/useFormSections";
 import CreateRoutineDialog from "./dialogs/CreateRoutineDialog";
 import axiosInstance from "../../../../api/axiosInstance";
+// utils 함수 import
+import { reissueToken } from "../../../../utils/routineUtils";
 
 export default function RoutineForm({
   isReadOnly = false,
@@ -40,32 +42,6 @@ export default function RoutineForm({
     defaultValues,
     mode: "onSubmit",
   });
-
-  // 토큰 재발급 함수
-  const reissueToken = async () => {
-    try {
-      // 토큰 재발급 요청
-      const response = await axiosInstance.post("/reissue", {});
-
-      if (response.data && response.data.success) {
-        // 새 토큰 저장
-        const newAccessToken = response.data.accessToken;
-        localStorage.setItem("accessToken", newAccessToken);
-
-        console.log("토큰이 성공적으로 재발급되었습니다.");
-        return newAccessToken;
-      } else {
-        throw new Error("토큰 재발급에 실패했습니다.");
-      }
-    } catch (error) {
-      console.error("토큰 재발급 오류:", error);
-      // 로그인 페이지로 리다이렉트하거나 다른 처리를 할 수 있음
-      alert("세션이 만료되었습니다. 다시 로그인해주세요.");
-      // 필요시 로그인 페이지로 리다이렉트
-      // navigate("/login");
-      throw error;
-    }
-  };
 
   // 사용자 정보 로드 (읽기 전용 모드가 아닐 때만)
   useEffect(() => {
@@ -128,8 +104,8 @@ export default function RoutineForm({
           // 토큰 만료 오류 (401) 처리
           if (error.response && error.response.status === 401) {
             console.log("토큰이 만료되었습니다. 재발급을 시도합니다.");
-            // 토큰 재발급
-            const newToken = await reissueToken();
+            // 토큰 재발급 - utils의 함수 사용
+            const newToken = await reissueToken(navigate);
             // 새 토큰으로 다시 요청
             return await axiosInstance.post("/plan/auth/write", requestData, {
               headers: {

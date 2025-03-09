@@ -135,6 +135,15 @@ export default function BadgeSelector({
     setIsCustomInputActive(false);
   };
 
+  console.log("BadgeSelector props:", {
+    name,
+    allowCustomInput,
+    readOnly,
+  });
+
+  // allowCustomInput이 false이고 드롭다운 옵션이 없는 경우 드롭다운 버튼 숨기기
+  const shouldShowDropdown = dropdownOptions.length > 0 || allowCustomInput;
+
   return (
     <div className="space-y-4">
       <FormField
@@ -179,13 +188,37 @@ export default function BadgeSelector({
                   />
                 ))}
 
-                {/* 드롭다운 메뉴 */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    className={cn(
-                      "flex items-center gap-2 px-4 py-2 rounded-full transition-all",
-                      "border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
-                      field.value &&
+                {/* 드롭다운 메뉴 - allowCustomInput이 false이고 드롭다운 옵션이 없는 경우 숨김 */}
+                {shouldShowDropdown && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-full transition-all",
+                        "border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500",
+                        field.value &&
+                          options.find(
+                            (opt) =>
+                              opt.idx ===
+                              (field.value &&
+                              typeof field.value === "object" &&
+                              field.value.value !== undefined
+                                ? field.value.value
+                                : field.value)
+                          ) &&
+                          !visibleOptions.find(
+                            (opt) =>
+                              opt.idx ===
+                              (field.value &&
+                              typeof field.value === "object" &&
+                              field.value.value !== undefined
+                                ? field.value.value
+                                : field.value)
+                          )
+                          ? "bg-blue-500 text-white border-transparent"
+                          : "bg-white text-gray-800 border-gray-200 hover:bg-gray-50"
+                      )}
+                      style={
+                        field.value &&
                         options.find(
                           (opt) =>
                             opt.idx ===
@@ -204,11 +237,24 @@ export default function BadgeSelector({
                               ? field.value.value
                               : field.value)
                         )
-                        ? "bg-blue-500 text-white border-transparent"
-                        : "bg-white text-gray-800 border-gray-200 hover:bg-gray-50"
-                    )}
-                    style={
-                      field.value &&
+                          ? {
+                              backgroundColor:
+                                options.find(
+                                  (opt) =>
+                                    opt.idx ===
+                                    (field.value &&
+                                    typeof field.value === "object" &&
+                                    field.value.value !== undefined
+                                      ? field.value.value
+                                      : field.value)
+                                ).color || "#3B82F6",
+                              color: "white",
+                              borderColor: "transparent",
+                            }
+                          : {}
+                      }
+                    >
+                      {field.value &&
                       options.find(
                         (opt) =>
                           opt.idx ===
@@ -226,69 +272,9 @@ export default function BadgeSelector({
                           field.value.value !== undefined
                             ? field.value.value
                             : field.value)
-                      )
-                        ? {
-                            backgroundColor:
-                              options.find(
-                                (opt) =>
-                                  opt.idx ===
-                                  (field.value &&
-                                  typeof field.value === "object" &&
-                                  field.value.value !== undefined
-                                    ? field.value.value
-                                    : field.value)
-                              ).color || "#3B82F6",
-                            color: "white",
-                            borderColor: "transparent",
-                          }
-                        : {}
-                    }
-                  >
-                    {field.value &&
-                    options.find(
-                      (opt) =>
-                        opt.idx ===
-                        (field.value &&
-                        typeof field.value === "object" &&
-                        field.value.value !== undefined
-                          ? field.value.value
-                          : field.value)
-                    ) &&
-                    !visibleOptions.find(
-                      (opt) =>
-                        opt.idx ===
-                        (field.value &&
-                        typeof field.value === "object" &&
-                        field.value.value !== undefined
-                          ? field.value.value
-                          : field.value)
-                    ) ? (
-                      <>
-                        {renderIcon(
-                          options.find(
-                            (opt) =>
-                              opt.idx ===
-                              (field.value &&
-                              typeof field.value === "object" &&
-                              field.value.value !== undefined
-                                ? field.value.value
-                                : field.value)
-                          ).iconKey,
-                          18,
-                          "",
-                          true,
-                          options.find(
-                            (opt) =>
-                              opt.idx ===
-                              (field.value &&
-                              typeof field.value === "object" &&
-                              field.value.value !== undefined
-                                ? field.value.value
-                                : field.value)
-                          ).color
-                        )}
-                        <span>
-                          {
+                      ) ? (
+                        <>
+                          {renderIcon(
                             options.find(
                               (opt) =>
                                 opt.idx ===
@@ -297,98 +283,127 @@ export default function BadgeSelector({
                                 field.value.value !== undefined
                                   ? field.value.value
                                   : field.value)
-                            ).name
-                          }
+                            ).iconKey,
+                            18,
+                            "",
+                            true,
+                            options.find(
+                              (opt) =>
+                                opt.idx ===
+                                (field.value &&
+                                typeof field.value === "object" &&
+                                field.value.value !== undefined
+                                  ? field.value.value
+                                  : field.value)
+                            ).color
+                          )}
+                          <span>
+                            {
+                              options.find(
+                                (opt) =>
+                                  opt.idx ===
+                                  (field.value &&
+                                  typeof field.value === "object" &&
+                                  field.value.value !== undefined
+                                    ? field.value.value
+                                    : field.value)
+                              ).name
+                            }
+                          </span>
+                        </>
+                      ) : (
+                        <span>
+                          {dropdownOptions.length > 0
+                            ? "기타 옵션"
+                            : allowCustomInput
+                            ? "직접 입력"
+                            : ""}
                         </span>
-                      </>
-                    ) : (
-                      <span>
-                        {dropdownOptions.length > 0 ? "기타 옵션" : "직접 입력"}
-                      </span>
-                    )}
-                    <ChevronDown className="h-4 w-4 ml-1" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="bg-white border shadow-md rounded-md p-1"
-                  >
-                    {/* 추가 옵션 목록 */}
-                    {dropdownOptions.map((option) => (
-                      <DropdownMenuItem
-                        key={option.idx}
-                        onClick={() => {
-                          field.onChange(option.idx);
+                      )}
+                      <ChevronDown className="h-4 w-4 ml-1" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="bg-white border shadow-md rounded-md p-1"
+                    >
+                      {/* 추가 옵션 목록 */}
+                      {dropdownOptions.map((option) => (
+                        <DropdownMenuItem
+                          key={option.idx}
+                          onClick={() => {
+                            field.onChange(option.idx);
 
-                          // 일반 옵션 선택 시 jobEtcCateDTO null로 설정 (customIdxValue가 아닌 경우)
-                          if (option.idx !== customIdxValue) {
-                            onCustomJobSelected(null);
-                          }
+                            // 일반 옵션 선택 시 jobEtcCateDTO null로 설정 (customIdxValue가 아닌 경우)
+                            if (option.idx !== customIdxValue) {
+                              onCustomJobSelected(null);
+                            }
 
-                          // onChange 콜백이 있으면 호출
-                          if (onChange) {
-                            onChange(option.idx);
+                            // onChange 콜백이 있으면 호출
+                            if (onChange) {
+                              onChange(option.idx);
+                            }
+                          }}
+                          className={cn(
+                            "cursor-pointer flex items-center px-2 py-1.5 rounded hover:bg-blue-100 transition-colors"
+                          )}
+                          style={
+                            (
+                              field.value &&
+                              typeof field.value === "object" &&
+                              field.value.value !== undefined
+                                ? field.value.value === option.idx
+                                : field.value === option.idx
+                            )
+                              ? {
+                                  backgroundColor: `${option.color}20`,
+                                  color: option.color,
+                                }
+                              : {}
                           }
-                        }}
-                        className={cn(
-                          "cursor-pointer flex items-center px-2 py-1.5 rounded hover:bg-blue-100 transition-colors"
-                        )}
-                        style={
-                          (
+                        >
+                          {renderIcon(
+                            option.iconKey,
+                            18,
+                            "mr-2",
                             field.value &&
-                            typeof field.value === "object" &&
-                            field.value.value !== undefined
+                              typeof field.value === "object" &&
+                              field.value.value !== undefined
                               ? field.value.value === option.idx
-                              : field.value === option.idx
-                          )
-                            ? {
-                                backgroundColor: `${option.color}20`,
-                                color: option.color,
-                              }
-                            : {}
-                        }
-                      >
-                        {renderIcon(
-                          option.iconKey,
-                          18,
-                          "mr-2",
-                          field.value &&
-                            typeof field.value === "object" &&
-                            field.value.value !== undefined
+                              : field.value === option.idx,
+                            option.color
+                          )}
+                          <span>{option.name}</span>
+                          {(field.value &&
+                          typeof field.value === "object" &&
+                          field.value.value !== undefined
                             ? field.value.value === option.idx
-                            : field.value === option.idx,
-                          option.color
-                        )}
-                        <span>{option.name}</span>
-                        {(field.value &&
-                        typeof field.value === "object" &&
-                        field.value.value !== undefined
-                          ? field.value.value === option.idx
-                          : field.value === option.idx) && (
-                          <Check
-                            className="ml-auto h-4 w-4"
-                            style={{ color: option.color }}
-                          />
-                        )}
-                      </DropdownMenuItem>
-                    ))}
+                            : field.value === option.idx) && (
+                            <Check
+                              className="ml-auto h-4 w-4"
+                              style={{ color: option.color }}
+                            />
+                          )}
+                        </DropdownMenuItem>
+                      ))}
 
-                    {/* 구분선 */}
-                    {dropdownOptions.length > 0 && allowCustomInput && (
-                      <DropdownMenuSeparator className="my-1 border-t border-gray-300" />
-                    )}
+                      {/* 구분선 */}
+                      {dropdownOptions.length > 0 && allowCustomInput && (
+                        <DropdownMenuSeparator className="my-1 border-t border-gray-300" />
+                      )}
 
-                    {/* 직접 입력 옵션 - allowCustomInput이 true일 때만 표시 */}
-                    {allowCustomInput && !readOnly && (
-                      <DropdownMenuItem
-                        onClick={() => setIsCustomInputActive(true)}
-                        className="cursor-pointer flex items-center px-2 py-1.5 rounded hover:bg-blue-50 transition-colors"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        <span>직접 입력</span>
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      {/* 직접 입력 옵션 - allowCustomInput이 true일 때만 표시 */}
+                      {allowCustomInput && !readOnly && (
+                        <DropdownMenuItem
+                          onClick={() => setIsCustomInputActive(true)}
+                          className="cursor-pointer flex items-center px-2 py-1.5 rounded hover:bg-blue-50 transition-colors"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          <span>직접 입력</span>
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
 
                 {/* 직접 입력 필드 */}
                 {isCustomInputActive && !readOnly && (

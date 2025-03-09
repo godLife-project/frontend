@@ -196,7 +196,7 @@ export default function useFormSections({
     </Card>
   );
 
-  // 관심사 선택 섹션
+  // 관심사 선택 섹션 - 직접 입력 옵션 제거
   const InterestSectionCard = () => (
     <Card className="bg-white">
       <CardHeader>
@@ -222,6 +222,7 @@ export default function useFormSections({
             maxVisible={10}
             required={true}
             readOnly={isReadOnly}
+            allowCustomInput={false} // 직접 입력 기능 비활성화
           />
         )}
       </CardContent>
