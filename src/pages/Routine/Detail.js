@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,16 +17,76 @@ import {
   CheckCircle2,
   MessageSquare,
   Send,
+  Lock,
 } from "lucide-react";
 
 export default function RoutineDetailPage() {
   const { planIdx } = useParams();
+  const navigate = useNavigate();
   const [routineData, setRoutineData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [newReview, setNewReview] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [isPrivateMessage, setIsPrivateMessage] = useState(false);
+
+  useEffect(() => {
+    const fetchRoutineData = async () => {
+      setIsLoading(true);
+      try {
+        // 로그인 여부 확인
+        const userInfoString = localStorage.getItem("userInfo");
+        const token = localStorage.getItem("accessToken");
+
+        if (!userInfoString && !token) {
+          // 로그인하지 않은 상태에서 비공개 루틴에 접근 시도
+          navigate("/user/login");
+          return;
+        }
+
+        // 루틴 데이터 가져오기
+        const response = await axiosInstance.get(`/plan/detail/${planIdx}`);
+        const routineData = response.data.message;
+
+        // 비공개 루틴인 경우 권한 체크
+        if (!routineData.isShared) {
+          // 사용자 정보 가져오기
+          const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
+          const currentUserIdx = userInfo ? userInfo.userIdx : null;
+
+          if (!currentUserIdx) {
+            // 로그인은 되어 있지만 userInfo가 없는 경우
+            navigate("/login");
+            return;
+          }
+
+          // 루틴 작성자와 현재 사용자가 다른 경우
+          if (parseInt(currentUserIdx) !== routineData.userIdx) {
+            setIsPrivateMessage(true);
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        setRoutineData(routineData);
+
+        // 리뷰 데이터 가져오기
+        fetchReviews();
+
+        setError(null);
+      } catch (error) {
+        console.error("루틴 데이터 가져오기 실패:", error);
+        setError("루틴 정보를 불러오는데 실패했습니다.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (planIdx) {
+      fetchRoutineData();
+    }
+  }, [planIdx, navigate]);
 
   // 리뷰 데이터 가져오기
   const fetchReviews = async () => {
@@ -60,37 +120,13 @@ export default function RoutineDetailPage() {
     }
   };
 
-  useEffect(() => {
-    const fetchRoutineData = async () => {
-      setIsLoading(true);
-      try {
-        const response = await axiosInstance.get(`/plan/detail/${planIdx}`);
-        setRoutineData(response.data.message);
-        console.log(response.data.message);
-
-        // 리뷰 데이터 가져오기
-        fetchReviews();
-
-        setError(null);
-      } catch (error) {
-        console.error("루틴 데이터 가져오기 실패:", error);
-        setError("루틴 정보를 불러오는데 실패했습니다.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (planIdx) {
-      fetchRoutineData();
-    }
-  }, [planIdx]);
-
   // 루틴 시작/완료 처리 함수
   const handleRoutineAction = async (action) => {
     try {
       const token = localStorage.getItem("accessToken");
-      // 유저 아이디 가져오기 - 실제로는 로그인 정보에서 가져오거나 상태에서 가져와야 함
-      const userIdx = localStorage.getItem("userIdx") || 1; // 유저 인덱스를 가져오는 방식 수정 필요
+      // 유저 정보에서 userIdx 가져오기
+      const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+      const userIdx = userInfo.userIdx || 1;
 
       // stopNgo API 엔드포인트 사용
       const isActive = action === "start" ? 1 : 0; // 시작하면 1, 끝내면 0
@@ -146,7 +182,8 @@ export default function RoutineDetailPage() {
     setIsSubmittingReview(true);
     try {
       const token = localStorage.getItem("accessToken");
-      const userIdx = localStorage.getItem("userIdx") || 1;
+      const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+      const userIdx = userInfo.userIdx || 1;
 
       // 리뷰 데이터 구성
       const reviewData = {
@@ -203,6 +240,26 @@ export default function RoutineDetailPage() {
     return new Date(dateString).toLocaleDateString("ko-KR", options);
   };
 
+  // 비공개 루틴 메시지 표시
+  if (isPrivateMessage) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 py-8 flex justify-center items-center">
+        <Card className="max-w-md w-full p-8 text-center">
+          <div className="flex flex-col items-center space-y-4">
+            <Lock className="w-16 h-16 text-gray-400" />
+            <h1 className="text-2xl font-bold text-gray-800">
+              비공개 루틴입니다
+            </h1>
+            <p className="text-gray-600">
+              이 루틴은 작성자만 볼 수 있는 비공개 루틴입니다.
+            </p>
+            <Button onClick={() => navigate("/")}>홈으로 돌아가기</Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoading)
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -252,7 +309,12 @@ export default function RoutineDetailPage() {
           <div className="relative">
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-8 pb-16 text-white">
               {/* 루틴 상태 배지 */}
-              <div className="absolute top-4 right-4">
+              <div className="absolute top-4 right-4 flex items-center space-x-2">
+                {!routineData.isShared && (
+                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-700 text-white flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> 비공개
+                  </span>
+                )}
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeStyle()}`}
                 >
