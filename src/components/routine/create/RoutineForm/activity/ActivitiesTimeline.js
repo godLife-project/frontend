@@ -1,9 +1,14 @@
-// src/components/routine/create/RoutineForm/ActivitiesTimeline.js
 import React, { useEffect, useState } from "react";
 import { useWatch } from "react-hook-form";
-import { Clock, AlertCircle, FileText, Star } from "lucide-react";
+import { Clock, AlertCircle, FileText, Star, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-function ActivitiesTimeline({ control }) {
+function ActivitiesTimeline({
+  control,
+  certifiedActivities = {},
+  isActive = false,
+  onCertifyActivity = null, // 인증 기능 추가
+}) {
   const activities = useWatch({
     control,
     name: "activities",
@@ -11,6 +16,16 @@ function ActivitiesTimeline({ control }) {
   });
 
   const [sortedActivities, setSortedActivities] = useState([]);
+
+  // 루틴 상태 디버깅
+  useEffect(() => {
+    console.log("ActivitiesTimeline Props:", {
+      isActive,
+      certifiedActivities,
+      hasActivities: activities && activities.length > 0,
+      hasCallback: !!onCertifyActivity,
+    });
+  }, [isActive, certifiedActivities, activities, onCertifyActivity]);
 
   // 활동을 시간순으로 정렬
   useEffect(() => {
@@ -42,7 +57,11 @@ function ActivitiesTimeline({ control }) {
   // 분 단위를 HH:MM 형식으로 변환
   function formatTime(totalMinutes) {
     // totalMinutes가 undefined, null, NaN 등인 경우 기본값 제공
-    if (totalMinutes === undefined || totalMinutes === null || isNaN(totalMinutes)) {
+    if (
+      totalMinutes === undefined ||
+      totalMinutes === null ||
+      isNaN(totalMinutes)
+    ) {
       return "00:00"; // 또는 다른 기본값
     }
 
@@ -60,10 +79,11 @@ function ActivitiesTimeline({ control }) {
         {[...Array(5)].map((_, i) => (
           <Star
             key={i}
-            className={`h-3 w-3 ${i < importance
+            className={`h-3 w-3 ${
+              i < importance
                 ? "fill-yellow-400 text-yellow-400"
                 : "text-gray-300"
-              }`}
+            }`}
           />
         ))}
       </div>
@@ -75,8 +95,24 @@ function ActivitiesTimeline({ control }) {
     const hasMemo = activity.description && activity.description.trim() !== "";
     const importance = activity.activityImp;
 
+    // 인증 상태 확인 - 인덱스 기반으로 수정
+    const isCertified = certifiedActivities[activity.id] === true;
+
+    console.log(`활동 ${activity.id} 인증 상태:`, {
+      id: activity.id,
+      isActive,
+      isCertified,
+      certifiedStatus: certifiedActivities[activity.id],
+    });
+
     // 중요도에 따른 배경색 (더 연한 색상으로 변경)
-    const getColor = (importance) => {
+    const getColor = (importance, isCertified) => {
+      // 인증 완료된 활동은 연한 녹색 배경으로 표시
+      if (isCertified && isActive) {
+        return "bg-green-50 border-l-4 border-green-500";
+      }
+
+      // 인증되지 않은 경우 기존 중요도별 색상 적용
       switch (importance) {
         case 5:
           return "bg-red-50 border-l-4 border-red-400";
@@ -92,14 +128,30 @@ function ActivitiesTimeline({ control }) {
       }
     };
 
-    const colorClass = getColor(importance);
+    const colorClass = getColor(importance, isCertified);
+
+    // 인증 버튼 클릭 핸들러
+    const handleCertify = () => {
+      if (onCertifyActivity) {
+        console.log(`인증 버튼 클릭: 활동 ID ${activity.id}`);
+        onCertifyActivity(activity.id);
+      }
+    };
 
     return (
       <div className="flex items-start mb-2">
         {/* 시간선 */}
         <div className="flex flex-col items-center mr-4">
-          <div className="rounded-full w-6 h-6 bg-blue-500 text-white flex items-center justify-center text-xs">
-            {index + 1}
+          <div
+            className={`rounded-full w-6 h-6 ${
+              isCertified && isActive ? "bg-green-500" : "bg-blue-500"
+            } text-white flex items-center justify-center text-xs`}
+          >
+            {isCertified && isActive ? (
+              <CheckCircle2 className="h-4 w-4" />
+            ) : (
+              index + 1
+            )}
           </div>
           <div className="text-xs font-medium text-blue-600">
             {activity.formattedStart}
@@ -114,9 +166,18 @@ function ActivitiesTimeline({ control }) {
           className={`${colorClass} rounded-lg p-3 shadow-sm flex-1 hover:shadow-md transition-shadow`}
         >
           <div className="flex justify-between items-start">
-            <h4 className="font-medium text-slate-700">
-              {activity.activityName || "무제 활동"}
-            </h4>
+            <div className="flex items-center gap-2">
+              <h4 className="font-medium text-slate-700">
+                {activity.activityName || "무제 활동"}
+              </h4>
+              {/* 인증 완료 배지 */}
+              {isCertified && isActive && (
+                <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full text-xs flex items-center">
+                  <CheckCircle2 className="h-3 w-3 mr-0.5" />
+                  완료
+                </span>
+              )}
+            </div>
             <div className="flex flex-col items-end">
               <ImportanceStars importance={importance} />
             </div>
@@ -125,12 +186,40 @@ function ActivitiesTimeline({ control }) {
           {hasMemo && (
             <div className="mt-2 text-xs text-slate-600 flex items-center">
               <FileText className="h-3 w-3 mr-1 text-blue-400 flex-shrink-0" />
-              <span className="line-clamp-1">{activity.memo}</span>
+              <span className="line-clamp-1">{activity.description}</span>
+            </div>
+          )}
+
+          {/* 인증 버튼 추가 - 디버깅 정보 포함 */}
+          {isActive && !isCertified && onCertifyActivity && (
+            <div className="mt-2 flex justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-green-600 border-green-200 hover:bg-green-50 flex items-center gap-1 text-xs py-1 h-7"
+                onClick={handleCertify}
+              >
+                <CheckCircle2 className="h-3 w-3" />
+                인증하기
+              </Button>
             </div>
           )}
         </div>
       </div>
     );
+  };
+
+  // 디버깅을 위한 출력
+  const renderActiveStatus = () => {
+    if (!isActive) {
+      return (
+        <div className="p-2 mb-4 bg-yellow-50 border border-yellow-200 rounded text-yellow-700 text-sm">
+          <AlertCircle className="inline-block h-4 w-4 mr-1" />이 루틴이
+          활성화되지 않았습니다. 루틴을 시작하면 인증 버튼이 표시됩니다.
+        </div>
+      );
+    }
+    return null;
   };
 
   // 메인 렌더링
@@ -174,9 +263,19 @@ function ActivitiesTimeline({ control }) {
                 <div className="w-3 h-3 bg-slate-400 rounded-sm"></div>
                 <span>매우 낮음</span>
               </div>
+              {/* 인증 완료 색상 가이드 추가 */}
+              {isActive && (
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-green-500 rounded-sm"></div>
+                  <span>인증 완료</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
+
+        {/* 활성화 상태 안내 메시지 */}
+        {renderActiveStatus()}
 
         {/* 수직 타임라인 */}
         <div className="py-2">

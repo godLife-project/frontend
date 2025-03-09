@@ -1,7 +1,15 @@
-// src/components/routine/create/RoutineForm/ActivitiesSection.js
 import React, { useState } from "react";
 import { useFieldArray, useFormState } from "react-hook-form";
-import { Plus, Clock, Trash2, AlarmClock, FileText, Star } from "lucide-react";
+import {
+  Plus,
+  Clock,
+  Trash2,
+  AlarmClock,
+  FileText,
+  Star,
+  Award,
+  CheckCircle2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,20 +19,19 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import StarRating from "@/components/common/starRating/StarRating";
 import ActivitiesTimeline from "./ActivitiesTimeline";
 
-function ActivitiesSection({ control, readOnly = false }) {
+function ActivitiesSection({
+  control,
+  readOnly = false,
+  isActive = false,
+  certifiedActivities = {},
+  onCertifyActivity = null,
+}) {
   const { fields, append, remove } = useFieldArray({
     control,
     name: "activities",
@@ -40,6 +47,13 @@ function ActivitiesSection({ control, readOnly = false }) {
       description: "",
       activityImp: 3, // 기본 중요도 3으로 설정
     });
+  };
+
+  // 활동 인증 처리 함수
+  const handleCertify = (activityId) => {
+    if (onCertifyActivity) {
+      onCertifyActivity(activityId);
+    }
   };
 
   return (
@@ -79,7 +93,18 @@ function ActivitiesSection({ control, readOnly = false }) {
       {fields.map((field, index) => (
         <Card key={field.id} className="p-4 relative">
           <div className="flex justify-between items-center mb-2">
-            <Badge className="bg-blue-500">{index + 1}번 활동</Badge>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-blue-500">{index + 1}번 활동</Badge>
+
+              {/* 인증 상태 표시 (활성화 상태이고 읽기 모드일 때만) */}
+              {isActive && certifiedActivities[index] && (
+                <Badge className="bg-green-500 flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  인증 완료
+                </Badge>
+              )}
+            </div>
+
             {/* 읽기 모드가 아닐 때만 삭제 버튼 표시 */}
             {!readOnly && (
               <Button
@@ -192,7 +217,12 @@ function ActivitiesSection({ control, readOnly = false }) {
       {fields.length > 0 && (
         <>
           <Separator className="my-4" />
-          <ActivitiesTimeline control={control} />
+          <ActivitiesTimeline
+            control={control}
+            certifiedActivities={certifiedActivities}
+            isActive={isActive}
+            onCertifyActivity={onCertifyActivity}
+          />
         </>
       )}
     </div>
