@@ -124,7 +124,6 @@ export default function useFormSections({
             onCustomJobSelected={handleCustomJobSelected}
             onChange={handleJobChange}
             readOnly={isReadOnly}
-            customIdxValue={999} // 직접 입력 시 사용할 인덱스 값 지정
           />
         )}
       </CardContent>

@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Plus, Check } from "lucide-react";
 import { Badge } from "./badge";
-import { renderIcon, iconMap } from "./icon-utils";
+import { renderIcon } from "./icon-utils";
 
 export default function BadgeSelector({
   control,
@@ -176,9 +176,9 @@ export default function BadgeSelector({
                       field.onChange(option.idx);
 
                       // 일반 옵션 선택 시 jobEtcCateDTO null로 설정 (customIdxValue가 아닌 경우)
-                      if (option.idx !== customIdxValue) {
-                        onCustomJobSelected(null);
-                      }
+                      // if (option.idx !== customIdxValue) {
+                      //   onCustomJobSelected(null);
+                      // }
                       if (onChange) {
                         onChange(option.idx);
                       }
