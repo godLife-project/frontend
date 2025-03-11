@@ -1,9 +1,7 @@
-// src/components/routine/detail/hooks/useRoutineDetail.js
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axiosInstance from "../../../../api/axiosInstance";
 import {
   reissueToken,
-  fetchReviews,
   fetchCertificationData,
 } from "../../../../utils/routineUtils";
 
@@ -21,68 +19,66 @@ export default function useRoutineDetail(planIdx, navigate) {
   const [certificationStreak, setCertificationStreak] = useState(0);
   const [showCompletionMessage, setShowCompletionMessage] = useState(false);
 
-  // 루틴 데이터 가져오기
-  useEffect(() => {
-    const fetchRoutineData = async () => {
-      setIsLoading(true);
-      try {
-        // 로그인 여부 확인
-        const userInfoString = localStorage.getItem("userInfo");
-        const token = localStorage.getItem("accessToken");
+  // fetchRoutineData 함수를 useCallback으로 컴포넌트 레벨에서 정의
+  const fetchRoutineData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      // 로그인 여부 확인
+      const userInfoString = localStorage.getItem("userInfo");
+      const token = localStorage.getItem("accessToken");
 
-        if (!userInfoString && !token) {
-          // 로그인하지 않은 상태에서 비공개 루틴에 접근 시도
-          navigate("/user/login");
+      if (!userInfoString && !token) {
+        // 로그인하지 않은 상태에서 비공개 루틴에 접근 시도
+        navigate("/user/login");
+        return;
+      }
+
+      // 루틴 데이터 가져오기
+      const response = await axiosInstance.get(`/plan/detail/${planIdx}`);
+      const routineData = response.data.message;
+
+      // 비공개 루틴인 경우 권한 체크
+      if (!routineData.isShared) {
+        // 사용자 정보 가져오기
+        const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
+        const currentUserIdx = userInfo ? userInfo.userIdx : null;
+
+        if (!currentUserIdx) {
+          // 로그인은 되어 있지만 userInfo가 없는 경우
+          navigate("/login");
           return;
         }
 
-        // 루틴 데이터 가져오기
-        const response = await axiosInstance.get(`/plan/detail/${planIdx}`);
-        const routineData = response.data.message;
-
-        // 비공개 루틴인 경우 권한 체크
-        if (!routineData.isShared) {
-          // 사용자 정보 가져오기
-          const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
-          const currentUserIdx = userInfo ? userInfo.userIdx : null;
-
-          if (!currentUserIdx) {
-            // 로그인은 되어 있지만 userInfo가 없는 경우
-            navigate("/login");
-            return;
-          }
-
-          // 루틴 작성자와 현재 사용자가 다른 경우
-          if (parseInt(currentUserIdx) !== routineData.userIdx) {
-            setIsPrivateMessage(true);
-            setIsLoading(false);
-            return;
-          }
+        // 루틴 작성자와 현재 사용자가 다른 경우
+        if (parseInt(currentUserIdx) !== routineData.userIdx) {
+          setIsPrivateMessage(true);
+          setIsLoading(false);
+          return;
         }
-
-        setRoutineData(routineData);
-
-        // 인증 데이터 가져오기
-        fetchCertificationData(routineData.planIdx);
-
-        // 리뷰 데이터 가져오기
-        fetchReviews();
-
-        console.log("루틴 데이터:", routineData);
-
-        setError(null);
-      } catch (error) {
-        console.error("루틴 데이터 가져오기 실패:", error);
-        setError("루틴 정보를 불러오는데 실패했습니다.");
-      } finally {
-        setIsLoading(false);
       }
-    };
 
+      setRoutineData(routineData);
+
+      // 인증 데이터 가져오기
+      fetchCertificationData(routineData.planIdx);
+
+      console.log("루틴 데이터:", routineData);
+
+      setError(null);
+    } catch (error) {
+      console.error("루틴 데이터 가져오기 실패:", error);
+      setError("루틴 정보를 불러오는데 실패했습니다.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [planIdx, navigate]);
+
+  // 초기 데이터 로드
+  useEffect(() => {
     if (planIdx) {
       fetchRoutineData();
     }
-  }, [planIdx, navigate]);
+  }, [planIdx, fetchRoutineData]);
 
   // 활동 인증 처리 함수
   const handleActivityCertification = async (activityId) => {
@@ -146,14 +142,32 @@ export default function useRoutineDetail(planIdx, navigate) {
   // 루틴 시작/완료 처리 함수
   const handleRoutineAction = async (action) => {
     try {
-      // 요청 데이터 구성
-      const requestData = {
-        planIdx: parseInt(planIdx),
-        userIdx: parseInt(
-          JSON.parse(localStorage.getItem("userInfo") || "{}").userIdx || 1
-        ),
-        isActive: action === "start" ? 1 : 0,
-      };
+      // 기본 정보 구성
+      const userIdx = parseInt(
+        JSON.parse(localStorage.getItem("userInfo") || "{}").userIdx || 1
+      );
+
+      // 액션에 따른 요청 데이터와 엔드포인트 구성
+      let requestData, endpoint;
+
+      if (action === "start") {
+        // 루틴 시작하기: stopNgo 엔드포인트 사용, isActive를 1로 설정
+        endpoint = "/plan/auth/stopNgo";
+        requestData = {
+          planIdx: parseInt(planIdx),
+          userIdx,
+          isActive: 1,
+        };
+      } else {
+        // 루틴 끝내기: earlyComplete 엔드포인트 사용, isCompleted를 1로 설정
+        endpoint = "/plan/auth/earlyComplete";
+        requestData = {
+          planIdx: parseInt(planIdx),
+          userIdx,
+          isDeleted: 0,
+          isCompleted: 1,
+        };
+      }
 
       // UI 즉시 업데이트
       setRoutineData((prevData) => ({
@@ -165,7 +179,7 @@ export default function useRoutineDetail(planIdx, navigate) {
       // API 호출 함수 (토큰 만료 처리 포함)
       const makeRequest = async (authToken) => {
         try {
-          return await axiosInstance.patch("/plan/auth/stopNgo", requestData, {
+          return await axiosInstance.patch(endpoint, requestData, {
             headers: {
               Authorization: `Bearer ${authToken}`,
             },
@@ -174,15 +188,11 @@ export default function useRoutineDetail(planIdx, navigate) {
           if (error.response && error.response.status === 401) {
             // 토큰 재발급
             const newToken = await reissueToken();
-            return await axiosInstance.patch(
-              "/plan/auth/stopNgo",
-              requestData,
-              {
-                headers: {
-                  Authorization: `Bearer ${newToken}`,
-                },
-              }
-            );
+            return await axiosInstance.patch(endpoint, requestData, {
+              headers: {
+                Authorization: `Bearer ${newToken}`,
+              },
+            });
           }
           throw error;
         }
@@ -199,14 +209,7 @@ export default function useRoutineDetail(planIdx, navigate) {
         );
 
         // 백그라운드에서 최신 데이터 가져오기
-        try {
-          const updatedResponse = await axiosInstance.get(
-            `/plan/detail/${planIdx}`
-          );
-          setRoutineData(updatedResponse.data.message);
-        } catch (error) {
-          console.error("루틴 데이터 갱신 실패:", error);
-        }
+        await fetchRoutineData();
       }
     } catch (error) {
       console.error(
@@ -252,37 +255,37 @@ export default function useRoutineDetail(planIdx, navigate) {
       const reviewData = {
         planIdx: parseInt(planIdx),
         userIdx: parseInt(userIdx),
-        content: newReview,
-        rating: 5,
+        review: newReview,
+        isCompleted: 1, // 고정 값 (완료된 루틴에만 적용함)
+        isDeleted: 0, // 고정 값 (삭제되지 않은 루틴에만 적용함)
       };
 
+      console.log("리뷰 작성 json : ", reviewData);
+
       // API 요청
-      const response = await axiosInstance.post("/plan/review", reviewData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axiosInstance.patch(
+        "/plan/auth/addReview",
+        reviewData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (response.data.success) {
-        fetchReviews();
+        // 리뷰 입력창 초기화
         setNewReview("");
+
+        // 성공 메시지 표시
         alert("리뷰가 성공적으로 등록되었습니다.");
+
+        // 데이터 다시 가져오기
+        await fetchRoutineData();
       }
     } catch (error) {
       console.error("리뷰 등록 실패:", error);
-
-      // 개발 중 임시 처리
-      const newReviewObj = {
-        id: Date.now(),
-        userIdx: 1,
-        username: "현재사용자",
-        profileImage: "https://api.dicebear.com/7.x/avataaars/svg?seed=789",
-        content: newReview,
-        rating: 5,
-        createdAt: new Date().toISOString(),
-      };
-      setReviews([newReviewObj, ...reviews]);
-      setNewReview("");
+      alert("리뷰 등록에 실패했습니다. 다시 시도해주세요.");
     } finally {
       setIsSubmittingReview(false);
     }
@@ -338,5 +341,6 @@ export default function useRoutineDetail(planIdx, navigate) {
     handleRoutineAction,
     getStatusBadgeStyle,
     getStatusText,
+    fetchRoutineData, // 함수를 외부로 노출
   };
 }

@@ -28,7 +28,7 @@ export default function RoutineDetailPage() {
     certifiedActivities,
     certificationStreak,
     showCompletionMessage,
-    reviews,
+    // reviews,
     newReview,
     setNewReview,
     isSubmittingReview,
@@ -125,7 +125,7 @@ export default function RoutineDetailPage() {
 
             {/* 리뷰 섹션 */}
             <ReviewSection
-              reviews={reviews}
+              reviews={routineData.review}
               newReview={newReview}
               setNewReview={setNewReview}
               isSubmittingReview={isSubmittingReview}
