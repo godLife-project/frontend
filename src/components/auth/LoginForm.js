@@ -75,7 +75,7 @@ const LoginForm = () => {
       }
 
       // 로그인 성공 후 리다이렉트
-      navigate("/");
+      navigate("/challenge/write");
     }
   }, [data, navigate, toast, headers, getTokens]);
 
@@ -198,7 +198,7 @@ const LoginForm = () => {
                 className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                 onClick={(e) => {
                   e.preventDefault();
-                  navigate("/signup");
+                  navigate("/user/signup");
                 }}
               >
                 회원가입

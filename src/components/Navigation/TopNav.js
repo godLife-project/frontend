@@ -1,20 +1,15 @@
-<<<<<<< HEAD
-import {React, useEffect} from 'react';
-import { useApi } from '../../hooks/useApi';
-=======
-import React from 'react';
->>>>>>> 0b1e81d0442bceaf12b056e397eb0acc662bf24d
-import { useNavigate } from 'react-router-dom';
-import { Button } from "@/components/ui/button"
-import { 
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from "@/components/ui/dropdown-menu"
-import { ChevronDown } from "lucide-react" 
-import { Bell } from 'lucide-react'
-import { UserNav } from './UserNav'
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown } from "lucide-react";
+import { Bell } from "lucide-react";
+import { UserNav } from "./UserNav";
 
 const NavItem = ({ item }) => {
   const navigate = useNavigate();
@@ -30,35 +25,30 @@ const NavItem = ({ item }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           {item.submenu.map((subItem) => (
-            <DropdownMenuItem key={subItem.href} onClick= {()=> navigate(subItem.href)}>
+            <DropdownMenuItem
+              key={subItem.href}
+              onClick={() => navigate(subItem.href)}
+            >
               {subItem.topName}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-    )
+    );
   }
 
   return (
-    <Button variant="ghost" className="font-medium" onClick={() => navigate(item.topAddr)}>
+    <Button
+      variant="ghost"
+      className="font-medium"
+      onClick={() => navigate(item.topAddr)}
+    >
       {item.topName}
     </Button>
-  )
-}
+  );
+};
 
-<<<<<<< HEAD
-const TopNav = () => {
-  const { data, loading, error, get } = useApi();
-  
-  useEffect(() => {
-          // 이제 try-catch가 필요 없음
-          get('/categories/topMenu');
-      }, [get]);
-  
-
-=======
 const TopNav = ({ categories }) => {
->>>>>>> 0b1e81d0442bceaf12b056e397eb0acc662bf24d
   return (
     <div className="h-16 items-center px-4 flex">
       {/* 로고 - 모든 화면에서 보임 */}
@@ -72,7 +62,7 @@ const TopNav = ({ categories }) => {
       {/* 데스크톱 네비게이션 - 데스크톱에서만 보임 */}
       <nav className="hidden md:flex flex-1 ml-8">
         <ul className="flex items-center gap-6">
-          {data && data.map((item, index) => (
+          {categories.map((item, index) => (
             <li key={item.topId || item.id || index}>
               <NavItem item={item} />
             </li>
@@ -87,9 +77,8 @@ const TopNav = ({ categories }) => {
         </Button>
         <UserNav />
       </div>
-      
     </div>
-  )
-}
+  );
+};
 
-export default TopNav
+export default TopNav;

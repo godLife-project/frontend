@@ -1,31 +1,28 @@
-<<<<<<< HEAD
 // components/Navigation/SideNav.js
-import {React, useEffect} from 'react';
-import { useApi } from '../../hooks/useApi';
-=======
-import React from 'react';
->>>>>>> 0b1e81d0442bceaf12b056e397eb0acc662bf24d
-import { useNavigate } from 'react-router-dom';
-import { Button } from "@/components/ui/button"
-import { Menu } from "lucide-react"
+import { React, useEffect } from "react";
+import { useApi } from "../../hooks/useApi";
+
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Menu } from "lucide-react";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
+} from "@/components/ui/sheet";
 
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"
+} from "@/components/ui/accordion";
 
 const MenuItem = ({ item }) => {
   const navigate = useNavigate();
-  
+
   if (item.submenu) {
     return (
       <Accordion type="single" collapsible>
@@ -49,13 +46,13 @@ const MenuItem = ({ item }) => {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-    )
+    );
   }
 
   return (
     <Accordion type="single">
       <AccordionItem value={item.topName} className="border-b">
-        <AccordionTrigger 
+        <AccordionTrigger
           className="py-2 hover:no-underline"
           hasSubmenu={false}
           onClick={() => navigate(item.topAddr)}
@@ -64,18 +61,8 @@ const MenuItem = ({ item }) => {
         </AccordionTrigger>
       </AccordionItem>
     </Accordion>
-  )
-}
-<<<<<<< HEAD
-const SideNav = () => {
-  const { data, loading, error, get } = useApi();
-    
-  useEffect(() => {
-    // 이제 try-catch가 필요 없음
-    get('/categories/topMenu');
-}, [get]);
-=======
->>>>>>> 0b1e81d0442bceaf12b056e397eb0acc662bf24d
+  );
+};
 
 const SideNav = ({ categories }) => {
   return (
@@ -93,13 +80,8 @@ const SideNav = ({ categories }) => {
             </SheetHeader>
             <nav className="flex-1 overflow-y-auto px-6 py-4">
               <ul className="space-y-3">
-<<<<<<< HEAD
-                {data && data.map((item, index) => (
-                  <li key={item.href}>
-=======
                 {categories.map((item, index) => (
                   <li key={item.topAddr || index}>
->>>>>>> 0b1e81d0442bceaf12b056e397eb0acc662bf24d
                     <MenuItem item={item} />
                   </li>
                 ))}
@@ -109,7 +91,7 @@ const SideNav = ({ categories }) => {
         </SheetContent>
       </Sheet>
     </div>
-  )
-}
+  );
+};
 
-export default SideNav
+export default SideNav;
