@@ -22,6 +22,19 @@ export default function useRoutineDetail(planIdx, navigate) {
   // fetchRoutineData 함수를 useCallback으로 컴포넌트 레벨에서 정의
   const fetchRoutineData = useCallback(async () => {
     setIsLoading(true);
+    // 데이터 로드 후 활동 데이터에 activityIdx가 있는지 확인
+    if (routineData && routineData.activities) {
+      console.log("서버에서 받은 활동 데이터:", routineData.activities);
+
+      // 활동 데이터에 activityIdx가 없으면 경고 로그 출력
+      const missingIds = routineData.activities.filter(
+        (a) => a.activityIdx === undefined
+      );
+      if (missingIds.length > 0) {
+        console.warn("activityIdx가 없는 활동이 있습니다:", missingIds);
+      }
+    }
+
     try {
       // 로그인 여부 확인
       const userInfoString = localStorage.getItem("userInfo");
@@ -81,9 +94,9 @@ export default function useRoutineDetail(planIdx, navigate) {
   }, [planIdx, fetchRoutineData]);
 
   // 활동 인증 처리 함수
-  const handleActivityCertification = async (activityId) => {
+  const handleActivityCertification = async (activityIdx) => {
     try {
-      console.log(`활동 ID ${activityId} 인증 시도 - 시작`);
+      console.log(`활동 ID ${activityIdx} 인증 시도 - 시작`);
 
       const token = localStorage.getItem("accessToken");
       const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
@@ -92,50 +105,106 @@ export default function useRoutineDetail(planIdx, navigate) {
       // 인증 데이터 구성
       const certificationData = {
         planIdx: parseInt(planIdx),
-        activityId: activityId,
+        activityIdx: activityIdx,
         userIdx: parseInt(userIdx),
-        date: new Date().toISOString().split("T")[0],
       };
 
       console.log(
         "활동 인증 요청 데이터:",
         JSON.stringify(certificationData, null, 2)
       );
-      console.log("현재 인증 상태:", certifiedActivities);
 
-      // 인증 상태 업데이트 (실제로는 API 호출 필요)
-      const updatedCertifications = {
-        ...certifiedActivities,
-        [activityId]: true,
+      // API 호출 함수 (토큰 만료 처리 포함)
+      const makeRequest = async (authToken) => {
+        console.log("인증 json : ", certificationData);
+        try {
+          return await axiosInstance.post(
+            "/verify/auth/routine",
+            certificationData,
+            {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+              },
+            }
+          );
+        } catch (error) {
+          if (error.response && error.response.status === 401) {
+            // 토큰 재발급
+            const newToken = await reissueToken();
+            return await axiosInstance.post(
+              "/verify/auth/routine",
+              certificationData,
+              {
+                headers: {
+                  Authorization: `Bearer ${newToken}`,
+                },
+              }
+            );
+          }
+          throw error;
+        }
       };
 
-      setCertifiedActivities(updatedCertifications);
+      // API 요청 실행
+      const response = await makeRequest(token);
 
-      // 모든 활동이 인증되었는지 확인
-      const allActivities = routineData.activities || [];
+      // 요청이 성공한 경우
+      if (
+        response.data.success ||
+        response.data.status === "success" ||
+        response.data.code === 200
+      ) {
+        // 인증 상태 업데이트
+        const updatedCertifications = {
+          ...certifiedActivities,
+          [activityIdx]: true,
+        };
 
-      if (allActivities.length > 0) {
-        const allCertified = allActivities.every(
-          (activity, index) => updatedCertifications[index] === true
-        );
+        setCertifiedActivities(updatedCertifications);
 
-        if (allCertified) {
-          // 스트릭 증가
-          const newStreak = certificationStreak + 1;
-          setCertificationStreak(newStreak);
+        // 모든 활동이 인증되었는지 확인
+        const allActivities = routineData.activities || [];
 
-          // 축하 메시지 표시
-          setShowCompletionMessage(true);
-          setTimeout(() => {
-            setShowCompletionMessage(false);
-          }, 3000);
+        if (allActivities.length > 0) {
+          const allCertified = allActivities.every(
+            (activity) => updatedCertifications[activity.activityIdx] === true
+          );
+
+          if (allCertified) {
+            // 스트릭 증가
+            const newStreak = certificationStreak + 1;
+            setCertificationStreak(newStreak);
+
+            // 축하 메시지 표시
+            setShowCompletionMessage(true);
+            setTimeout(() => {
+              setShowCompletionMessage(false);
+            }, 3000);
+          }
         }
-      }
 
-      alert(`"${activityId + 1}번 활동"이 인증되었습니다!`);
+        alert(`"${activityIdx + 1}번 활동"이 인증되었습니다!`);
+
+        // 최신 데이터로 갱신
+        await fetchRoutineData();
+      } else {
+        console.error("활동 인증 실패:", response.data);
+        alert(
+          response.data.message || "인증에 실패했습니다. 다시 시도해주세요."
+        );
+      }
     } catch (error) {
       console.error("활동 인증 실패:", error);
-      alert("인증에 실패했습니다. 다시 시도해주세요.");
+
+      if (error.response && error.response.data) {
+        alert(
+          `인증에 실패했습니다: ${
+            error.response.data.message || "알 수 없는 오류"
+          }`
+        );
+      } else {
+        alert("인증에 실패했습니다. 다시 시도해주세요.");
+      }
     }
   };
 
@@ -241,9 +310,12 @@ export default function useRoutineDetail(planIdx, navigate) {
     }
   };
 
-  // 리뷰 제출 함수
-  const handleSubmitReview = async () => {
-    if (!newReview.trim()) return;
+  // 직접 리뷰 텍스트를 받는 handleSubmitReview 함수
+  const handleSubmitReview = async (reviewText) => {
+    // reviewText가 있으면 사용하고, 없으면 상태의 newReview 사용 (호환성 유지)
+    const reviewContent = reviewText || newReview;
+
+    if (!reviewContent.trim()) return;
 
     setIsSubmittingReview(true);
     try {
@@ -255,7 +327,7 @@ export default function useRoutineDetail(planIdx, navigate) {
       const reviewData = {
         planIdx: parseInt(planIdx),
         userIdx: parseInt(userIdx),
-        review: newReview,
+        review: reviewContent,
         isCompleted: 1, // 고정 값 (완료된 루틴에만 적용함)
         isDeleted: 0, // 고정 값 (삭제되지 않은 루틴에만 적용함)
       };
@@ -273,7 +345,9 @@ export default function useRoutineDetail(planIdx, navigate) {
         }
       );
 
-      if (response.data.success) {
+      console.log("리뷰 작성 api :", response);
+
+      if (response.data.status === "success" || response.data.code === 200) {
         // 리뷰 입력창 초기화
         setNewReview("");
 

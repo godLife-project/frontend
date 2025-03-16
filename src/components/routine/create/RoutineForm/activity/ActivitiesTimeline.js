@@ -34,14 +34,16 @@ function ActivitiesTimeline({
       return;
     }
 
+    console.log("원본 활동 데이터:", activities);
+
     // 모든 시작 시간을 분으로 변환하여 정렬
-    const processedActivities = activities.map((activity, index) => {
+    const processedActivities = activities.map((activity) => {
       const [hours, minutes] = activity.setTime.split(":").map(Number);
       const startMinutes = hours * 60 + minutes;
 
       return {
         ...activity,
-        id: index,
+        // id 필드는 사용하지 않음 - 서버의 activityIdx만 사용
         startMinutes,
         formattedStart: formatTime(startMinutes),
       };
@@ -95,15 +97,8 @@ function ActivitiesTimeline({
     const hasMemo = activity.description && activity.description.trim() !== "";
     const importance = activity.activityImp;
 
-    // 인증 상태 확인 - 인덱스 기반으로 수정
-    const isCertified = certifiedActivities[activity.id] === true;
-
-    console.log(`활동 ${activity.id} 인증 상태:`, {
-      id: activity.id,
-      isActive,
-      isCertified,
-      certifiedStatus: certifiedActivities[activity.id],
-    });
+    // 인증 상태 확인 - activityIdx 기반으로 수정
+    const isCertified = certifiedActivities[activity.activityIdx] === true;
 
     // 중요도에 따른 배경색 (더 연한 색상으로 변경)
     const getColor = (importance, isCertified) => {
@@ -133,8 +128,8 @@ function ActivitiesTimeline({
     // 인증 버튼 클릭 핸들러
     const handleCertify = () => {
       if (onCertifyActivity) {
-        console.log(`인증 버튼 클릭: 활동 ID ${activity.id}`);
-        onCertifyActivity(activity.id);
+        console.log(`인증 버튼 클릭: 활동 서버 ID ${activity.activityIdx}`);
+        onCertifyActivity(activity.activityIdx);
       }
     };
 

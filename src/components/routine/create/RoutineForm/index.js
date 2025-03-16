@@ -18,6 +18,8 @@ export default function RoutineForm({
   isActive = false,
   certifiedActivities = {},
   onCertifyActivity = null,
+  onSubmit = null,
+  isEditMode = false, // 수정 모드 prop 추가
 }) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [formData, setFormData] = useState(null);
@@ -44,10 +46,22 @@ export default function RoutineForm({
   });
 
   // 사용자 정보 로드 (읽기 전용 모드가 아닐 때만)
+  // RoutineForm 컴포넌트 내의 useEffect 수정
+
+  // 사용자 정보 로드 (읽기 전용 모드가 아닐 때만)
   useEffect(() => {
     if (!isReadOnly) {
       try {
         const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+
+        // 루틴 데이터가 있으면(수정 모드) 루틴 데이터의 값을 우선 사용
+        if (routineData) {
+          // 폼 데이터가 이미 설정되어 있으면 다시 설정하지 않음
+          // 이렇게 하면 루틴의 원래 jobIdx와 다른 값들이 유지됨
+          return;
+        }
+
+        // 새로운 루틴 생성 모드일 때만 사용자 정보 적용
         if (userInfo.userIdx) {
           form.setValue("userIdx", userInfo.userIdx);
         }
@@ -58,13 +72,31 @@ export default function RoutineForm({
         console.error("사용자 정보 로딩 실패:", e);
       }
     }
-  }, [form, isReadOnly]);
+  }, [form, isReadOnly, routineData]);
 
   // 폼 제출 핸들러
-  async function onSubmit(values) {
+  async function handleFormSubmit(values) {
     if (isReadOnly) return;
-    console.log("제출할 데이터:", values);
-    setFormData(values);
+
+    // 활동의 description이 null인 경우 빈 문자열로 변환
+    const processedValues = {
+      ...values,
+      activities: values.activities.map((activity) => ({
+        ...activity,
+        description: activity.description || "", // null이면 빈 문자열로 변환
+      })),
+    };
+
+    // 수정 모드일 경우 onSubmit 콜백 실행
+    if (isEditMode && onSubmit) {
+      console.log("수정 모드에서 폼 제출됨, 부모 onSubmit 호출");
+      onSubmit(processedValues);
+      return;
+    }
+
+    // 일반 생성 모드 로직
+    console.log("생성 모드에서 폼 제출됨");
+    setFormData(processedValues);
     setShowCreateDialog(true);
   }
 
@@ -170,7 +202,10 @@ export default function RoutineForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form
+        onSubmit={form.handleSubmit(handleFormSubmit)}
+        className="space-y-6"
+      >
         {/* 각 섹션 렌더링 */}
         <TitleSectionCard />
         <JobSectionCard />
@@ -183,17 +218,19 @@ export default function RoutineForm({
         {/* 제출 버튼 (읽기 전용 모드가 아닐 때만) */}
         {!isReadOnly && (
           <Button type="submit" className="w-full bg-blue-500">
-            루틴 생성하기
+            {isEditMode ? "루틴 저장하기" : "루틴 생성하기"}
           </Button>
         )}
       </form>
 
-      {/* 루틴 시작 확인 다이얼로그 */}
-      <CreateRoutineDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        onConfirm={handleCreateRoutine}
-      />
+      {/* 루틴 시작 확인 다이얼로그 - 수정 모드가 아닌 경우에만 표시 */}
+      {!isEditMode && (
+        <CreateRoutineDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          onConfirm={handleCreateRoutine}
+        />
+      )}
     </Form>
   );
 }

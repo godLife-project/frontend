@@ -28,11 +28,46 @@ export default function useFormSections({
   const [isLoading, setIsLoading] = useState(true);
   const [jobIcons, setJobIcons] = useState([]);
 
-  // 카테고리 및 아이콘 데이터 로드
-  useEffect(() => {
-    const fetchCategories = async () => {
-      setIsLoading(true);
-      try {
+  // 로컬 스토리지에서 데이터 가져오기 함수
+  const getDataFromLocalStorage = () => {
+    try {
+      const jobsFromStorage = JSON.parse(
+        localStorage.getItem("jobCategories") || "[]"
+      );
+      const targetsFromStorage = JSON.parse(
+        localStorage.getItem("targetCategories") || "[]"
+      );
+      const iconsFromStorage = JSON.parse(
+        localStorage.getItem("jobIcons") || "[]"
+      );
+
+      // 유효한 데이터가 있으면 상태 업데이트
+      if (jobsFromStorage.length > 0) setJobs(jobsFromStorage);
+      if (targetsFromStorage.length > 0) setTargets(targetsFromStorage);
+      if (iconsFromStorage.length > 0) setJobIcons(iconsFromStorage);
+
+      // 모든 데이터가 있는지 확인
+      return (
+        jobsFromStorage.length > 0 &&
+        targetsFromStorage.length > 0 &&
+        iconsFromStorage.length > 0
+      );
+    } catch (error) {
+      console.error("로컬 스토리지에서 데이터 가져오기 실패:", error);
+      return false;
+    }
+  };
+
+  // 카테고리 및 아이콘 데이터 가져오는 함수
+  const fetchCategoryData = async () => {
+    setIsLoading(true);
+    try {
+      // 로컬 스토리지에서 먼저 데이터 확인
+      const hasLocalData = getDataFromLocalStorage();
+
+      // 로컬 데이터가 없으면 API 호출
+      if (!hasLocalData) {
+        console.log("API에서 카테고리 데이터 가져오기");
         const [jobsResponse, targetsResponse, jobIconsResponse] =
           await Promise.all([
             axiosInstance.get("/categories/job"),
@@ -40,10 +75,12 @@ export default function useFormSections({
             axiosInstance.get("/categories/icon"),
           ]);
 
+        // 상태 업데이트
         setJobs(jobsResponse.data);
         setTargets(targetsResponse.data);
         setJobIcons(jobIconsResponse.data);
 
+        // 로컬 스토리지에 저장
         localStorage.setItem(
           "jobCategories",
           JSON.stringify(jobsResponse.data)
@@ -53,15 +90,49 @@ export default function useFormSections({
           JSON.stringify(targetsResponse.data)
         );
         localStorage.setItem("jobIcons", JSON.stringify(jobIconsResponse.data));
-      } catch (error) {
-        console.error("카테고리 데이터 로드 실패:", error);
-      } finally {
-        setIsLoading(false);
+      } else {
+        console.log("로컬 스토리지에서 카테고리 데이터 가져옴");
       }
-    };
+    } catch (error) {
+      console.error("카테고리 데이터 로드 실패:", error);
+      // 에러 발생 시 로컬 스토리지 데이터 사용 시도
+      getDataFromLocalStorage();
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchCategories();
+  // 초기 데이터 로드
+  useEffect(() => {
+    fetchCategoryData();
   }, []);
+
+  // isReadOnly가 변경될 때 아이콘 데이터 다시 로드하는 useEffect 추가
+  useEffect(() => {
+    if (!isReadOnly) {
+      try {
+        // localStorage에서 아이콘 데이터 가져오기
+        const jobsFromStorage = JSON.parse(
+          localStorage.getItem("jobCategories") || "[]"
+        );
+        const targetsFromStorage = JSON.parse(
+          localStorage.getItem("targetCategories") || "[]"
+        );
+        const iconsFromStorage = JSON.parse(
+          localStorage.getItem("jobIcons") || "[]"
+        );
+
+        // 데이터가 있으면 상태 업데이트
+        if (jobsFromStorage.length > 0) setJobs(jobsFromStorage);
+        if (targetsFromStorage.length > 0) setTargets(targetsFromStorage);
+        if (iconsFromStorage.length > 0) setJobIcons(iconsFromStorage);
+
+        console.log("수정 모드 전환: localStorage에서 아이콘 데이터 로드됨");
+      } catch (error) {
+        console.error("localStorage에서 데이터 로드 실패:", error);
+      }
+    }
+  }, [isReadOnly]);
 
   const handleJobChange = (jobIdx) => {
     // jobIdx가 999가 아닌 경우(일반 옵션 선택) jobEtcCateDTO를 null로 설정
@@ -101,34 +172,45 @@ export default function useFormSections({
   );
 
   // 직업 선택 섹션 컴포넌트
-  const JobSectionCard = () => (
-    <Card className="bg-white">
-      <CardHeader>
-        <CardTitle>추천 직업</CardTitle>
-        <CardDescription>
-          {isReadOnly
-            ? "이 루틴의 추천 직업"
-            : "루틴에 맞는 직업을 선택하면 다른 사람들이 루틴을 찾아보기 좋아요!"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="py-4 text-center">로딩 중...</div>
-        ) : (
-          <BadgeSelector
-            control={form.control}
-            name="jobIdx"
-            options={jobs}
-            availableIcons={jobIcons}
-            maxVisible={10}
-            onCustomJobSelected={handleCustomJobSelected}
-            onChange={handleJobChange}
-            readOnly={isReadOnly}
-          />
-        )}
-      </CardContent>
-    </Card>
-  );
+  const JobSectionCard = () => {
+    // 여기에 콘솔 로그 추가
+    console.log("JobSectionCard 렌더링:", {
+      isReadOnly,
+      jobsLength: jobs.length,
+      iconsLength: jobIcons.length,
+      jobIconsData: jobIcons,
+    });
+
+    return (
+      <Card className="bg-white">
+        <CardHeader>
+          <CardTitle>추천 직업</CardTitle>
+          <CardDescription>
+            {isReadOnly
+              ? "이 루틴의 추천 직업"
+              : "루틴에 맞는 직업을 선택하면 다른 사람들이 루틴을 찾아보기 좋아요!"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="py-4 text-center">로딩 중...</div>
+          ) : (
+            <BadgeSelector
+              control={form.control}
+              name="jobIdx"
+              options={jobs}
+              availableIcons={jobIcons}
+              maxVisible={10}
+              onCustomJobSelected={handleCustomJobSelected}
+              onChange={handleJobChange}
+              readOnly={isReadOnly}
+              key={`job-selector-${isReadOnly}`}
+            />
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
   // 루틴 지속 기간과 중요도 섹션
   const DurationAndImportanceSection = () => (
@@ -195,7 +277,7 @@ export default function useFormSections({
     </Card>
   );
 
-  // 관심사 선택 섹션 - 직접 입력 옵션 제거
+  // 관심사 선택 섹션
   const InterestSectionCard = () => (
     <Card className="bg-white">
       <CardHeader>
@@ -222,6 +304,7 @@ export default function useFormSections({
             required={true}
             readOnly={isReadOnly}
             allowCustomInput={false} // 직접 입력 기능 비활성화
+            key={`interest-selector-${isReadOnly}`} // 읽기 모드 변경 시 컴포넌트 리렌더링
           />
         )}
       </CardContent>

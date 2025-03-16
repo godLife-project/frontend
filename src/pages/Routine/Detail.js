@@ -1,9 +1,13 @@
 // src/pages/RoutineDetailPage.jsx
-import React from "react";
+import React, { useCallback, useState } from "react"; // useState 추가
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Lock } from "lucide-react";
+import { Lock, Edit } from "lucide-react"; // Edit 아이콘만 사용
+
+// API 및 유틸리티
+import axiosInstance from "../../api/axiosInstance";
+import { reissueToken } from "../../utils/routineUtils";
 
 // 컴포넌트
 import RoutineForm from "../../components/routine/create/RoutineForm";
@@ -19,6 +23,9 @@ export default function RoutineDetailPage() {
   const { planIdx } = useParams();
   const navigate = useNavigate();
 
+  // 수정 모드 상태 추가
+  const [isEditMode, setIsEditMode] = useState(false);
+
   // 모든 데이터와 로직을 커스텀 훅으로 이동
   const {
     routineData,
@@ -28,17 +35,124 @@ export default function RoutineDetailPage() {
     certifiedActivities,
     certificationStreak,
     showCompletionMessage,
-    // reviews,
-    newReview,
+    // 리뷰 관련 함수들
     setNewReview,
     isSubmittingReview,
     handleSubmitReview,
     formatReviewDate,
+    // 다른 함수들
     handleActivityCertification,
     handleRoutineAction,
     getStatusBadgeStyle,
     getStatusText,
   } = useRoutineDetail(planIdx, navigate);
+
+  console.log("루틴 정보 :", routineData);
+
+  // 리뷰 제출 처리 함수 - useCallback으로 메모이제이션
+  const handleReviewSubmit = useCallback(
+    (reviewText) => {
+      // 부모 컴포넌트 상태 업데이트
+      setNewReview(reviewText);
+      // 제출 처리
+      handleSubmitReview();
+    },
+    [setNewReview, handleSubmitReview]
+  );
+
+  // 수정 모드 토글 함수
+  const toggleEditMode = () => {
+    const newEditMode = !isEditMode;
+    console.log("수정 모드 전환:", newEditMode);
+    setIsEditMode(newEditMode);
+  };
+
+  // 수정된 데이터 저장 처리 함수
+  const handleSaveChanges = async (formData) => {
+    console.log("수정된 데이터:", formData);
+
+    // requestData 준비
+    const requestData = {
+      ...formData,
+      planIdx: planIdx, // URL 파라미터에서 가져온 planIdx 추가
+    };
+
+    // jobIdx가 999가 아니고 jobEtcCateDTO가 설정된 경우 null로 변경 (루틴 생성과 동일한 로직)
+    if (requestData.jobIdx !== 999 && requestData.jobEtcCateDTO) {
+      requestData.jobEtcCateDTO = null;
+    }
+
+    let token = localStorage.getItem("accessToken");
+
+    try {
+      // 루틴 수정 API 호출 함수
+      const updateRoutine = async (authToken) => {
+        try {
+          const response = await axiosInstance.patch(
+            "/plan/auth/modify",
+            requestData,
+            {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+              },
+            }
+          );
+          return response;
+        } catch (error) {
+          // 토큰 만료 오류 (401) 처리
+          if (error.response && error.response.status === 401) {
+            console.log("토큰이 만료되었습니다. 재발급을 시도합니다.");
+            // 토큰 재발급 - utils의 함수 사용
+            const newToken = await reissueToken(navigate);
+            // 새 토큰으로 다시 요청
+            return await axiosInstance.post("/plan/auth/modify", requestData, {
+              headers: {
+                Authorization: `Bearer ${newToken}`,
+              },
+            });
+          }
+          // 다른 오류는 그대로 던지기
+          throw error;
+        }
+      };
+
+      // API 호출
+      const response = await updateRoutine(token);
+      console.log("루틴 수정 성공:", response.data);
+
+      // 성공 메시지
+      alert("루틴이 성공적으로 수정되었습니다!");
+
+      // 수정 모드 해제
+      setIsEditMode(false);
+
+      // 최신 데이터로 페이지 새로고침 (선택적)
+      // window.location.reload();
+
+      // 또는 커스텀 훅의 데이터 리프레시 함수 호출 (만약 구현되어 있다면)
+      // refreshRoutineData();
+    } catch (error) {
+      console.error("루틴 수정 실패:", error);
+      if (error.response) {
+        console.error("응답 데이터:", error.response.data);
+        console.error("응답 상태:", error.response.status);
+        alert(
+          `루틴 수정 실패: ${
+            error.response.data.message || "알 수 없는 오류가 발생했습니다."
+          }`
+        );
+      } else if (error.request) {
+        console.error("요청 실패:", error.request);
+        alert("서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.");
+      } else {
+        console.error("오류 메시지:", error.message);
+        alert("요청 중 오류가 발생했습니다.");
+      }
+
+      // 오류가 발생해도 수정 모드는 유지
+      // setIsEditMode(false); // 오류 시에도 수정 모드를 해제하려면 주석 해제
+    }
+  };
 
   // 비공개 루틴 메시지 표시
   if (isPrivateMessage) {
@@ -84,6 +198,10 @@ export default function RoutineDetailPage() {
     );
   }
 
+  // 사용자가 루틴의 소유자인지 확인
+  const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+  const isOwner = parseInt(userInfo.userIdx) === parseInt(routineData.userIdx);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-50 py-8 relative">
       {/* 모든 활동 완료 축하 메시지 */}
@@ -94,6 +212,20 @@ export default function RoutineDetailPage() {
       )}
 
       <div className="max-w-3xl mx-auto px-4 relative">
+        {/* 루틴 소유자인 경우에만 수정 버튼 표시하고, 수정 모드가 아닌 경우에만 표시 */}
+        {isOwner && !routineData.isCompleted && !isEditMode && (
+          <div className="flex justify-end mb-4">
+            <Button
+              onClick={toggleEditMode}
+              className="bg-blue-500"
+              variant="default"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              수정하기
+            </Button>
+          </div>
+        )}
+
         <Card className="overflow-hidden shadow-lg">
           {/* 헤더 부분 */}
           <div className="relative">
@@ -113,33 +245,43 @@ export default function RoutineDetailPage() {
           {/* 본문 내용 */}
           <CardContent className="p-8 pt-16">
             <div className="space-y-6 mt-4">
-              {/* 수정된 RoutineForm 사용 - 활동별 인증 기능 적용 */}
+              {/* RoutineForm - isReadOnly를 isEditMode 상태에 따라 설정, onSubmit을 수정 모드일 때만 전달 */}
               <RoutineForm
-                isReadOnly={true}
+                isReadOnly={!isEditMode} // 수정 모드일 때는 읽기 전용 아님
                 routineData={routineData}
                 isActive={!!routineData.isActive}
                 certifiedActivities={certifiedActivities}
                 onCertifyActivity={handleActivityCertification}
+                onSubmit={isEditMode ? handleSaveChanges : undefined}
+                isEditMode={isEditMode} // 이 prop을 RoutineForm에 전달
               />
             </div>
 
-            {/* 리뷰 섹션 */}
-            <ReviewSection
-              reviews={routineData.review}
-              newReview={newReview}
-              setNewReview={setNewReview}
-              isSubmittingReview={isSubmittingReview}
-              handleSubmitReview={handleSubmitReview}
-              formatReviewDate={formatReviewDate}
-            />
+            {/* 수정 모드가 아닐 때만 리뷰 섹션 표시 */}
+            {!isEditMode && (
+              <ReviewSection
+                reviews={routineData.review}
+                handleSubmitReview={(reviewText) => {
+                  console.log("부모에서 리뷰 제출 함수 호출됨:", reviewText);
+                  // 부모 상태 설정
+                  setNewReview(reviewText);
+                  // 원래 제출 함수 호출
+                  handleSubmitReview(reviewText);
+                }}
+                isSubmittingReview={isSubmittingReview}
+                formatReviewDate={formatReviewDate}
+              />
+            )}
           </CardContent>
         </Card>
 
-        {/* 플로팅 버튼 */}
-        <FloatingActionButton
-          routineData={routineData}
-          handleRoutineAction={handleRoutineAction}
-        />
+        {/* 플로팅 버튼 - 수정 모드가 아닐 때만 표시 */}
+        {!isEditMode && (
+          <FloatingActionButton
+            routineData={routineData}
+            handleRoutineAction={handleRoutineAction}
+          />
+        )}
       </div>
     </div>
   );

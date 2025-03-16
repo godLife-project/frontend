@@ -1,40 +1,44 @@
-// badge.jsx
+// Badge 컴포넌트 수정 (./badge.jsx 파일)
+import React from "react";
 import { cn } from "@/lib/utils";
 
-export function Badge({ option, selected, onSelect, renderIcon }) {
-  // 옵션에서 color 값이 있으면 사용, 없으면 기본 색상 사용
-  const bgColor = option.color ? option.color : "#3B82F6"; // 기본값은 blue-500
-  
-  // 선택 여부에 따른 스타일 적용
-  const badgeStyle = selected
-    ? {
-        backgroundColor: bgColor,
-        color: "white",
-        borderColor: "transparent"
-      }
-    : {
-        backgroundColor: "transparent",
-        color: bgColor,
-        borderColor: bgColor,
-        // 호버 효과를 inline style로 구현할 수 없으므로 className으로 처리
-      };
-
+export const Badge = ({
+  option,
+  selected = false,
+  onSelect,
+  renderIcon,
+  readOnly = false, // 읽기 전용 모드
+}) => {
   return (
-    <button
-      type="button"
-      onClick={onSelect}
+    <div
       className={cn(
-        "flex items-center gap-2 px-4 py-2 rounded-full transition-all border text-sm font-medium",
-        "focus:outline-none focus:ring-2 focus:ring-offset-2",
+        "flex items-center gap-2 px-4 py-2 rounded-full transition-all",
+        "border text-sm font-medium",
         selected
-          ? "hover:bg-opacity-90 focus:ring-blue-500"
-          : "hover:bg-gray-50 focus:ring-blue-500"
+          ? "bg-blue-500 text-white border-transparent"
+          : "bg-white text-gray-800 border-gray-200",
+        // 읽기 모드가 아닐 때만 호버 효과와 커서 포인터 적용
+        !readOnly && !selected ? "hover:bg-gray-50 cursor-pointer" : "",
+        readOnly ? "cursor-default" : "cursor-pointer" // 읽기 모드일 때는 커서 기본값으로
       )}
-      style={badgeStyle}
+      style={
+        selected && option.color
+          ? {
+              backgroundColor: option.color,
+              color: "white",
+              borderColor: "transparent",
+            }
+          : {}
+      }
+      onClick={() => {
+        // 읽기 모드일 때는 클릭 이벤트 무시
+        if (!readOnly) {
+          onSelect(option);
+        }
+      }}
     >
-      {/* 아이콘 렌더링 - 색상 전달 */}
       {renderIcon(option.iconKey, 18, "", selected, option.color)}
       <span>{option.name}</span>
-    </button>
+    </div>
   );
-}
+};
