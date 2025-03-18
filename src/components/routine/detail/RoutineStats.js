@@ -2,7 +2,26 @@
 import React from "react";
 import { Eye, Heart, Award, Share2, Flame } from "lucide-react";
 
-const RoutineStats = ({ routineData, certificationStreak }) => {
+const RoutineStats = ({
+  routineData,
+  certificationStreak,
+  handleLike,
+  handleUnlike,
+}) => {
+  // 좋아요 상태 확인
+  const isLiked = routineData.isLiked || false;
+
+  // 좋아요 클릭 이벤트 핸들러
+  const handleLikeClick = () => {
+    if (isLiked) {
+      // 이미 좋아요 상태이면 취소
+      handleUnlike();
+    } else {
+      // 좋아요 상태가 아니면 추가
+      handleLike();
+    }
+  };
+
   return (
     <div className="absolute left-0 right-0 bottom-0 transform translate-y-1/2 px-8">
       <div className="bg-white rounded-lg shadow-md p-4">
@@ -17,9 +36,18 @@ const RoutineStats = ({ routineData, certificationStreak }) => {
             </span>
           </div>
 
-          <div className="flex flex-col items-center justify-center p-2">
-            <div className="flex items-center text-red-500 mb-1">
-              <Heart className="w-4 h-4 mr-1" />
+          <div
+            className="flex flex-col items-center justify-center p-2 cursor-pointer"
+            onClick={handleLikeClick}
+          >
+            <div
+              className="flex items-center mb-1"
+              style={{ color: isLiked ? "#FF4136" : "#FF6B6B" }}
+            >
+              <Heart
+                className="w-4 h-4 mr-1"
+                fill={isLiked ? "#FF4136" : "none"}
+              />
               <span className="text-sm font-medium">좋아요</span>
             </div>
             <span className="text-lg font-bold">

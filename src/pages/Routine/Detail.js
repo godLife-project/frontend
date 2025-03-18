@@ -1,9 +1,9 @@
 // src/pages/RoutineDetailPage.jsx
-import React, { useCallback, useState } from "react"; // useState 추가
+import React, { useCallback, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Lock, Edit } from "lucide-react"; // Edit 아이콘만 사용
+import { Lock, Edit } from "lucide-react";
 
 // API 및 유틸리티
 import axiosInstance from "../../api/axiosInstance";
@@ -43,8 +43,11 @@ export default function RoutineDetailPage() {
     // 다른 함수들
     handleActivityCertification,
     handleRoutineAction,
+    handleLike, // 좋아요 추가 함수
+    handleUnlike, // 좋아요 취소 함수
     getStatusBadgeStyle,
     getStatusText,
+    fetchRoutineData, // 데이터 갱신 함수
   } = useRoutineDetail(planIdx, navigate);
 
   console.log("루틴 정보 :", routineData);
@@ -126,11 +129,8 @@ export default function RoutineDetailPage() {
       // 수정 모드 해제
       setIsEditMode(false);
 
-      // 최신 데이터로 페이지 새로고침 (선택적)
-      // window.location.reload();
-
-      // 또는 커스텀 훅의 데이터 리프레시 함수 호출 (만약 구현되어 있다면)
-      // refreshRoutineData();
+      // 데이터 리프레시 함수 호출
+      fetchRoutineData();
     } catch (error) {
       console.error("루틴 수정 실패:", error);
       if (error.response) {
@@ -235,10 +235,12 @@ export default function RoutineDetailPage() {
               getStatusText={getStatusText}
             />
 
-            {/* 통계 정보 카드 */}
+            {/* 통계 정보 카드 - 좋아요 함수 추가 */}
             <RoutineStats
               routineData={routineData}
               certificationStreak={certificationStreak}
+              handleLike={handleLike}
+              handleUnlike={handleUnlike}
             />
           </div>
 
