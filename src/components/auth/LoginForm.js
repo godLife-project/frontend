@@ -75,7 +75,7 @@ const LoginForm = () => {
       }
 
       // 로그인 성공 후 리다이렉트
-      navigate("/challenge/write");
+      navigate("/");
     }
   }, [data, navigate, toast, headers, getTokens]);
 

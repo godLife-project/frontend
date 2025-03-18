@@ -57,6 +57,8 @@ import Home from "./pages/Home/Home";
 import Signup from "./pages/Auth/SignUp";
 import Login from "./pages/Auth/Login";
 import ChallengeWritePage from "./pages/Challenge/Write";
+import ChallengDetailPage from "./pages/Challenge/Detail";
+import Challenge from "./page/Challenge";
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
@@ -84,11 +86,20 @@ function App() {
             <Routes>
               <Route path="/user/login" element={<Login />} />
               <Route path="/user/signup" element={<Signup />} />
+              <Route path="/user/challenge" element={<Challenge />} />
               <Route
                 path="/challenge/write"
                 element={
                   <ProtectedRoute>
                     <ChallengeWritePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/challenge/detail"
+                element={
+                  <ProtectedRoute>
+                    <ChallengDetailPage />
                   </ProtectedRoute>
                 }
               />
