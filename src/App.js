@@ -15,7 +15,8 @@ import Login from "./pages/Auth/Login";
 import RoutineCreator from "./pages/Routine/Create";
 import RoutineListPage from "./pages/Routine/List";
 import RoutineDetailPage from "./pages/Routine/Detail";
-
+import ChallengDetailPage from "./pages/Challenge/Detail";
+import ChallengeWritePage from "./pages/Challenge/Write";
 // 인증이 필요한 라우트를 위한 컴포넌트
 function AppRoutes() {
   const { isAuthenticated, loading } = useAuth();
