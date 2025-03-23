@@ -1,13 +1,17 @@
 // src/components/routine/detail/RoutineHeader.jsx
 import React from "react";
 import { Calendar, Lock } from "lucide-react";
+import FlameIndicator from "../FlameIndicator";
 
 const RoutineHeader = ({ routineData, getStatusBadgeStyle, getStatusText }) => {
   return (
     <div className="relative">
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-8 pb-16 text-white">
-        {/* 루틴 상태 배지 */}
+        {/* 루틴 상태 배지 및 불꽃 표시 */}
         <div className="absolute top-4 right-4 flex items-center space-x-2">
+          {/* 불꽃 인디케이터 추가 */}
+          <FlameIndicator certExp={routineData.certExp || 0} />
+
           {!routineData.isShared && (
             <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-700 text-white flex items-center gap-1">
               <Lock className="w-3 h-3" /> 비공개

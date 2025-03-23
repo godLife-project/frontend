@@ -1,9 +1,8 @@
-// src/pages/RoutineDetailPage.jsx
 import React, { useCallback, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Lock, Edit } from "lucide-react";
+import { Lock, Edit, Trash2, AlertCircle } from "lucide-react";
 
 // API 및 유틸리티
 import axiosInstance from "../../api/axiosInstance";
@@ -18,6 +17,8 @@ import FloatingActionButton from "../../components/routine/detail/FloatingAction
 
 // 커스텀 훅
 import useRoutineDetail from "../../components/routine/detail/hooks/useRoutineDetail";
+import FlameLevel from "@/components/routine/FlameLevel";
+import FlameProgressBar from "@/components/routine/FlameProgressBar";
 
 export default function RoutineDetailPage() {
   const { planIdx } = useParams();
@@ -25,6 +26,8 @@ export default function RoutineDetailPage() {
 
   // 수정 모드 상태 추가
   const [isEditMode, setIsEditMode] = useState(false);
+  // 삭제 확인 모달 상태 추가
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // 모든 데이터와 로직을 커스텀 훅으로 이동
   const {
@@ -43,11 +46,11 @@ export default function RoutineDetailPage() {
     // 다른 함수들
     handleActivityCertification,
     handleRoutineAction,
-    handleLike, // 좋아요 추가 함수
-    handleUnlike, // 좋아요 취소 함수
+    handleLike,
+    handleUnlike,
     getStatusBadgeStyle,
     getStatusText,
-    fetchRoutineData, // 데이터 갱신 함수
+    fetchRoutineData,
   } = useRoutineDetail(planIdx, navigate);
 
   console.log("루틴 정보 :", routineData);
@@ -68,6 +71,82 @@ export default function RoutineDetailPage() {
     const newEditMode = !isEditMode;
     console.log("수정 모드 전환:", newEditMode);
     setIsEditMode(newEditMode);
+  };
+
+  // 삭제 확인 모달 표시 함수
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  // 삭제 확인 모달 닫기 함수
+  const handleCancelDelete = () => {
+    setShowDeleteConfirm(false);
+  };
+
+  // 루틴 삭제 처리 함수
+  const handleDeleteRoutine = async () => {
+    let token = localStorage.getItem("accessToken");
+
+    try {
+      // 루틴 삭제 API 호출 함수
+      const deleteRoutine = async (authToken) => {
+        try {
+          const response = await axiosInstance.delete(
+            `/plan/auth/delete/${planIdx}`,
+            {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+              },
+            }
+          );
+          return response;
+        } catch (error) {
+          // 토큰 만료 오류 (401) 처리
+          if (error.response && error.response.status === 401) {
+            console.log("토큰이 만료되었습니다. 재발급을 시도합니다.");
+            // 토큰 재발급 - utils의 함수 사용
+            const newToken = await reissueToken(navigate);
+            // 새 토큰으로 다시 요청
+            return await axiosInstance.delete(`/plan/auth/delete/${planIdx}`, {
+              headers: {
+                Authorization: `Bearer ${newToken}`,
+              },
+            });
+          }
+          // 다른 오류는 그대로 던지기
+          throw error;
+        }
+      };
+
+      // API 호출
+      // const response = await deleteRoutine(token);
+      // console.log("루틴 삭제 성공:", response.data);
+
+      // 성공 메시지
+      alert("루틴이 성공적으로 삭제되었습니다!");
+
+      // 홈으로 이동
+      navigate("/");
+    } catch (error) {
+      console.error("루틴 삭제 실패:", error);
+      if (error.response) {
+        console.error("응답 데이터:", error.response.data);
+        console.error("응답 상태:", error.response.status);
+        alert(
+          `루틴 삭제 실패: ${
+            error.response.data.message || "알 수 없는 오류가 발생했습니다."
+          }`
+        );
+      } else if (error.request) {
+        console.error("요청 실패:", error.request);
+        alert("서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.");
+      } else {
+        console.error("오류 메시지:", error.message);
+        alert("요청 중 오류가 발생했습니다.");
+      }
+      // 삭제 확인 모달 닫기
+      setShowDeleteConfirm(false);
+    }
   };
 
   // 수정된 데이터 저장 처리 함수
@@ -211,13 +290,52 @@ export default function RoutineDetailPage() {
         </div>
       )}
 
+      {/* 삭제 확인 모달 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <div className="flex items-center text-red-500 mb-4">
+              <AlertCircle className="w-6 h-6 mr-2" />
+              <h3 className="text-lg font-bold">루틴 삭제 확인</h3>
+            </div>
+            <p className="mb-6">
+              이 루틴을 정말 삭제하시겠습니까? 삭제된 루틴은 복구할 수 없습니다.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={handleCancelDelete}
+                className="hover:bg-gray-100"
+              >
+                취소
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteRoutine}
+                className="bg-red-500 hover:bg-red-600"
+              >
+                삭제
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-3xl mx-auto px-4 relative">
-        {/* 루틴 소유자인 경우에만 수정 버튼 표시하고, 수정 모드가 아닌 경우에만 표시 */}
+        {/* 루틴 소유자인 경우에만 수정 및 삭제 버튼 표시하고, 수정 모드가 아닌 경우에만 표시 */}
         {isOwner && !routineData.isCompleted && !isEditMode && (
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-end mb-4 space-x-3">
+            <Button
+              onClick={handleDeleteClick}
+              className="bg-red-500 hover:bg-red-600"
+              variant="destructive"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              삭제하기
+            </Button>
             <Button
               onClick={toggleEditMode}
-              className="bg-blue-500"
+              className="bg-blue-500 hover:bg-blue-600"
               variant="default"
             >
               <Edit className="w-4 h-4 mr-2" />
