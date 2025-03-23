@@ -58,7 +58,29 @@ function App() {
           }}
         >
           <Layout>
-            <AppRoutes />
+            <Routes>
+              <Route path="/user/login" element={<Login />} />
+              <Route path="/user/signup" element={<Signup />} />
+              <Route path="/user/challenge" element={<Challenge />} />
+              <Route
+                path="/challenge/write"
+                element={
+                  <ProtectedRoute>
+                    <ChallengeWritePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/challenge/:challIdx"
+                element={
+                  <ProtectedRoute>
+                    <ChallengDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route path="/" element={<Home />} />
+            </Routes>
           </Layout>
           <Toaster />
         </Router>
