@@ -71,24 +71,24 @@ const ChallengeForm = () => {
     }
   }, [navigate, toast]);
 
-  // useEffect(() => {
-  //   const fetchChallengeCategories = async () => {
-  //     try {
-  //       const response = await axiosInstance.get(`/categories/challenge`);
-  //       // console.log("챌린지 카테고리 데이터:", response.data);
-  //       setChallengeCategories(response.data);
-  //     } catch (error) {
-  //       console.error("챌린지 카테고리 데이터 가져오기 실패:", error);
-  //       toast({
-  //         variant: "destructive",
-  //         title: "카테고리 로딩 실패",
-  //         description: "카테고리 정보를 불러오는데 실패했습니다.",
-  //       });
-  //     }
-  //   };
+  useEffect(() => {
+    const fetchChallengeCategories = async () => {
+      try {
+        const response = await axiosInstance.get(`/categories/challenge`);
+        // console.log("챌린지 카테고리 데이터:", response.data);
+        setChallengeCategories(response.data);
+      } catch (error) {
+        console.error("챌린지 카테고리 데이터 가져오기 실패:", error);
+        toast({
+          variant: "destructive",
+          title: "카테고리 로딩 실패",
+          description: "카테고리 정보를 불러오는데 실패했습니다.",
+        });
+      }
+    };
 
-  //   fetchChallengeCategories();
-  // }, [toast]);
+    fetchChallengeCategories();
+  }, [toast]);
 
   const form = useForm({
     resolver: zodResolver(signupSchema),
