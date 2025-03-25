@@ -84,7 +84,7 @@ function App() {
                 }
               />
               <Route
-                path="/challenge/modify"
+                path="/challenges/modify"
                 element={<ChallengModifyPage />}
               />
               <Route path="/" element={<Home />} />

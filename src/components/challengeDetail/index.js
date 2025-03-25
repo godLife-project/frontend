@@ -40,16 +40,16 @@ const ChallengeDetailForm = () => {
   // 카테고리 정보를 가져오는 함수
   const fetchCategoryName = async (categoryIdx) => {
     try {
-      const response = await axiosInstance.get(`/categories/target`);
+      const response = await axiosInstance.get(`/categories/challenge`);
 
       // 받아온 카테고리 목록에서 일치하는 카테고리 찾기
       const matchedCategory = response.data.find(
-        (category) => category.idx === categoryIdx
+        (category) => category.challCategoryIdx === categoryIdx
       );
 
       // 찾은 카테고리의 이름 설정
       if (matchedCategory) {
-        setCategoryName(matchedCategory.name);
+        setCategoryName(matchedCategory.challName);
       }
     } catch (error) {
       console.error("카테고리 정보 불러오기 실패:", error);
@@ -84,10 +84,10 @@ const ChallengeDetailForm = () => {
         }
       );
 
-      console.log("✅ API 응답 데이터:", response.data);
+      console.log("API 응답 데이터:", response.data);
       setChallengeData(response.data);
     } catch (err) {
-      console.error("❌ API 호출 에러:", err.response?.status, err.message);
+      console.error("API 호출 에러:", err.response?.status, err.message);
       setError(err.message);
     } finally {
       setLoading(false);
