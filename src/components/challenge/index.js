@@ -1,3 +1,4 @@
+//챌린지 작성
 import { useState, useRef, useEffect } from "react";
 import {
   Card,
@@ -40,13 +41,13 @@ const signupSchema = z.object({
   challTitle: z.string().min(1, "제목을 입력해주세요"),
   challDescription: z.string().min(1, "설명을 입력해주세요"),
   challCategoryIdx: z.string().min(1, "카테고리를 선택해주세요"),
-  totalClearTime: z.string().min(1, "총 클리어 시간을 입력해주세요"),
   minParticipationTime: z.string().min(1, "최소 참여 시간을 입력해주세요"),
+  totalClearTime: z.string().min(1, "총 클리어 시간을 입력해주세요"),
   maxParticipants: z.string().min(1, "최대 참여 인원을 입력해주세요"),
   challState: z.enum(["0", "1"]),
-  challStartTime: z.string().optional(),
+  challStartTime: z.string().optional(), // 선택적 필드로 처리
   duration: z.string().min(1, "유지 기간을 입력해주세요"),
-  userJoin: z.string().optional(),
+  userJoin: z.string().optional(), // 선택적 필드로 처리
 });
 
 const ChallengeForm = () => {
@@ -100,7 +101,7 @@ const ChallengeForm = () => {
       totalClearTime: "",
       minParticipationTime: "",
       maxParticipants: "",
-      challState: "0",
+      challState: "",
       challStartTime: "",
       duration: "",
       userJoin: "",
@@ -155,9 +156,7 @@ const ChallengeForm = () => {
         totalClearTime: parseInt(data.totalClearTime, 10),
         maxParticipants: parseInt(data.maxParticipants, 10),
         duration: parseInt(data.duration, 10),
-        challCategoryIdx: isNaN(parseInt(data.challCategoryIdx, 10))
-          ? null
-          : parseInt(data.challCategoryIdx, 10),
+        challCategoryIdx: parseInt(data.challCategoryIdx, 10),
         // 날짜 형식 올바르게 지정
         challStartTime:
           challengeType === "0" && data.challStartTime
@@ -415,10 +414,10 @@ const ChallengeForm = () => {
               <CardTitle>챌린지 유형</CardTitle>
             </CardHeader>
             <CardContent>
-              <FormField>
+              <FormField
                 control={form.control}
-                name="challState" render=
-                {({ field }) => (
+                name="challState"
+                render={({ field }) => (
                   <FormItem>
                     <FormControl>
                       <RadioGroup
@@ -445,7 +444,7 @@ const ChallengeForm = () => {
                     </FormControl>
                   </FormItem>
                 )}
-              </FormField>
+              />
             </CardContent>
           </Card>
 
