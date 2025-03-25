@@ -1,5 +1,4 @@
-//챌린지 작성
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -15,13 +14,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import * as z from "zod";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import axiosInstance from "@/api/axiosInstance";
 import {
   Form,
   FormField,
   FormItem,
-  FormLabel,
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
@@ -29,54 +27,65 @@ import { useToast } from "@/components/ui/use-toast";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 
 // 유효성 검사 스키마
-const signupSchema = z.object({
+const challengeEditSchema = z.object({
+  challIdx: z.number(),
   challTitle: z.string().min(1, "제목을 입력해주세요"),
   challDescription: z.string().min(1, "설명을 입력해주세요"),
   challCategoryIdx: z.string().min(1, "카테고리를 선택해주세요"),
   minParticipationTime: z.string().min(1, "최소 참여 시간을 입력해주세요"),
-  totalClearTime: z.string().min(1, "총 클리어 시간을 입력해주세요"),
   maxParticipants: z.string().min(1, "최대 참여 인원을 입력해주세요"),
-  challState: z.enum(["0", "1"]),
-  challStartTime: z.string().optional(), // 선택적 필드로 처리
-  duration: z.string().min(1, "유지 기간을 입력해주세요"),
-  userJoin: z.string().optional(), // 선택적 필드로 처리
+  challStartTime: z.string().optional(),
+  challEndTime: z.string().optional(),
 });
 
-const ChallengeForm = () => {
+const ChallengeModifyForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { challIdx } = useParams(); // URL에서 챌린지 ID 가져오기
 
-  const [challengeType, setChallengeType] = useState("0");
-  const [titleLength, setTitleLength] = useState(0);
-  const [descriptionLength, setDescriptionLength] = useState(0);
   const [challengeCategories, setChallengeCategories] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [titleLength, setTitleLength] = useState(0);
+  const [descriptionLength, setDescriptionLength] = useState(0);
 
-  useEffect(() => {
-    const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) {
-      toast({
-        variant: "destructive",
-        title: "로그인이 필요합니다",
-        description: "챌린지 작성을 위해 로그인해주세요.",
-      });
-      navigate("/user/login");
-    }
-  }, [navigate, toast]);
+  // 더미 데이터
+  const dummyData = {
+    challIdx: 81,
+    challTitle: "수정한 챌린지입니다",
+    challDescription: "가나다가가가ㅋㅋ",
+    challCategoryIdx: 5,
+    minParticipationTime: 1,
+    maxParticipants: 2,
+    challStartTime: "2025-02-15T12:00:00",
+    challEndTime: "2025-02-16T12:00:00",
+  };
+
+  const form = useForm({
+    resolver: zodResolver(challengeEditSchema),
+    mode: "onChange",
+    defaultValues: {
+      challIdx: dummyData.challIdx,
+      challTitle: dummyData.challTitle,
+      challDescription: dummyData.challDescription,
+      challCategoryIdx: String(dummyData.challCategoryIdx),
+      minParticipationTime: String(dummyData.minParticipationTime),
+      maxParticipants: String(dummyData.maxParticipants),
+      challStartTime: dummyData.challStartTime.split("T")[0],
+      challEndTime: dummyData.challEndTime.split("T")[0],
+    },
+  });
 
   // useEffect(() => {
+  //   // 챌린지 카테고리 가져오기
   //   const fetchChallengeCategories = async () => {
   //     try {
   //       const response = await axiosInstance.get(`/categories/challenge`);
-  //       // console.log("챌린지 카테고리 데이터:", response.data);
   //       setChallengeCategories(response.data);
   //     } catch (error) {
   //       console.error("챌린지 카테고리 데이터 가져오기 실패:", error);
@@ -90,27 +99,6 @@ const ChallengeForm = () => {
 
   //   fetchChallengeCategories();
   // }, [toast]);
-
-  const form = useForm({
-    resolver: zodResolver(signupSchema),
-    mode: "onChange", // 변경: onSubmit에서 onChange로 변경하여 실시간 유효성 검사
-    defaultValues: {
-      challTitle: "",
-      challDescription: "",
-      challCategoryIdx: "",
-      totalClearTime: "",
-      minParticipationTime: "",
-      maxParticipants: "",
-      challState: "",
-      challStartTime: "",
-      duration: "",
-      userJoin: "",
-    },
-  });
-
-  const {
-    formState: { errors },
-  } = form;
 
   const handleTitleChange = (e) => {
     const inputValue = e.target.value;
@@ -126,12 +114,6 @@ const ChallengeForm = () => {
     }
   };
 
-  // challengeType이 변경될 때마다 challState 값 업데이트
-  useEffect(() => {
-    form.setValue("challState", challengeType);
-  }, [challengeType, form]);
-
-  // 챌린지 작성 API 요청 함수
   const onSubmit = async (data) => {
     setIsSubmitting(true);
 
@@ -142,7 +124,7 @@ const ChallengeForm = () => {
         toast({
           variant: "destructive",
           title: "로그인이 필요합니다",
-          description: "챌린지 작성을 위해 로그인해주세요.",
+          description: "챌린지 수정을 위해 로그인해주세요.",
         });
         navigate("/user/login");
         return;
@@ -150,47 +132,46 @@ const ChallengeForm = () => {
 
       // 데이터 형식 변환
       const submitData = {
-        ...data,
-        challState: "PUBLISHED", // "0" 또는 "1" 대신 항상 "PUBLISHED" 사용
-        minParticipationTime: parseInt(data.minParticipationTime, 10),
-        totalClearTime: parseInt(data.totalClearTime, 10),
-        maxParticipants: parseInt(data.maxParticipants, 10),
-        duration: parseInt(data.duration, 10),
+        challIdx: data.challIdx,
+        challTitle: data.challTitle,
+        challDescription: data.challDescription,
         challCategoryIdx: parseInt(data.challCategoryIdx, 10),
-        // 날짜 형식 올바르게 지정
-        challStartTime:
-          challengeType === "0" && data.challStartTime
-            ? `${data.challStartTime}T10:00:00`
-            : null,
-        userJoin: challengeType === "0" ? 0 : 1,
+        minParticipationTime: parseInt(data.minParticipationTime, 10),
+        maxParticipants: parseInt(data.maxParticipants, 10),
+        challStartTime: data.challStartTime
+          ? `${data.challStartTime}T10:00:00`
+          : undefined,
+        challEndTime: data.challEndTime
+          ? `${data.challEndTime}T12:00:00`
+          : undefined,
       };
 
-      console.log("제출할 챌린지 데이터:", submitData);
+      console.log("제출할 챌린지 수정 데이터:", submitData);
 
-      // axiosInstance는 인터셉터를 통해 토큰이 자동으로 포함되어야 함
-      const response = await axiosInstance.post(
-        "/challenges/admin/create",
+      // 챌린지 수정 API 요청
+      const response = await axiosInstance.patch(
+        "/challenges/admin/modify",
         submitData,
         {
           headers: { Authorization: `${accessToken}` },
         }
       );
 
-      console.log("챌린지 생성 성공:", response.data);
+      console.log("챌린지 수정 성공:", response.data);
 
       toast({
-        title: "챌린지 생성 성공",
-        description: "챌린지가 성공적으로 생성되었습니다!",
+        title: "챌린지 수정 성공",
+        description: "챌린지가 성공적으로 수정되었습니다!",
       });
 
-      // 성공 시 챌린지 목록 페이지로 이동
+      // 성공 시 챌린지 목록 또는 상세 페이지로 이동
       navigate("/challenge");
     } catch (error) {
-      console.error("챌린지 생성 중 오류 발생:", error);
+      console.error("챌린지 수정 중 오류 발생:", error);
       toast({
         variant: "destructive",
-        title: "챌린지 생성 실패",
-        description: "챌린지 생성 중 오류가 발생했습니다. 다시 시도해주세요.",
+        title: "챌린지 수정 실패",
+        description: "챌린지 수정 중 오류가 발생했습니다. 다시 시도해주세요.",
       });
     } finally {
       setIsSubmitting(false);
@@ -233,20 +214,14 @@ const ChallengeForm = () => {
                           <SelectValue placeholder="선택" />
                         </SelectTrigger>
                         <SelectContent className="bg-white">
-                          {challengeCategories.length > 0 ? (
-                            challengeCategories.map((category) => (
-                              <SelectItem
-                                key={category.challCategoryIdx}
-                                value={String(category.challCategoryIdx)}
-                              >
-                                {category.challName}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectGroup>
-                              <SelectLabel>카테고리 없음</SelectLabel>
-                            </SelectGroup>
-                          )}
+                          {challengeCategories.map((category) => (
+                            <SelectItem
+                              key={category.challCategoryIdx}
+                              value={String(category.challCategoryIdx)}
+                            >
+                              {category.challName}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </FormControl>
@@ -328,9 +303,9 @@ const ChallengeForm = () => {
 
           <Card className="bg-white shadow-sm">
             <CardHeader>
-              <CardTitle>최소 참여 가능 시간 및 총 클리어 시간</CardTitle>
+              <CardTitle>최소 참여 가능 시간 및 최대 참여 인원</CardTitle>
               <CardDescription>
-                최소 참여 가능 시간과 총 클리어 시간을 설정해주세요.
+                최소 참여 가능 시간과 최대 참여 인원을 설정해주세요.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -340,16 +315,11 @@ const ChallengeForm = () => {
                   name="minParticipationTime"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700">
+                      <Label className="text-gray-700">
                         참여 가능한 최소 시간
-                      </FormLabel>
+                      </Label>
                       <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          id="minParticipationTime"
-                          min="1"
-                        />
+                        <Input {...field} type="number" min="1" />
                       </FormControl>
                       <FormMessage className="text-red-500 text-sm" />
                     </FormItem>
@@ -358,19 +328,12 @@ const ChallengeForm = () => {
 
                 <FormField
                   control={form.control}
-                  name="totalClearTime"
+                  name="maxParticipants"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700">
-                        총 클리어 시간
-                      </FormLabel>
+                      <Label className="text-gray-700">최대 참여 인원</Label>
                       <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          id="totalClearTime"
-                          min="1"
-                        />
+                        <Input {...field} type="number" min="1" />
                       </FormControl>
                       <FormMessage className="text-red-500 text-sm" />
                     </FormItem>
@@ -382,109 +345,30 @@ const ChallengeForm = () => {
 
           <Card className="bg-white shadow-sm">
             <CardHeader>
-              <CardTitle>최대 참여 가능 인원</CardTitle>
-              <CardDescription>
-                최대 참여 가능한 인원을 설정해주세요.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <FormField
-                control={form.control}
-                name="maxParticipants"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        className="w-full"
-                        type="number"
-                        id="maxParticipants"
-                        min="1"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white">
-            <CardHeader>
-              <CardTitle>챌린지 유형</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <FormField
-                control={form.control}
-                name="challState"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <RadioGroup
-                        className="flex space-x-4"
-                        value={challengeType}
-                        onValueChange={(value) => {
-                          setChallengeType(value);
-                          field.onChange(value);
-                        }}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="0" id="admin-challenge" />
-                          <Label htmlFor="admin-challenge">
-                            관리자 개입형 챌린지
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="1" id="user-challenge" />
-                          <Label htmlFor="user-challenge">
-                            유저 참여형 챌린지
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white shadow-sm">
-            <CardHeader>
               <CardTitle>챌린지 기간 설정</CardTitle>
               <CardDescription>
-                {challengeType === "0"
-                  ? "시작일과 챌린지 유지 기간을 설정해주세요."
-                  : "챌린지 유지 시간을 설정해주세요."}
+                챌린지의 시작일과 종료일을 설정해주세요.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col md:flex-row gap-6">
-                {challengeType === "0" && (
-                  <div className="flex-1 space-y-2">
-                    <Label htmlFor="challStartTime">시작일</Label>
-                    <Controller
-                      control={form.control}
-                      name="challStartTime"
-                      render={({ field }) => (
-                        <Input {...field} type="date" id="challStartTime" />
-                      )}
-                    />
-                  </div>
-                )}
-
                 <div className="flex-1 space-y-2">
-                  <Label htmlFor="duration">유지 기간 (일)</Label>
+                  <Label htmlFor="challStartTime">시작일</Label>
                   <Controller
                     control={form.control}
-                    name="duration"
+                    name="challStartTime"
                     render={({ field }) => (
-                      <Input
-                        {...field}
-                        type="number"
-                        id="duration"
-                        min="1"
-                        className="w-full"
-                      />
+                      <Input {...field} type="date" id="challStartTime" />
+                    )}
+                  />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="challEndTime">종료일</Label>
+                  <Controller
+                    control={form.control}
+                    name="challEndTime"
+                    render={({ field }) => (
+                      <Input {...field} type="date" id="challEndTime" />
                     )}
                   />
                 </div>
@@ -493,15 +377,15 @@ const ChallengeForm = () => {
           </Card>
 
           <div className="flex justify-end space-x-4">
-            <Button
+            {/* <Button
               variant="outline"
               type="button"
               onClick={() => navigate(-1)}
             >
               취소
-            </Button>
+            </Button> */}
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "제출 중..." : "생성하기"}
+              {isSubmitting ? "수정 중..." : "수정하기"}
             </Button>
           </div>
         </form>
@@ -510,4 +394,4 @@ const ChallengeForm = () => {
   );
 };
 
-export default ChallengeForm;
+export default ChallengeModifyForm;
