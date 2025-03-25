@@ -76,8 +76,7 @@ function App() {
                 }
               />
               <Route
-                // path="/challenge/:challIdx"
-                path="/challenge/detail"
+                path="/challenges/detail/:challIdx"
                 element={
                   <ProtectedRoute>
                     <ChallengDetailPage />
