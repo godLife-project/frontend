@@ -84,7 +84,7 @@ function App() {
                 }
               />
               <Route
-                path="/challenges/modify"
+                path="/challenge/modify/:challIdx"
                 element={<ChallengModifyPage />}
               />
               <Route path="/" element={<Home />} />
