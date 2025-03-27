@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Search, Filter, ChevronDown, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import SearchBar from "@/components/common/SearchBar";
+import SearchBar from "@/components/common/SearchBar/SearchBar";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
