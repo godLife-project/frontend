@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
+import { GitFork } from "lucide-react"; // GitFork 아이콘 임포트 추가
 import { formSchema } from "./schema";
 import useFormSections from "./hooks/useFormSections";
 import CreateRoutineDialog from "./dialogs/CreateRoutineDialog";
@@ -23,6 +24,8 @@ export default function RoutineForm({
 }) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [formData, setFormData] = useState(null);
+  const [isForkData, setIsForkData] = useState(false);
+  const [forkIdx, setForkIdx] = useState(null);
   const navigate = useNavigate();
 
   // 기본값 설정 - 읽기 전용 모드에서는 routineData 사용
@@ -37,6 +40,8 @@ export default function RoutineForm({
     jobEtcCateDTO: null,
     activities: [],
     repeatDays: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+    forkIdx: null,
+    forked: false,
   };
 
   const form = useForm({
@@ -45,10 +50,6 @@ export default function RoutineForm({
     mode: "onSubmit",
   });
 
-  // 사용자 정보 로드 (읽기 전용 모드가 아닐 때만)
-  // RoutineForm 컴포넌트 내의 useEffect 수정
-
-  // 사용자 정보 로드 (읽기 전용 모드가 아닐 때만)
   // 사용자 정보 및 포크 데이터 로드
   useEffect(() => {
     if (!isReadOnly) {
@@ -74,6 +75,14 @@ export default function RoutineForm({
           form.setValue("jobEtcCateDTO", parsedForkData.jobEtcCateDTO);
           form.setValue("activities", parsedForkData.activities);
           form.setValue("repeatDays", parsedForkData.repeatDays);
+
+          // 포크 정보 저장
+          if (parsedForkData.forkIdx && parsedForkData.forked) {
+            setIsForkData(true);
+            setForkIdx(parsedForkData.forkIdx);
+            form.setValue("forkIdx", parsedForkData.forkIdx);
+            form.setValue("forked", parsedForkData.forked);
+          }
 
           // 사용자 정보는 덮어쓰지 않음 (포크된 데이터에 없을 수 있음)
           const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
@@ -117,6 +126,15 @@ export default function RoutineForm({
         description: activity.description || "", // null이면 빈 문자열로 변환
       })),
     };
+
+    // 포크 정보 추가
+    if (isForkData && forkIdx) {
+      processedValues.forkIdx = forkIdx;
+      processedValues.forked = true;
+    } else {
+      processedValues.forkIdx = null;
+      processedValues.forked = false;
+    }
 
     // 수정 모드일 경우 onSubmit 콜백 실행
     if (isEditMode && onSubmit) {
@@ -237,6 +255,14 @@ export default function RoutineForm({
         onSubmit={form.handleSubmit(handleFormSubmit)}
         className="space-y-6"
       >
+        {isForkData && forkIdx && (
+          <div className="bg-purple-50 border border-purple-200 p-3 rounded-md text-purple-700 text-sm">
+            <GitFork className="inline-block w-4 h-4 mr-1 mb-1" />
+            다른 사용자의 루틴을 포크하여 작성 중입니다. 루틴을 저장하면 원본
+            루틴의 포크 카운트가 증가합니다.
+          </div>
+        )}
+
         {/* 각 섹션 렌더링 */}
         <TitleSectionCard />
         <JobSectionCard />

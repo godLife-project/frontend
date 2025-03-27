@@ -8,20 +8,10 @@ export default function MyRoutineList() {
   const [routines, setRoutines] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchInputTerm, setSearchInputTerm] = useState(""); // 입력 중인 검색어
-  // 필터 상태 관리
-  const [filters, setFilters] = useState({
-    status: "all", // 상태 필터 - 1: 진행중, 2: 대기중, 3: 완료, all: 진행+대기
-    target: "", // 목표 카테고리
-    job: "", // 직업 카테고리
-    sort: "latest", // 정렬 기준
-    order: "desc", // 정렬 순서
-  });
 
   const navigate = useNavigate();
 
-  // 데이터 가져오기 (필터 적용)
+  // 데이터 가져오기 (필터 없음)
   const fetchRoutineData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -30,42 +20,7 @@ export default function MyRoutineList() {
 
     try {
       const getRoutines = async (authToken) => {
-        // 필터를 URL 쿼리 파라미터로 변환
-        const queryParams = new URLSearchParams();
-
-        // 상태 필터 적용
-        if (filters.status && filters.status !== "all") {
-          queryParams.append("status", filters.status);
-        }
-
-        // 목표 카테고리 필터 적용
-        if (filters.target) {
-          queryParams.append("target", filters.target);
-        }
-
-        // 직업 카테고리 필터 적용
-        if (filters.job) {
-          queryParams.append("job", filters.job);
-        }
-
-        // 정렬 기준 적용
-        if (filters.sort) {
-          queryParams.append("sort", filters.sort);
-        }
-
-        // 정렬 순서 적용
-        if (filters.order) {
-          queryParams.append("order", filters.order);
-        }
-
-        // 검색어 적용
-        if (searchTerm) {
-          queryParams.append("search", searchTerm);
-        }
-
-        // URL에 쿼리 파라미터 추가
-        const queryString = queryParams.toString();
-        const url = `/list/auth/myPlans${queryString ? `?${queryString}` : ""}`;
+        const url = `/list/auth/myPlans`;
 
         console.log("API 요청 URL:", url);
 
@@ -108,9 +63,8 @@ export default function MyRoutineList() {
     } finally {
       setIsLoading(false);
     }
-  }, [navigate, filters, searchTerm]); // 의존성 배열에 filters와 searchTerm 추가
+  }, [navigate]); // 의존성 배열에서 filters와 searchTerm 제거
 
-  // 필터나 검색어가 변경될 때마다 데이터 다시 가져오기
   useEffect(() => {
     fetchRoutineData();
   }, [fetchRoutineData]);
@@ -125,14 +79,6 @@ export default function MyRoutineList() {
     navigate("/routine/create");
   };
 
-  // 검색 핸들러
-  const handleSearch = (value) => {
-    // 실제 검색 실행 시에만 API 호출 (검색 버튼 클릭 또는 엔터)
-    setSearchTerm(value);
-  };
-
-  // 필터 변경 핸들러 (이미 setFilters를 통해 처리)
-
   return (
     <>
       <RoutineList
@@ -141,13 +87,7 @@ export default function MyRoutineList() {
         error={error}
         onCardClick={handleRoutineCardClick}
         onAddNewRoutine={handleAddNewRoutine}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        searchInputTerm={searchInputTerm}
-        setSearchInputTerm={setSearchInputTerm}
-        filters={filters}
-        setFilters={setFilters}
-        onSearch={handleSearch}
+        // 검색 및 필터 관련 prop 제거
       />
     </>
   );

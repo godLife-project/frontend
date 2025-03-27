@@ -72,6 +72,9 @@ const RoutineStats = ({
           })),
           // 반드시 배열 형태로 저장
           repeatDays: repeatDays,
+          // 포크 관련 필드 추가 - API 요구사항
+          forkIdx: routineData.planIdx, // 원본 루틴의 인덱스 번호
+          forked: true, // 루틴을 따라함을 표시
         })
       );
 
