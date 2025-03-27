@@ -20,7 +20,7 @@ import ChallengeWritePage from "./pages/Challenge/Write";
 import ChallengeForm from "./components/challenge";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ChallengModifyPage from "./pages/Challenge/Modify";
-
+import ChallengeListPage from "./pages/Challenge/List";
 // 인증이 필요한 라우트를 위한 컴포넌트
 function AppRoutes() {
   const { isAuthenticated, loading } = useAuth();
@@ -87,6 +87,7 @@ function App() {
                 path="/challenge/modify/:challIdx"
                 element={<ChallengModifyPage />}
               />
+              <Route path="/challenge/list" element={<ChallengeListPage />} />
               <Route path="/" element={<Home />} />
             </Routes>
           </Layout>

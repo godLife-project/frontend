@@ -203,7 +203,7 @@ const ChallengeModifyPage = () => {
 
       // 챌린지 수정 API 요청
       const response = await axiosInstance.patch(
-        `/challenges/admin/modify/${challIdx}`,
+        `/challenges/admin/modify/`,
         submitData,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
