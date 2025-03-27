@@ -13,9 +13,9 @@ import Home from "./pages/Home/Home";
 import Signup from "./pages/Auth/SignUp";
 import Login from "./pages/Auth/Login";
 import RoutineCreator from "./pages/Routine/Create";
-import RoutineListPage from "./pages/Routine/MyRoutineList";
 import RoutineDetailPage from "./pages/Routine/Detail";
 import MyRoutineList from "./pages/Routine/MyRoutineList";
+import RoutineList from "./pages/Routine/List";
 
 // 인증이 필요한 라우트를 위한 컴포넌트
 function AppRoutes() {
@@ -30,7 +30,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/routine/list" element={<RoutineListPage />} />
+      <Route path="/routine/list" element={<RoutineList />} />
       <Route path="/routine/mylist" element={<MyRoutineList />} />
       <Route path="/routine/detail/:planIdx" element={<RoutineDetailPage />} />
       <Route
