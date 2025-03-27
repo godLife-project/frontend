@@ -91,8 +91,9 @@ export default function RoutineDetailPage() {
       // 루틴 삭제 API 호출 함수
       const deleteRoutine = async (authToken) => {
         try {
-          const response = await axiosInstance.delete(
+          const response = await axiosInstance.patch(
             `/plan/auth/delete/${planIdx}`,
+            {},
             {
               headers: {
                 Authorization: `Bearer ${authToken}`,
@@ -107,7 +108,7 @@ export default function RoutineDetailPage() {
             // 토큰 재발급 - utils의 함수 사용
             const newToken = await reissueToken(navigate);
             // 새 토큰으로 다시 요청
-            return await axiosInstance.delete(`/plan/auth/delete/${planIdx}`, {
+            return await axiosInstance.patch(`/plan/auth/delete/${planIdx}`, {
               headers: {
                 Authorization: `Bearer ${newToken}`,
               },
@@ -119,14 +120,14 @@ export default function RoutineDetailPage() {
       };
 
       // API 호출
-      // const response = await deleteRoutine(token);
-      // console.log("루틴 삭제 성공:", response.data);
+      const response = await deleteRoutine(token);
+      console.log("루틴 삭제 성공:", response.data);
 
       // 성공 메시지
       alert("루틴이 성공적으로 삭제되었습니다!");
 
       // 홈으로 이동
-      navigate("/");
+      navigate("/routine/mylist");
     } catch (error) {
       console.error("루틴 삭제 실패:", error);
       if (error.response) {

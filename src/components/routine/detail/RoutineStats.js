@@ -26,48 +26,66 @@ const RoutineStats = ({
 
   // Fork 클릭 이벤트 핸들러 추가
   const handleForkClick = () => {
-    // repeatDays 데이터 처리 - 서로 다른 형식을 올바르게 처리
-    let repeatDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]; // 기본값
+    console.log("포크 버튼 클릭됨", routineData);
 
-    if (routineData.repeatDays) {
-      // repeatDays가 배열이면 그대로 사용
-      if (Array.isArray(routineData.repeatDays)) {
-        repeatDays = routineData.repeatDays;
+    try {
+      // repeatDays 데이터 처리 - 서로 다른 형식을 올바르게 처리
+      let repeatDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]; // 기본값
+
+      if (routineData.repeatDays) {
+        // repeatDays가 배열이면 그대로 사용
+        if (Array.isArray(routineData.repeatDays)) {
+          repeatDays = routineData.repeatDays;
+        }
+        // repeatDays가 문자열이면 배열로 변환 (쉼표로 구분된 경우)
+        else if (
+          typeof routineData.repeatDays === "string" &&
+          routineData.repeatDays.includes(",")
+        ) {
+          repeatDays = routineData.repeatDays.split(",");
+        }
+        // 다른 형식이면 기본값 유지
       }
-      // repeatDays가 문자열이면 배열로 변환 (쉼표로 구분된 경우)
-      else if (
-        typeof routineData.repeatDays === "string" &&
-        routineData.repeatDays.includes(",")
-      ) {
-        repeatDays = routineData.repeatDays.split(",");
-      }
-      // 다른 형식이면 기본값 유지
+
+      // 현재 루틴 데이터를 세션 스토리지에 저장
+      sessionStorage.setItem(
+        "forkRoutineData",
+        JSON.stringify({
+          planTitle: `${routineData.planTitle} (복사본)`,
+          endTo: routineData.endTo,
+          targetIdx: routineData.targetIdx,
+          isShared: routineData.isShared,
+          planImp: routineData.planImp,
+          jobIdx: routineData.jobIdx,
+          jobEtcCateDTO: routineData.jobEtcCateDTO,
+          // 모든 필요한 필드를 포함한 activities 매핑
+          activities: routineData.activities.map((activity) => ({
+            activityTitle:
+              activity.activityName || activity.activityTitle || "",
+            activityName: activity.activityName || activity.activityTitle || "",
+            description: activity.description || "",
+            activityImp: activity.activityImp || 5,
+            setTime: activity.setTime || "12:00",
+            planIdx: null, // 새 루틴이므로 null로 설정
+            activityIdx: null, // 새 루틴이므로 null로 설정
+            verified: false, // 기본값은 false
+          })),
+          // 반드시 배열 형태로 저장
+          repeatDays: repeatDays,
+        })
+      );
+
+      // 저장 후 확인 (디버깅용)
+      const savedData = sessionStorage.getItem("forkRoutineData");
+      console.log("저장된 데이터:", savedData);
+
+      // 루틴 생성 페이지로 이동
+      navigate("/routine/create");
+    } catch (error) {
+      console.error("포크 처리 중 오류 발생:", error);
+      alert("포크 처리 중 오류가 발생했습니다: " + error.message);
     }
-
-    // 현재 루틴 데이터를 세션 스토리지에 저장
-    sessionStorage.setItem(
-      "forkRoutineData",
-      JSON.stringify({
-        planTitle: `${routineData.planTitle} (복사본)`,
-        endTo: routineData.endTo,
-        targetIdx: routineData.targetIdx,
-        isShared: routineData.isShared,
-        planImp: routineData.planImp,
-        jobIdx: routineData.jobIdx,
-        jobEtcCateDTO: routineData.jobEtcCateDTO,
-        activities: routineData.activities.map((activity) => ({
-          activityTitle: activity.activityTitle,
-          description: activity.description || "",
-        })),
-        // 반드시 배열 형태로 저장
-        repeatDays: repeatDays,
-      })
-    );
-
-    // 루틴 생성 페이지로 이동
-    navigate("/routine/create");
   };
-
   return (
     <div className="absolute left-0 right-0 bottom-0 transform translate-y-1/2 px-8">
       <div className="bg-white rounded-lg shadow-md p-4">

@@ -30,6 +30,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/routine/list" element={<RoutineListPage />} />
       <Route path="/routine/mylist" element={<MyRoutineList />} />
       <Route path="/routine/detail/:planIdx" element={<RoutineDetailPage />} />
       <Route

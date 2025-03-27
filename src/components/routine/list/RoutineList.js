@@ -1,9 +1,8 @@
-// src/components/routine/list/RoutineList.jsx
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import SearchWrapper from "@/components/common/SearchWrapper";
 import {
   Calendar,
   Video,
@@ -21,11 +20,8 @@ import {
   Activity,
   Target,
   Calendar as CalendarIcon,
+  Search,
 } from "lucide-react";
-
-// API
-import axiosInstance from "../../../api/axiosInstance";
-import { reissueToken } from "../../../utils/routineUtils";
 
 // 동적으로 아이콘 렌더링하는 컴포넌트
 const DynamicIcon = ({ iconName, color = "#000", size = 16 }) => {
@@ -167,7 +163,7 @@ const RoutineCard = ({ routine, onCardClick, isActive }) => {
             <div className="flex mt-3">
               <Badge
                 variant="outline"
-                className="bg-white bg-opacity-90 text-gray-700 font-medium px-2 py-1 shadow-sm"
+                className="bg-white text-gray-800 font-medium px-2 py-1 shadow-md border border-gray-200"
               >
                 <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
                 {formatRepeatDays(myPlanInfos.repeatDays)}
@@ -197,10 +193,12 @@ const RoutineCard = ({ routine, onCardClick, isActive }) => {
           <div className="ml-2 mb-3">
             <div className="flex items-center text-gray-600 mb-2">
               <Activity className="w-4 h-4 mr-2" />
-              <span className="text-sm">활동 {myActivities.length}개</span>
+              <span className="text-sm">
+                활동 {myActivities?.length || 0}개
+              </span>
             </div>
             <div className="bg-white rounded-md p-2.5 shadow-sm border border-gray-100">
-              {myActivities.slice(0, 2).map((activity) => (
+              {(myActivities || []).slice(0, 2).map((activity) => (
                 <div
                   key={activity.activityIdx}
                   className="flex items-center mb-2 last:mb-0"
@@ -217,7 +215,7 @@ const RoutineCard = ({ routine, onCardClick, isActive }) => {
                   )}
                 </div>
               ))}
-              {myActivities.length > 2 && (
+              {(myActivities?.length || 0) > 2 && (
                 <div className="text-xs text-blue-500 font-medium mt-1.5 text-center">
                   + {myActivities.length - 2}개 더 보기...
                 </div>
@@ -259,79 +257,30 @@ const RoutineCard = ({ routine, onCardClick, isActive }) => {
   );
 };
 
-// 메인 루틴 리스트 컴포넌트
-const RoutineList = () => {
-  const [routines, setRoutines] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
+// 메인 루틴 리스트 컴포넌트 - 필터 적용 버전
+const RoutineList = ({
+  routines,
+  isLoading,
+  error,
+  onCardClick,
+  onAddNewRoutine,
+  searchTerm,
+  setSearchTerm,
+  searchInputTerm,
+  setSearchInputTerm,
+  filters,
+  setFilters,
+  onSearch,
+}) => {
+  // null/undefined 체크 추가
+  const safeRoutines = routines || [];
 
-  // 데이터 가져오기
-  useEffect(() => {
-    const fetchRoutineData = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      let token = localStorage.getItem("accessToken");
-
-      try {
-        const getRoutines = async (authToken) => {
-          try {
-            const response = await axiosInstance.get("/list/auth/myPlans", {
-              headers: {
-                Authorization: `Bearer ${authToken}`,
-              },
-            });
-            return response;
-          } catch (error) {
-            // 토큰 만료 처리
-            if (error.response && error.response.status === 401) {
-              const newToken = await reissueToken(navigate);
-              return await axiosInstance.get("/list/auth/myPlans", {
-                headers: {
-                  Authorization: `Bearer ${newToken}`,
-                },
-              });
-            }
-            throw error;
-          }
-        };
-
-        const response = await getRoutines(token);
-        console.log("루틴 리스트 데이터:", response.data);
-
-        if (response.data && response.data.status === "success") {
-          setRoutines(response.data.message || []);
-        } else {
-          setError("데이터를 불러오는데 실패했습니다.");
-        }
-      } catch (error) {
-        console.error("루틴 리스트 조회 실패:", error);
-        setError("루틴 목록을 불러오는데 문제가 발생했습니다.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchRoutineData();
-  }, [navigate]);
-
-  // 루틴 카드 클릭 핸들러
-  const handleRoutineCardClick = (planIdx) => {
-    navigate(`/routine/detail/${planIdx}`);
-  };
-
-  // 새 루틴 추가 핸들러
-  const handleAddNewRoutine = () => {
-    navigate("/routine/create");
-  };
-
-  // 활성 루틴과 비활성 루틴 분류
-  const activeRoutines = routines.filter(
-    (routine) => routine.myPlanInfos.isActive
+  // 상태에 따른 루틴 분류 (API가 필터링을 수행하므로 클라이언트 측에서는 간단하게 처리)
+  const activeRoutines = safeRoutines.filter(
+    (routine) => routine?.myPlanInfos?.isActive
   );
-  const inactiveRoutines = routines.filter(
-    (routine) => !routine.myPlanInfos.isActive
+  const inactiveRoutines = safeRoutines.filter(
+    (routine) => routine?.myPlanInfos && !routine.myPlanInfos.isActive
   );
 
   if (isLoading) {
@@ -361,39 +310,64 @@ const RoutineList = () => {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">나의 루틴 목록</h1>
-          <p className="text-gray-500 mt-1">총 {routines.length}개의 루틴</p>
+          <p className="text-gray-500 mt-1">
+            총 {safeRoutines.length}개의 루틴
+          </p>
         </div>
         <Button
-          onClick={handleAddNewRoutine}
+          onClick={onAddNewRoutine}
           className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 font-medium py-2 px-4 shadow-md transition-all hover:shadow-lg"
         >
           <PlusCircle className="w-4 h-4 mr-2" />새 루틴
         </Button>
       </div>
 
-      {routines.length === 0 ? (
-        <div className="text-center py-16 bg-gray-50 rounded-lg shadow-sm border border-gray-100">
-          <div className="mb-6 text-gray-300">
-            <Calendar className="w-16 h-16 mx-auto" />
-          </div>
-          <h3 className="text-xl font-medium text-gray-700 mb-3">
-            루틴이 없습니다
+      {/* SearchWrapper 컴포넌트로 대체 */}
+      <SearchWrapper
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        searchInputTerm={searchInputTerm}
+        setSearchInputTerm={setSearchInputTerm}
+        filters={filters}
+        setFilters={setFilters}
+        totalResults={safeRoutines.length}
+        placeholder="루틴 제목, 직업, 목표, 활동 검색..."
+        onSearch={onSearch}
+      />
+
+      {/* 검색 결과가 없을 때 */}
+      {safeRoutines.length === 0 && (
+        <div className="text-center py-10 bg-gray-50 rounded-lg border border-gray-200 mb-6">
+          <Search className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <h3 className="text-xl font-medium text-gray-700 mb-2">
+            검색 결과가 없습니다
           </h3>
-          <p className="text-gray-500 mb-6 max-w-md mx-auto">
-            첫 번째 루틴을 만들어 습관을 형성하고 목표를 달성해보세요!
+          <p className="text-gray-500">
+            검색어를 변경하거나 필터를 조정해보세요
           </p>
           <Button
-            onClick={handleAddNewRoutine}
-            className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 font-medium py-2 px-6 shadow-md"
+            onClick={() => {
+              setSearchTerm("");
+              setFilters({
+                status: "all",
+                target: "",
+                job: "",
+                sort: "latest",
+                order: "desc",
+              });
+            }}
+            variant="outline"
+            className="mt-4"
           >
-            <PlusCircle className="w-4 h-4 mr-2" />
-            루틴 만들기
+            필터 초기화
           </Button>
         </div>
-      ) : (
+      )}
+
+      {safeRoutines.length > 0 && (
         <div className="space-y-10">
           {/* 활성 루틴 섹션 */}
           <div>
@@ -411,7 +385,7 @@ const RoutineList = () => {
               <div className="text-center py-8 bg-white rounded-lg border border-dashed border-gray-300">
                 <p className="text-gray-500">활성화된 루틴이 없습니다.</p>
                 <Button
-                  onClick={handleAddNewRoutine}
+                  onClick={onAddNewRoutine}
                   variant="link"
                   className="text-blue-600 mt-2"
                 >
@@ -424,7 +398,7 @@ const RoutineList = () => {
                   <RoutineCard
                     key={routine.myPlanInfos.planIdx}
                     routine={routine}
-                    onCardClick={handleRoutineCardClick}
+                    onCardClick={onCardClick}
                     isActive={true}
                   />
                 ))}
@@ -454,7 +428,7 @@ const RoutineList = () => {
                   <RoutineCard
                     key={routine.myPlanInfos.planIdx}
                     routine={routine}
-                    onCardClick={handleRoutineCardClick}
+                    onCardClick={onCardClick}
                     isActive={false}
                   />
                 ))}

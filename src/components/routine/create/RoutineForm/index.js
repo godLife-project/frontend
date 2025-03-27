@@ -49,19 +49,50 @@ export default function RoutineForm({
   // RoutineForm 컴포넌트 내의 useEffect 수정
 
   // 사용자 정보 로드 (읽기 전용 모드가 아닐 때만)
+  // 사용자 정보 및 포크 데이터 로드
   useEffect(() => {
     if (!isReadOnly) {
       try {
-        const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+        // 1. 세션스토리지에서 포크된 루틴 데이터 확인
+        const forkData = sessionStorage.getItem("forkRoutineData");
 
-        // 루틴 데이터가 있으면(수정 모드) 루틴 데이터의 값을 우선 사용
-        if (routineData) {
-          // 폼 데이터가 이미 설정되어 있으면 다시 설정하지 않음
-          // 이렇게 하면 루틴의 원래 jobIdx와 다른 값들이 유지됨
+        if (forkData) {
+          // 포크 데이터가 있으면 파싱하여 폼 값 설정
+          const parsedForkData = JSON.parse(forkData);
+          console.log("포크된 루틴 데이터 불러옴:", parsedForkData);
+
+          // 폼 값 설정
+          form.reset(parsedForkData);
+
+          // 개별 필드 설정 (필요한 경우)
+          form.setValue("planTitle", parsedForkData.planTitle);
+          form.setValue("endTo", parsedForkData.endTo);
+          form.setValue("targetIdx", parsedForkData.targetIdx);
+          form.setValue("isShared", parsedForkData.isShared);
+          form.setValue("planImp", parsedForkData.planImp);
+          form.setValue("jobIdx", parsedForkData.jobIdx);
+          form.setValue("jobEtcCateDTO", parsedForkData.jobEtcCateDTO);
+          form.setValue("activities", parsedForkData.activities);
+          form.setValue("repeatDays", parsedForkData.repeatDays);
+
+          // 사용자 정보는 덮어쓰지 않음 (포크된 데이터에 없을 수 있음)
+          const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+          if (userInfo.userIdx) {
+            form.setValue("userIdx", userInfo.userIdx);
+          }
+
+          // 사용 후 세션스토리지에서 데이터 삭제 (선택사항)
+          sessionStorage.removeItem("forkRoutineData");
           return;
         }
 
-        // 새로운 루틴 생성 모드일 때만 사용자 정보 적용
+        // 2. 포크된 데이터가 없고 수정 모드인 경우 루틴 데이터 사용
+        if (routineData) {
+          return; // 이미 defaultValues로 설정되어 있음
+        }
+
+        // 3. 새로운 루틴 생성 모드일 때 사용자 정보 적용
+        const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
         if (userInfo.userIdx) {
           form.setValue("userIdx", userInfo.userIdx);
         }
@@ -69,7 +100,7 @@ export default function RoutineForm({
           form.setValue("jobIdx", userInfo.jobIdx);
         }
       } catch (e) {
-        console.error("사용자 정보 로딩 실패:", e);
+        console.error("데이터 로딩 실패:", e);
       }
     }
   }, [form, isReadOnly, routineData]);
@@ -162,7 +193,7 @@ export default function RoutineForm({
       );
 
       // 루틴 목록 페이지로 이동
-      navigate("/routines");
+      navigate("/routine/mylist");
     } catch (error) {
       console.error("루틴 생성 실패:", error);
       if (error.response) {
