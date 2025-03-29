@@ -24,7 +24,7 @@ const ChallengeDetailForm = () => {
   // 권한 더미 데이터
   const [userAuthority] = useState({
     // 시나리오 1: 관리자 권한 (수정/삭제 버튼 보임)
-    authorityIdx: 2, // 일반 유저가 아닌 권한
+    authorityIdx: 1, // 일반 유저가 아닌 권한
     authorityName: "관리자",
     authorityDescription: "모든 기능 접근 가능",
   });
@@ -231,7 +231,8 @@ const ChallengeDetailForm = () => {
             </CardHeader>
           </Card>
         </div>
-        <Button className="w-full mt-10">지금 참여하기</Button>
+        <ModifyDeleteButtons />
+        <JoinButtons />
       </div>
     </div>
   );

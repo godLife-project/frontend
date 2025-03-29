@@ -203,7 +203,7 @@ const ChallengeModifyPage = () => {
 
       // 챌린지 수정 API 요청
       const response = await axiosInstance.patch(
-        `/challenges/admin/modify/`,
+        `/challenges/admin/modify`,
         submitData,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -522,14 +522,7 @@ const ChallengeModifyPage = () => {
 
           {/* 제출 버튼 */}
           <div className="flex justify-end space-x-4">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => navigate(-1)}
-            >
-              취소
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? "수정 중..." : "수정하기"}
             </Button>
           </div>

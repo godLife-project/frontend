@@ -68,7 +68,7 @@ function App() {
               <Route path="/user/signup" element={<Signup />} />
               {/* <Route path="/user/challenge" element={<ChallengeForm />} /> */}
               <Route
-                path="/user/challenge/write"
+                path="/user/challenges/write"
                 element={
                   <ProtectedRoute>
                     <ChallengeWritePage />
@@ -84,10 +84,14 @@ function App() {
                 }
               />
               <Route
-                path="/challenge/modify/:challIdx"
+                path="/challenges/modify/:challIdx"
                 element={<ChallengModifyPage />}
               />
-              <Route path="/challenge/list" element={<ChallengeListPage />} />
+              <Route path="/challenges/list" element={<ChallengeListPage />} />
+              <Route
+                path="/challenges/list/:challIdx"
+                element={<ChallengDetailPage />}
+              />
               <Route path="/" element={<Home />} />
             </Routes>
           </Layout>
