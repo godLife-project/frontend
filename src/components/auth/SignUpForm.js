@@ -56,7 +56,7 @@ const SignUpForm = () => {
   const targetIdxInputRef = useRef(null);
   const userPhoneInputRef = useRef(null);
   const userGenderInputRef = useRef(null);
-
+  const emailCheckInputRef = useRef(null);
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
@@ -64,6 +64,7 @@ const SignUpForm = () => {
   const [serverError, setServerError] = useState(""); // 서버 오류 메시지를 저장할 상태 변수
   const [jobCategories, setJobCategories] = useState([]);
   const [targetCategories, setTargetCategories] = useState([]);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
   const { toast } = useToast();
 
   const form = useForm({
@@ -79,6 +80,7 @@ const SignUpForm = () => {
       jobIdx: "",
       targetIdx: "",
       userPhone: "",
+      verificationCode: "",
     },
   });
 
@@ -219,6 +221,101 @@ const SignUpForm = () => {
     }
   };
 
+  //이메일 중복 확인 함수
+  const checkDuplicateEmail = async () => {
+    const userEmail = form.getValues("userEmail").trim();
+    if (!userEmail) {
+      alert("이메일을 입력해주세요.");
+      userEmailInputRef.current?.focus();
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 요청 본문에 이메일 포함
+      const response = await axiosInstance.post(
+        `/verify/emails/send/verification-requests`,
+        {
+          userEmail: userEmail,
+        }
+      );
+
+      console.log("이메일 인증 코드 전송 응답:", response.data);
+
+      // API가 성공 정보를 반환한다고 가정
+      alert("인증 코드가 이메일로 전송되었습니다.");
+
+      // 인증 코드를 위한 새 필드와 확인 함수가 필요할 수 있습니다
+    } catch (error) {
+      console.error("이메일 인증 코드 전송 오류:", error);
+
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.message
+      ) {
+        // 서버에서 보낸 특정 오류 메시지 처리
+        alert(error.response.data.message);
+      } else {
+        alert("인증 코드 전송 중 오류가 발생했습니다.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 이메일 인증번호 확인 함수
+  const checkVerificationsEmail = async () => {
+    const userEmail = form.getValues("userEmail").trim();
+    const verificationCode = form.getValues("verificationCode").trim(); // 인증 코드 입력 필드 값
+
+    if (!userEmail) {
+      alert("이메일을 입력해주세요.");
+      emailCheckInputRef.current?.focus();
+      return;
+    }
+
+    if (!verificationCode) {
+      alert("인증 코드를 입력해주세요.");
+      emailCheckInputRef.current?.focus(); // 인증 코드 입력 필드에 대한 ref 필요
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // GET 요청에 쿼리 파라미터 추가하는 방법
+      const response = await axiosInstance.get(`/verify/emails/verifications`, {
+        params: {
+          code: verificationCode, // 요청 파라미터에 인증 코드 전달
+        },
+        data: {
+          userEmail: userEmail, // 요청 본문에 이메일 포함
+        },
+      });
+
+      console.log("이메일 인증 코드 확인 응답:", response.data);
+
+      // 인증 성공 처리
+      alert("이메일 인증이 완료되었습니다.");
+      setIsEmailVerified(true); // 이메일 인증 상태를 저장하는 상태 변수 필요
+    } catch (error) {
+      console.error("이메일 인증 코드 확인 오류:", error);
+
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.message
+      ) {
+        // 서버에서 보낸 특정 오류 메시지 처리
+        alert(error.response.data.message);
+      } else {
+        alert("인증 코드 확인 중 오류가 발생했습니다.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 회원가입 API 요청 함수
   const onSubmit = async (data) => {
     const { userPwConfirm, ...apiData } = data;
@@ -230,6 +327,15 @@ const SignUpForm = () => {
     };
     const formData = form.getValues();
     console.log("회원가입 버튼 클릭됨, 전달된 데이터:", submitData);
+
+    if (!isEmailVerified) {
+      toast({
+        variant: "destructive",
+        title: "이메일 인증 필요",
+        description: "이메일 인증을 완료해주세요.",
+      });
+      return;
+    }
 
     if (!isIdValid) {
       toast({
@@ -391,13 +497,47 @@ const SignUpForm = () => {
                   <FormItem>
                     <FormLabel>이메일</FormLabel>
                     <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="Email"
-                        {...field}
-                        ref={userEmailInputRef}
-                        style={getInputStyle("userEmail")}
-                      />
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          type="email"
+                          placeholder="Email"
+                          {...field}
+                          ref={userEmailInputRef}
+                          style={getInputStyle("userEmail")}
+                        />
+                        <Button
+                          type="button"
+                          className="min-w-[68px] bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 text-xs rounded"
+                          onClick={checkDuplicateEmail}
+                        >
+                          인증하기
+                        </Button>
+                      </div>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="userEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          placeholder="인증번호 입력"
+                          {...field}
+                          ref={emailCheckInputRef}
+                          style={getInputStyle("verificationCode")}
+                        />
+                        <Button
+                          type="button"
+                          className="min-w-[68px] bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 text-xs rounded"
+                          onClick={checkVerificationsEmail}
+                        >
+                          확인
+                        </Button>
+                      </div>
                     </FormControl>
                   </FormItem>
                 )}
@@ -470,11 +610,11 @@ const SignUpForm = () => {
                 name="userPhone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>휴대폰</FormLabel>
+                    <FormLabel>휴대폰번호</FormLabel>
                     <FormControl>
                       <Input
                         type="tel"
-                        placeholder=""
+                        placeholder="'-' 포함하고 입력"
                         pattern="[0-9]{3}-[0-9]{4}-[0-9]{4}"
                         {...field}
                         ref={userPhoneInputRef}
