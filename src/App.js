@@ -16,6 +16,9 @@ import RoutineCreator from "./pages/Routine/Create";
 import RoutineDetailPage from "./pages/Routine/Detail";
 import MyRoutineList from "./pages/Routine/MyRoutineList";
 import RoutineListPage from "./pages/Routine/List";
+import SimpleChat from "./components/SimpleChat";
+import SocketChat from "./components/SoketChat";
+import NoticeListPage from "./pages/Notice/NoticeList";
 
 // 인증이 필요한 라우트를 위한 컴포넌트
 function AppRoutes() {
@@ -30,6 +33,9 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/notice/list" element={<NoticeListPage />} />
+      <Route path="/chat" element={<SocketChat />} />
+      <Route path="/simplechat" element={<SimpleChat />} />
       <Route path="/routine/list" element={<RoutineListPage />} />
       <Route path="/routine/mylist" element={<MyRoutineList />} />
       <Route path="/routine/detail/:planIdx" element={<RoutineDetailPage />} />
