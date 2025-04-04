@@ -2,10 +2,8 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { renderIcon } from "@/components/common/badge-selector/icon-utils";
 import {
-  Video,
-  Code,
-  BookOpen,
   Clock,
   Flame,
   Eye,
@@ -13,24 +11,10 @@ import {
   GitFork,
   CheckCircle,
   XCircle,
-  Leaf,
   Activity,
   Target,
   Calendar,
 } from "lucide-react";
-
-// 동적으로 아이콘 렌더링하는 컴포넌트
-const DynamicIcon = ({ iconName, color = "#000", size = 16 }) => {
-  const icons = {
-    Video: <Video size={size} color={color} />,
-    Code: <Code size={size} color={color} />,
-    BookOpen: <BookOpen size={size} color={color} />,
-    Leaf: <Leaf size={size} color={color} />,
-    // 필요한 아이콘들 추가
-  };
-
-  return icons[iconName] || <Leaf size={size} color={color} />;
-};
 
 // 색상 조정 헬퍼 함수 (밝게/어둡게)
 const adjustColor = (hex, percent) => {
@@ -117,6 +101,7 @@ const RoutineCard = ({ routine, onClick, isPublic = false, isActive }) => {
       isActive !== undefined ? isActive : planInfos?.isActive === 1;
   }
 
+  console.log("targetInfo:", targetInfo);
   // 루틴 그라데이션 색상
   const getGradientStyle = () => {
     const baseColor = jobInfo?.color || "#4F46E5";
@@ -164,13 +149,14 @@ const RoutineCard = ({ routine, onClick, isPublic = false, isActive }) => {
             </h3>
             <div className="flex items-center mt-2">
               <div className="bg-white p-1.5 rounded-full mr-2 shadow-sm">
-                {jobInfo && (
-                  <DynamicIcon
-                    iconName={jobInfo.icon}
-                    color={jobInfo.color}
-                    size={18}
-                  />
-                )}
+                {jobInfo &&
+                  renderIcon(
+                    jobInfo.iconKey || "leaf", // icon 대신 iconKey 사용
+                    18,
+                    "",
+                    false,
+                    jobInfo.color
+                  )}
               </div>
               <span className="text-white text-sm font-medium drop-shadow-sm">
                 {jobInfo?.name || "직업 없음"}
@@ -230,7 +216,14 @@ const RoutineCard = ({ routine, onClick, isPublic = false, isActive }) => {
               className="p-1.5 rounded-full bg-teal-50 mr-2.5"
               style={{ color: targetInfo?.color || "#008080" }}
             >
-              <Target className="w-5 h-5" />
+              {targetInfo &&
+                renderIcon(
+                  targetInfo.iconKey || "target", // icon 대신 iconKey 사용
+                  18,
+                  "",
+                  false,
+                  targetInfo.color
+                )}
             </div>
             <span className="text-sm font-medium text-gray-800">
               {targetInfo?.name || "목표 없음"}

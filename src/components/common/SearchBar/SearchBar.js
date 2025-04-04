@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Search, X } from "lucide-react";
 import axiosInstance from "@/api/axiosInstance";
+import { Button } from "@/components/ui/button";
 
 const SearchBar = ({ onSearch, onClear, initialSearchTerm = "" }) => {
   const [searchInputTerm, setSearchInputTerm] = useState(initialSearchTerm);
@@ -47,9 +48,9 @@ const SearchBar = ({ onSearch, onClear, initialSearchTerm = "" }) => {
   }, []);
 
   // 초기 검색어가 변경될 경우 상태 업데이트
-  useEffect(() => {
-    setSearchInputTerm(initialSearchTerm);
-  }, [initialSearchTerm]);
+  // useEffect(() => {
+  //   setSearchInputTerm(initialSearchTerm);
+  // }, [initialSearchTerm]);
 
   // 검색어 선택 핸들러
   const handleSearchLogSelect = (log) => {
@@ -130,6 +131,14 @@ const SearchBar = ({ onSearch, onClear, initialSearchTerm = "" }) => {
             <X size={16} />
           </button>
         )}
+
+        {/* 검색 버튼 추가 */}
+        {/* <Button
+          type="submit"
+          className="bg-blue-500 hover:bg-blue-600 text-white rounded-r-lg px-4"
+        >
+          검색
+        </Button> */}
       </form>
 
       {/* 검색 로그 드롭다운 */}

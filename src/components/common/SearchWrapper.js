@@ -26,11 +26,8 @@ import {
 
 const SearchWrapper = ({
   searchTerm,
-  setSearchTerm,
-  searchInputTerm,
-  setSearchInputTerm,
   filters,
-  setFilters,
+  onFilterChange,
   totalResults,
   placeholder = "검색...",
   onSearch,
@@ -46,13 +43,41 @@ const SearchWrapper = ({
       const targetCategoriesFromStorage =
         localStorage.getItem("targetCategories");
       if (targetCategoriesFromStorage) {
-        setTargetCategories(JSON.parse(targetCategoriesFromStorage));
+        try {
+          const parsedTargets = JSON.parse(targetCategoriesFromStorage);
+          console.log("로컬 스토리지에서 로드한 목표 카테고리:", parsedTargets);
+
+          // 각 항목에 targetIdx가 있는지 확인
+          const hasCorrectFormat = parsedTargets.every(
+            (item) => item.targetIdx !== undefined
+          );
+          if (!hasCorrectFormat) {
+            console.error(
+              "일부 목표 카테고리에 targetIdx가 없습니다:",
+              parsedTargets.filter((item) => item.targetIdx === undefined)
+            );
+          }
+
+          setTargetCategories(parsedTargets);
+        } catch (parseError) {
+          console.error("목표 카테고리 파싱 오류:", parseError);
+        }
+      } else {
+        console.warn("로컬 스토리지에 목표 카테고리 데이터가 없습니다.");
       }
 
       // 직업 카테고리 가져오기
       const jobCategoriesFromStorage = localStorage.getItem("jobCategories");
       if (jobCategoriesFromStorage) {
-        setJobCategories(JSON.parse(jobCategoriesFromStorage));
+        try {
+          const parsedJobs = JSON.parse(jobCategoriesFromStorage);
+          console.log("로컬 스토리지에서 로드한 직업 카테고리:", parsedJobs);
+          setJobCategories(parsedJobs);
+        } catch (parseError) {
+          console.error("직업 카테고리 파싱 오류:", parseError);
+        }
+      } else {
+        console.warn("로컬 스토리지에 직업 카테고리 데이터가 없습니다.");
       }
     } catch (error) {
       console.error("로컬 스토리지에서 카테고리 데이터 가져오기 실패:", error);
@@ -61,39 +86,75 @@ const SearchWrapper = ({
 
   // 필터 상태 변경 핸들러
   const handleFilterChange = (key, value) => {
-    setFilters({
-      ...filters,
-      [key]: value,
-    });
+    console.log(`SearchWrapper 필터 변경: ${key} = ${value}`);
+    onFilterChange(key, value);
   };
 
   // 체크박스 다중 선택 핸들러 (목표, 직업 카테고리)
   const handleMultipleSelect = (key, id) => {
+    console.log(`다중 선택 처리: ${key}, ID ${id}, 타입: ${typeof id}`);
+
+    // ID가 유효한지 확인 (undefined나 null이 아닌지)
+    if (id === undefined || id === null) {
+      console.error(`유효하지 않은 ID: ${id}`);
+      return; // 유효하지 않은 ID는 처리하지 않음
+    }
+
+    // 숫자로 변환 (안전하게)
+    const numId = parseInt(id, 10);
+
+    if (isNaN(numId)) {
+      console.error(`숫자로 변환할 수 없는 ID: ${id}`);
+      return;
+    }
+
+    console.log(`변환된 ID: ${numId}`);
+
     const currentValues = filters[key]
-      ? filters[key].split(",").map(Number)
+      ? filters[key]
+          .split(",")
+          .filter(Boolean)
+          .map((val) => parseInt(val, 10))
+          .filter((val) => !isNaN(val))
       : [];
 
-    if (currentValues.includes(id)) {
+    console.log(`현재 선택된 값들:`, currentValues);
+
+    let newValue = "";
+
+    if (currentValues.includes(numId)) {
       // 이미 선택된 항목이면 제거
-      const newValues = currentValues.filter((val) => val !== id);
-      handleFilterChange(key, newValues.length > 0 ? newValues.join(",") : "");
+      const newValues = currentValues.filter((val) => val !== numId);
+      newValue = newValues.length > 0 ? newValues.join(",") : "";
+      console.log(`ID ${numId} 제거, 새 값:`, newValue);
     } else {
       // 선택되지 않은 항목이면 추가
-      const newValues = [...currentValues, id];
-      handleFilterChange(key, newValues.join(","));
+      const newValues = [...currentValues, numId];
+      newValue = newValues.join(",");
+      console.log(`ID ${numId} 추가, 새 값:`, newValue);
     }
+
+    // 변경된 필터 값을 상위 컴포넌트에 전달
+    handleFilterChange(key, newValue);
   };
 
   // 필터 초기화
   const resetFilters = () => {
-    setFilters({
+    const defaultFilters = {
       status: "all",
       target: "",
       job: "",
       sort: "latest",
       order: "desc",
+    };
+
+    // 각 필터 속성을 개별적으로 업데이트
+    Object.entries(defaultFilters).forEach(([key, value]) => {
+      onFilterChange(key, value);
     });
-    setSearchTerm("");
+
+    // 검색어 초기화
+    onSearch("");
   };
 
   // 선택된 필터 카운트
@@ -130,19 +191,30 @@ const SearchWrapper = ({
   // 선택된 카테고리 이름 표시
   const getSelectedCategoryNames = (key, categories) => {
     if (!filters[key]) return "전체";
-    if (!categories || categories.length === 0) return "로딩 중...";
+    if (!categories || categories.length === 0) return "전체";
 
-    const selectedIds = filters[key].split(",").map(Number);
-    const names = selectedIds
-      .map(
-        (id) =>
-          categories.find(
-            (cat) => cat.id === id || cat.targetIdx === id || cat.jobIdx === id
-          )?.name || ""
-      )
-      .filter(Boolean);
+    try {
+      const selectedIds = filters[key]
+        .split(",")
+        .filter(Boolean)
+        .map((id) => Number(id))
+        .filter((id) => !isNaN(id));
 
-    return names.length > 0 ? names.join(", ") : "전체";
+      if (selectedIds.length === 0) return "전체";
+
+      const names = selectedIds
+        .map((id) => {
+          // idx 필드를 기준으로 카테고리 찾기
+          const category = categories.find((cat) => cat.idx === id);
+          return category?.name || "";
+        })
+        .filter(Boolean);
+
+      return names.length > 0 ? names.join(", ") : "전체";
+    } catch (error) {
+      console.error(`${key} 카테고리 이름 가져오기 오류:`, error);
+      return "전체";
+    }
   };
 
   return (
@@ -151,10 +223,9 @@ const SearchWrapper = ({
         <div className="flex flex-col space-y-4">
           {/* 검색바 */}
           <SearchBar
-            searchTerm={searchInputTerm}
-            setSearchTerm={setSearchTerm}
-            placeholder={placeholder}
+            initialSearchTerm={searchTerm}
             onSearch={onSearch}
+            placeholder={placeholder}
           />
 
           {/* 필터 토글 버튼 */}
@@ -310,17 +381,21 @@ const SearchWrapper = ({
                       <Separator className="my-1" />
                       {targetCategories.map((category) => (
                         <DropdownMenuCheckboxItem
-                          key={category.id || category.targetIdx}
+                          key={category.idx}
                           checked={filters.target
                             ?.split(",")
+                            .filter(Boolean)
                             .map(Number)
-                            .includes(category.id || category.targetIdx)}
-                          onCheckedChange={() =>
-                            handleMultipleSelect(
-                              "target",
-                              category.id || category.targetIdx
-                            )
-                          }
+                            .includes(category.idx)}
+                          onCheckedChange={() => {
+                            console.log(
+                              "목표 카테고리 선택:",
+                              category.name,
+                              "idx:",
+                              category.idx
+                            );
+                            handleMultipleSelect("target", category.idx);
+                          }}
                           className="hover:bg-gray-100"
                         >
                           {category.name}
@@ -356,17 +431,21 @@ const SearchWrapper = ({
                       <Separator className="my-1" />
                       {jobCategories.map((category) => (
                         <DropdownMenuCheckboxItem
-                          key={category.id || category.jobIdx}
+                          key={category.idx}
                           checked={filters.job
                             ?.split(",")
+                            .filter(Boolean)
                             .map(Number)
-                            .includes(category.id || category.jobIdx)}
-                          onCheckedChange={() =>
-                            handleMultipleSelect(
-                              "job",
-                              category.id || category.jobIdx
-                            )
-                          }
+                            .includes(category.idx)}
+                          onCheckedChange={() => {
+                            console.log(
+                              "직업 카테고리 선택:",
+                              category.name,
+                              "idx:",
+                              category.idx
+                            );
+                            handleMultipleSelect("job", category.idx);
+                          }}
                           className="hover:bg-gray-100"
                         >
                           {category.name}
