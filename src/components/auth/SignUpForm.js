@@ -39,6 +39,7 @@ const signupSchema = z
     jobIdx: z.string(),
     userPhone: z.string(),
     targetIdx: z.string(),
+    verificationCode: z.string(),
   })
   .refine((data) => data.userPw === data.userPwConfirm, {
     message: "비밀번호가 일치하지 않습니다.",
@@ -283,15 +284,13 @@ const SignUpForm = () => {
 
     setLoading(true);
     try {
-      // GET 요청에 쿼리 파라미터 추가하는 방법
-      const response = await axiosInstance.get(`/verify/emails/verifications`, {
-        params: {
-          code: verificationCode, // 요청 파라미터에 인증 코드 전달
-        },
-        data: {
-          userEmail: userEmail, // 요청 본문에 이메일 포함
-        },
-      });
+      // Correct way: code as query parameter, userEmail in body
+      const response = await axiosInstance.post(
+        `/verify/emails/verifications?code=${verificationCode}`,
+        {
+          userEmail: userEmail,
+        }
+      );
 
       console.log("이메일 인증 코드 확인 응답:", response.data);
 
@@ -318,7 +317,7 @@ const SignUpForm = () => {
 
   // 회원가입 API 요청 함수
   const onSubmit = async (data) => {
-    const { userPwConfirm, ...apiData } = data;
+    const { userPwConfirm, verificationCode, ...apiData } = data;
     const submitData = {
       ...apiData,
       userGender: parseInt(data.userGender, 10),
@@ -502,7 +501,7 @@ const SignUpForm = () => {
                           type="email"
                           placeholder="Email"
                           {...field}
-                          ref={userEmailInputRef}
+                          ref={emailCheckInputRef}
                           style={getInputStyle("userEmail")}
                         />
                         <Button
@@ -519,7 +518,7 @@ const SignUpForm = () => {
               />
               <FormField
                 control={form.control}
-                name="userEmail"
+                name="verificationCode"
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
