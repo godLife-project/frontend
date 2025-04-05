@@ -19,6 +19,8 @@ import RoutineListPage from "./pages/Routine/List";
 import SimpleChat from "./components/SimpleChat";
 import SocketChat from "./components/SoketChat";
 import NoticeListPage from "./pages/Notice/NoticeList";
+import NoticeDetail from "./pages/Notice/NoticeDetail";
+import NoticeCreateEdit from "./pages/Notice/NoticeCreateEdit";
 
 // 인증이 필요한 라우트를 위한 컴포넌트
 function AppRoutes() {
@@ -33,6 +35,9 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/notice/detail/:noticeIdx" element={<NoticeDetail />} />
+      <Route path="/notice/edit/:noticeIdx" element={<NoticeCreateEdit />} />
+      <Route path="/notice/create" element={<NoticeCreateEdit />} />
       <Route path="/notice/list" element={<NoticeListPage />} />
       <Route path="/chat" element={<SocketChat />} />
       <Route path="/simplechat" element={<SimpleChat />} />
