@@ -379,7 +379,7 @@ const SignUpForm = () => {
           title: "회원가입 성공",
           description: "로그인 페이지로 이동합니다.",
         });
-        navigate("/login");
+        navigate("/user/login");
       }
     } catch (error) {
       console.error("회원가입 실패:", error);

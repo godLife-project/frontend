@@ -110,9 +110,12 @@ const ChallengeListForm = () => {
         return "유효하지 않은 날짜";
       }
 
-      return `${date.getFullYear()}년 ${
+      const hours = date.getHours().toString().padStart(2, "0");
+      const minutes = date.getMinutes().toString().padStart(2, "0");
+
+      return `종료일 : ${date.getFullYear()}년 ${
         date.getMonth() + 1
-      }월 ${date.getDate()}일 ${date.getHours()}:${date.getMinutes()}`;
+      }월 ${date.getDate()}일 ${hours}:${minutes}`;
     } catch (error) {
       console.error("날짜 포맷팅 오류:", error);
       return "날짜 형식 오류";

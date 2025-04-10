@@ -66,7 +66,6 @@ function App() {
             <Routes>
               <Route path="/user/login" element={<Login />} />
               <Route path="/user/signup" element={<Signup />} />
-              {/* <Route path="/user/challenge" element={<ChallengeForm />} /> */}
               <Route
                 path="/user/challenges/write"
                 element={

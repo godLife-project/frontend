@@ -172,7 +172,7 @@ const ChallengeForm = () => {
         "/challenges/admin/create",
         submitData,
         {
-          headers: { Authorization: `${accessToken}` },
+          headers: { Authorization: `Bearer ${accessToken}` },
         }
       );
 
