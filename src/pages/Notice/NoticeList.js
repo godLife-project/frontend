@@ -1,103 +1,108 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import axiosInstance from "@/api/axiosInstance";
 
+// 목 데이터 생성
+const mockNotices = Array.from({ length: 35 }, (_, index) => ({
+  noticeIdx: index + 1,
+  noticeTitle: `공지사항 제목 ${index + 1}`,
+  noticeSub: `이것은 공지사항 ${
+    index + 1
+  }의 내용입니다. 여기에는 공지사항의 상세 내용이 들어갑니다. 공지사항에는 다양한 정보가 포함될 수 있습니다. 예를 들어 서비스 점검 일정, 새로운 기능 소개, 중요 정책 안내 등이 여기에 기재됩니다.`,
+  noticeDate: new Date(
+    2025,
+    3,
+    Math.floor(Math.random() * 30) + 1
+  ).toISOString(),
+  noticeModify:
+    Math.random() > 0.7
+      ? new Date(2025, 3, Math.floor(Math.random() * 30) + 1).toISOString()
+      : null,
+  writeName: ["관리자", "시스템", "운영팀"][Math.floor(Math.random() * 3)],
+  isPopup: Math.random() > 0.8 ? "Y" : "N",
+}));
+
 const NoticeListPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentPage = parseInt(searchParams.get("page") || "1", 10);
+  const pageSize = 10;
+
   const [notices, setNotices] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const navigate = useNavigate();
+
+  // 페이지 변경 함수
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages) return;
+
+    setSearchParams({ page: newPage.toString() });
+  };
 
   useEffect(() => {
     const fetchNotices = async () => {
       setIsLoading(true);
       try {
-        // ==================== 실제 API 호출 코드 (현재는 주석 처리) ====================
-        // const url = "/notice";
-        // const response = await axiosInstance.get(url);
-        // setNotices(response.data);
-        // console.log(response.data);
-
-        // ============================================================================
-
-        // 목데이터를 사용하는 부분 (작성자 정보 추가)
-        const mockData = {
-          code: 200,
-          message: [
-            {
-              noticeIdx: 26,
-              noticeTitle: "공지사항 제목이다",
-              noticeSub: "하나 둘 셋 ",
-              userIdx: 0,
-              userName: "시스템관리자",
-              noticeDate: "2025-03-27 17:34:02",
-              noticeModify: null,
-            },
-            {
-              noticeIdx: 24,
-              noticeTitle: "제목이 바뀜ㅎ1",
-              noticeSub: "내용도 바꿈 ㅋ",
-              userIdx: 1,
-              userName: "김운영자",
-              noticeDate: "2025-03-26 20:11:09",
-              noticeModify: null,
-            },
-            {
-              noticeIdx: 3,
-              noticeTitle: "서비스 점검 안내",
-              noticeSub:
-                "안녕하세요. 더나은 서비스 제공을 위해 서버 점검을 진행합니다.\n    점검일시 : 2025년 02월20일 (목) 02:00 ~ 05:00\n\n점검 중에는 서비스 이용이 일시적으로 중단될 수 있으니 양해 부탁드립니다. 더 나은 서비스를 제공하기 위한 노력이니 많은 협조 부탁드립니다. 문의사항이 있으시면 고객센터로 연락주세요.",
-              userIdx: 0,
-              userName: "시스템관리자",
-              noticeDate: "2025-02-19 15:09:38",
-              noticeModify: null,
-            },
-            {
-              noticeIdx: 2,
-              noticeTitle: "커뮤니티 가이드라인 안내",
-              noticeSub:
-                "우리 커뮤니티가 더욱 건강한 공간이 될 수 있도록 규칙을 알려드립니다.\n    1. 욕설, 비방, 차별적 발언을 삼가주세요.\n    2. 다른 회원을 존중하고 배려하는 마음을 가져주세요.\n    3. 불법적인 콘텐츠나 스팸을 게시하지 마세요.\n    4. 개인정보 보호에 주의해주세요.\n    5. 저작권을 침해하는 콘텐츠를 게시하지 마세요.\n    6. 광고성 콘텐츠는 관련 게시판에만 작성해주세요.\n    7. 논쟁이 될 수 있는 주제에 대해서는 서로 다른 의견을 존중해주세요.\n\n모두가 함께 만들어가는 커뮤니티가 될 수 있도록 협조 부탁드립니다. 가이드라인을 위반할 경우 경고 없이 게시물이 삭제되거나 계정이 정지될 수 있습니다.",
-              userIdx: 2,
-              userName: "박매니저",
-              noticeDate: "2025-02-19 15:09:33",
-              noticeModify: null,
-            },
-            {
-              noticeIdx: 1,
-              noticeTitle: "사이트 오픈 안내",
-              noticeSub:
-                "안녕하세요 여러분! godLife 플랫폼이 정식 오픈했습니다! 많은 이용 부탁드립니다.",
-              userIdx: 1,
-              userName: "김운영자",
-              noticeDate: "2025-02-19 15:09:31",
-              noticeModify: null,
-            },
-          ],
-          status: "success",
-        };
-
-        // 실제 API 응답을 시뮬레이션하기 위해 짧은 지연 추가
+        // API 호출 대신 목 데이터 사용
         setTimeout(() => {
-          if (mockData.status === "success") {
-            setNotices(mockData.message);
-          } else {
-            throw new Error("공지사항을 불러오는데 실패했습니다.");
-          }
-        }, 500); // 0.5초 지연
-      } catch (err) {
-        setError(err.message);
-        console.error("공지사항 로딩 오류:", err);
-      } finally {
-        setTimeout(() => {
+          // 현재 페이지에 해당하는 데이터만 추출
+          const start = (currentPage - 1) * pageSize;
+          const end = start + pageSize;
+          const paginatedNotices = mockNotices.slice(start, end);
+
+          // 데이터 및 페이지네이션 정보 설정
+          setNotices(paginatedNotices);
+          setTotalItems(mockNotices.length);
+          setTotalPages(Math.ceil(mockNotices.length / pageSize));
           setIsLoading(false);
-        }, 500);
+        }, 500); // 로딩 시뮬레이션
+
+        /* 실제 API 코드는 주석 처리
+        const url = `/notice?page=${currentPage}&size=${pageSize}`;
+        const response = await axiosInstance.get(url);
+
+        console.log("API 응답 확인:", response.data);
+
+        if (response.data && Array.isArray(response.data.data)) {
+          setNotices(response.data.data);
+          
+          if (response.data.totalItems !== undefined) {
+            setTotalItems(response.data.totalItems);
+            setTotalPages(Math.ceil(response.data.totalItems / pageSize));
+          } else if (response.data.totalPages !== undefined) {
+            setTotalPages(response.data.totalPages);
+          } else {
+            setTotalPages(Math.max(1, Math.ceil(response.data.data.length / pageSize)));
+          }
+        } else {
+          console.warn("예상치 못한 API 응답 구조:", response.data);
+          setNotices([]);
+          setTotalPages(1);
+        }
+        */
+      } catch (err) {
+        setError(err.message || "공지사항을 불러오는데 실패했습니다.");
+        console.error("공지사항 로딩 오류:", err);
+        setNotices([]);
       }
     };
 
     fetchNotices();
-  }, []);
+  }, [currentPage, pageSize]);
 
   const handleCreateNotice = () => {
     navigate("/notice/create");
@@ -105,6 +110,96 @@ const NoticeListPage = () => {
 
   const handleViewNotice = (noticeIdx) => {
     navigate(`/notice/detail/${noticeIdx}`);
+  };
+
+  // 페이지네이션 표시 함수
+  const renderPagination = () => {
+    // 페이지 범위 계산 (최대 5개의 페이지 번호 표시)
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+
+    // 페이지 범위 조정
+    if (endPage - startPage < 4 && totalPages > 5) {
+      if (startPage === 1) {
+        endPage = Math.min(totalPages, 5);
+      } else if (endPage === totalPages) {
+        startPage = Math.max(1, totalPages - 4);
+      }
+    }
+
+    const pages = Array.from(
+      { length: endPage - startPage + 1 },
+      (_, i) => startPage + i
+    );
+
+    return (
+      <Pagination className="mt-6">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious
+              onClick={() => handlePageChange(currentPage - 1)}
+              className={
+                currentPage <= 1
+                  ? "pointer-events-none opacity-50"
+                  : "cursor-pointer"
+              }
+            />
+          </PaginationItem>
+
+          {startPage > 1 && (
+            <>
+              <PaginationItem>
+                <PaginationLink onClick={() => handlePageChange(1)}>
+                  1
+                </PaginationLink>
+              </PaginationItem>
+              {startPage > 2 && (
+                <PaginationItem>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              )}
+            </>
+          )}
+
+          {pages.map((page) => (
+            <PaginationItem key={page}>
+              <PaginationLink
+                isActive={page === currentPage}
+                onClick={() => handlePageChange(page)}
+              >
+                {page}
+              </PaginationLink>
+            </PaginationItem>
+          ))}
+
+          {endPage < totalPages && (
+            <>
+              {endPage < totalPages - 1 && (
+                <PaginationItem>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              )}
+              <PaginationItem>
+                <PaginationLink onClick={() => handlePageChange(totalPages)}>
+                  {totalPages}
+                </PaginationLink>
+              </PaginationItem>
+            </>
+          )}
+
+          <PaginationItem>
+            <PaginationNext
+              onClick={() => handlePageChange(currentPage + 1)}
+              className={
+                currentPage >= totalPages
+                  ? "pointer-events-none opacity-50"
+                  : "cursor-pointer"
+              }
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    );
   };
 
   // 날짜 포맷팅 함수
@@ -170,53 +265,70 @@ const NoticeListPage = () => {
             </div>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
-            {notices.map((notice) => (
-              <div
-                key={notice.noticeIdx}
-                className="cursor-pointer p-6 transition-colors hover:bg-gray-50"
-                onClick={() => handleViewNotice(notice.noticeIdx)}
-              >
-                <div className="flex items-start justify-between mb-1">
-                  <div>
-                    <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700 ring-1 ring-inset ring-blue-700/10 mr-2">
-                      No.{notice.noticeIdx}
-                    </span>
-                    <h3 className="text-lg font-semibold inline">
-                      {notice.noticeTitle}
-                    </h3>
-                  </div>
-                  <time className="text-xs text-muted-foreground">
-                    {formatDate(notice.noticeDate)}
-                  </time>
-                </div>
-
-                <div className="flex items-center mt-2">
-                  <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs text-indigo-700 font-medium">
-                    {notice.userName ? notice.userName.charAt(0) : "?"}
-                  </div>
-                  <span className="ml-2 text-sm font-medium text-gray-600">
-                    {notice.userName || "알 수 없음"}
-                  </span>
-                </div>
-
-                <div className="mt-3 relative">
-                  <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed pr-16">
-                    {notice.noticeSub}
-                  </p>
-                  {notice.noticeSub && notice.noticeSub.length > 100 && (
-                    <div className="absolute bottom-0 right-0 bg-gradient-to-l from-white via-white to-transparent w-20 h-full flex items-end justify-end">
-                      <span className="text-xs text-blue-500 px-2 py-1">
-                        더보기
+          <>
+            <div className="divide-y divide-gray-100">
+              {notices.map((notice) => (
+                <div
+                  key={notice.noticeIdx}
+                  className="cursor-pointer p-6 transition-colors hover:bg-gray-50"
+                  onClick={() => handleViewNotice(notice.noticeIdx)}
+                >
+                  <div className="flex items-start justify-between mb-1">
+                    <div>
+                      <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700 ring-1 ring-inset ring-blue-700/10 mr-2">
+                        No.{notice.noticeIdx}
                       </span>
+                      <h3 className="text-lg font-semibold inline">
+                        {notice.noticeTitle}
+                      </h3>
+                      {notice.isPopup === "Y" && (
+                        <span className="ml-2 inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-xs text-red-700 ring-1 ring-inset ring-red-700/10">
+                          팝업
+                        </span>
+                      )}
                     </div>
-                  )}
+                    <time className="text-xs text-muted-foreground">
+                      {formatDate(notice.noticeDate)}
+                    </time>
+                  </div>
+
+                  <div className="flex items-center mt-2">
+                    <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs text-indigo-700 font-medium">
+                      {notice.writeName ? notice.writeName.charAt(0) : "?"}
+                    </div>
+                    <span className="ml-2 text-sm font-medium text-gray-600">
+                      {notice.writeName || "알 수 없음"}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 relative">
+                    <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed pr-16">
+                      {notice.noticeSub}
+                    </p>
+                    {notice.noticeSub && notice.noticeSub.length > 100 && (
+                      <div className="absolute bottom-0 right-0 bg-gradient-to-l from-white via-white to-transparent w-20 h-full flex items-end justify-end">
+                        <span className="text-xs text-blue-500 px-2 py-1">
+                          더보기
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+
+            {/* 페이지네이션 컴포넌트 */}
+            {renderPagination()}
+          </>
         )}
       </Card>
+
+      {!isLoading && !error && notices.length > 0 && (
+        <div className="mt-4 text-sm text-center text-muted-foreground">
+          전체 {totalItems || "?"}개 중 {(currentPage - 1) * pageSize + 1}-
+          {Math.min(currentPage * pageSize, totalItems || notices.length)} 표시
+        </div>
+      )}
     </div>
   );
 };

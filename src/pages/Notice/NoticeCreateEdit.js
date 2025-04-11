@@ -4,7 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, Calendar } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns/format";
+import { ko } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import axiosInstance from "@/api/axiosInstance";
 
 // Toast UI Editor 불러오기
@@ -24,6 +34,11 @@ const NoticeCreateEdit = () => {
   const [userIdx, setUserIdx] = useState(null);
   const [originalNotice, setOriginalNotice] = useState(null);
 
+  // 팝업 관련 상태 추가
+  const [isPopup, setIsPopup] = useState(false);
+  const [popupStartDate, setPopupStartDate] = useState(null);
+  const [popupEndDate, setPopupEndDate] = useState(null);
+
   // 사용자 정보 가져오기
   useEffect(() => {
     const getUserInfo = () => {
@@ -34,9 +49,6 @@ const NoticeCreateEdit = () => {
     getUserInfo();
   }, []);
 
-  // 사용자 정보 가져오기
-  // 수정 모드인 경우 기존 공지사항 데이터 가져오기
-
   // 에디터가 초기화된 후와 원본 데이터가 로드된 후에 내용 설정
   useEffect(() => {
     if (!isLoading && originalNotice && editorRef.current) {
@@ -46,33 +58,43 @@ const NoticeCreateEdit = () => {
       }, 100); // 약간의 지연을 주어 에디터가 완전히 마운트된 후 실행
     }
   }, [isLoading, originalNotice]);
+
   useEffect(() => {
     if (isEditMode) {
       const fetchNoticeForEdit = async () => {
         try {
-          // ==================== 실제 API 호출 코드 ====================
-          // const response = await axiosInstance.get(`/notice/${noticeIdx}`);
-          // const noticeData = response.data;
-          // ============================================================
+          // 실제 API 호출 코드
+          const response = await axiosInstance.get(`/notice/${noticeIdx}`);
+          console.log("원본 API 응답:", response.data);
 
-          // 목데이터 (실제 환경에서는 API 응답 사용)
-          const mockNoticeData = {
-            noticeIdx: parseInt(noticeIdx),
-            noticeTitle: "서비스 점검 안내",
-            noticeSub:
-              "안녕하세요. 더나은 서비스 제공을 위해 서버 점검을 진행합니다.\n\n점검일시 : 2025년 02월20일 (목) 02:00 ~ 05:00\n\n점검 중에는 서비스 이용이 일시적으로 중단될 수 있으니 양해 부탁드립니다. 더 나은 서비스를 제공하기 위한 노력이니 많은 협조 부탁드립니다.\n\n문의사항이 있으시면 고객센터로 연락주세요.",
-            userIdx: 0,
-            userName: "시스템관리자",
-            noticeDate: "2025-02-19 15:09:38",
-            noticeModify: null,
-          };
+          // API 응답 구조에 맞게 데이터 처리
+          let noticeData;
+          if (response.data && response.data.message) {
+            // response.data가 { code: 200, message: {...}, status: 'success' } 형태인 경우
+            noticeData = response.data.message;
+          } else {
+            // 기존 방식 (response.data가 직접 공지사항 데이터인 경우)
+            noticeData = response.data;
+          }
 
-          // 지연 시뮬레이션
-          setTimeout(() => {
-            setTitle(mockNoticeData.noticeTitle);
-            setOriginalNotice(mockNoticeData);
-            setIsLoading(false);
-          }, 500);
+          console.log("수정할 공지사항 데이터:", noticeData);
+
+          // 데이터 설정
+          setTitle(noticeData.noticeTitle || "");
+          setOriginalNotice(noticeData);
+
+          // 팝업 관련 데이터 설정
+          setIsPopup(noticeData.isPopup === "Y");
+
+          if (noticeData.popupStartDate) {
+            setPopupStartDate(new Date(noticeData.popupStartDate));
+          }
+
+          if (noticeData.popupEndDate) {
+            setPopupEndDate(new Date(noticeData.popupEndDate));
+          }
+
+          setIsLoading(false);
         } catch (error) {
           console.error("공지사항 데이터 로딩 실패:", error);
           toast({
@@ -83,7 +105,7 @@ const NoticeCreateEdit = () => {
           });
           setIsLoading(false);
           // 오류 발생시 목록으로 돌아가기
-          navigate("/notice");
+          navigate("/notice/list");
         }
       };
 
@@ -113,58 +135,68 @@ const NoticeCreateEdit = () => {
       return;
     }
 
+    // 팝업 일자 유효성 검사
+    if (isPopup) {
+      if (!popupStartDate || !popupEndDate) {
+        toast({
+          title: "팝업 시작일과 종료일을 모두 입력해주세요",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (popupEndDate < popupStartDate) {
+        toast({
+          title: "팝업 종료일은 시작일보다 이후여야 합니다",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
       const token = localStorage.getItem("accessToken");
 
-      if (isEditMode) {
-        // ==================== 수정 API 호출 코드 ====================
-        // const url = `/notice/admin/update/${noticeIdx}`;
-        // await axiosInstance.put(
-        //   url,
-        //   {
-        //     noticeTitle: title,
-        //     noticeSub: editorContent,
-        //     userIdx: userIdx,
-        //   },
-        //   {
-        //     headers: {
-        //       "Content-Type": "application/json",
-        //       Authorization: `Bearer ${token}`,
-        //     },
-        //   }
-        // );
-        // ============================================================
+      // 요청 데이터 준비
+      const noticeData = {
+        noticeTitle: title,
+        noticeSub: editorContent,
+        isPopup: isPopup ? "Y" : "N",
+        popupStartDate:
+          isPopup && popupStartDate
+            ? format(popupStartDate, "yyyy-MM-dd")
+            : null,
+        popupEndDate:
+          isPopup && popupEndDate ? format(popupEndDate, "yyyy-MM-dd") : null,
+      };
 
-        // 업데이트 성공 시뮬레이션 (목데이터용)
-        await new Promise((resolve) => setTimeout(resolve, 800));
+      console.log("전송할 데이터:", noticeData);
+
+      if (isEditMode) {
+        // 수정 API 호출 코드
+        const url = `/notice/admin/${noticeIdx}`;
+        await axiosInstance.patch(url, noticeData, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
         toast({
           title: "공지사항이 성공적으로 수정되었습니다",
           variant: "default",
         });
       } else {
-        // ==================== 생성 API 호출 코드 ====================
-        // const url = "/notice/admin/create";
-        // await axiosInstance.post(
-        //   url,
-        //   {
-        //     noticeTitle: title,
-        //     noticeSub: editorContent,
-        //     userIdx: userIdx,
-        //   },
-        //   {
-        //     headers: {
-        //       "Content-Type": "application/json",
-        //       Authorization: `Bearer ${token}`,
-        //     },
-        //   }
-        // );
-        // ============================================================
-
-        // 생성 성공 시뮬레이션 (목데이터용)
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        // 생성 API 호출 코드
+        const url = "/notice/admin/create";
+        await axiosInstance.post(url, noticeData, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
         toast({
           title: "공지사항이 성공적으로 등록되었습니다",
@@ -257,6 +289,106 @@ const NoticeCreateEdit = () => {
                   }}
                 />
               </div>
+            </div>
+
+            {/* 팝업 관련 설정 추가 */}
+            <div className="space-y-4 border rounded-md p-4 bg-slate-50">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <label className="text-sm font-medium">팝업으로 표시</label>
+                  <p className="text-sm text-muted-foreground">
+                    이 공지사항을 팝업창으로 표시합니다
+                  </p>
+                </div>
+                <Switch
+                  checked={isPopup}
+                  onCheckedChange={setIsPopup}
+                  aria-label="팝업 표시 여부"
+                />
+              </div>
+
+              {isPopup && (
+                <div className="pt-3 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">팝업 시작일</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !popupStartDate && "text-muted-foreground"
+                            )}
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {popupStartDate ? (
+                              format(popupStartDate, "yyyy년 MM월 dd일", {
+                                locale: ko,
+                              })
+                            ) : (
+                              <span>날짜 선택</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <div className="bg-white rounded-md shadow-md border">
+                            <CalendarComponent
+                              mode="single"
+                              selected={popupStartDate}
+                              onSelect={setPopupStartDate}
+                              initialFocus
+                              className="bg-white"
+                            />
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">팝업 종료일</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !popupEndDate && "text-muted-foreground"
+                            )}
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {popupEndDate ? (
+                              format(popupEndDate, "yyyy년 MM월 dd일", {
+                                locale: ko,
+                              })
+                            ) : (
+                              <span>날짜 선택</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <div className="bg-white rounded-md shadow-md border">
+                            <CalendarComponent
+                              mode="single"
+                              selected={popupEndDate}
+                              onSelect={setPopupEndDate}
+                              initialFocus
+                              className="bg-white"
+                              disabled={(date) =>
+                                popupStartDate ? date < popupStartDate : false
+                              }
+                            />
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    설정된 기간 동안 사용자에게 공지사항 팝업이 표시됩니다.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end space-x-4">

@@ -36,29 +36,24 @@ const NoticeDetail = () => {
     const fetchNoticeDetail = async () => {
       setIsLoading(true);
       try {
-        // ==================== 실제 API 호출 코드 ====================
-        // const response = await axiosInstance.get(`/notice/${noticeIdx}`);
-        // setNotice(response.data);
-        // ============================================================
+        // API 호출 코드
+        const response = await axiosInstance.get(`/notice/${noticeIdx}`);
 
-        // 목데이터를 사용하는 부분
-        const mockNotice = {
-          noticeIdx: parseInt(noticeIdx),
-          noticeTitle: "서비스 점검 안내",
-          noticeSub:
-            "안녕하세요. 더나은 서비스 제공을 위해 서버 점검을 진행합니다.\n\n점검일시 : 2025년 02월20일 (목) 02:00 ~ 05:00\n\n점검 중에는 서비스 이용이 일시적으로 중단될 수 있으니 양해 부탁드립니다. 더 나은 서비스를 제공하기 위한 노력이니 많은 협조 부탁드립니다.\n\n문의사항이 있으시면 고객센터로 연락주세요.",
-          userIdx: 0,
-          userName: "시스템관리자",
-          noticeDate: "2025-02-19 15:09:38",
-          noticeModify: "2025-02-19 18:22:10",
-        };
+        // 응답 구조에 맞게 데이터 처리
+        // response.data가 { code: 200, message: {...}, status: 'success' } 형태인 경우
+        if (response.data && response.data.message) {
+          setNotice(response.data.message);
+          console.log("API 응답:", response.data);
+          console.log("공지사항 데이터:", response.data.message);
+        } else {
+          // 기존 방식 (response.data가 직접 공지사항 데이터인 경우)
+          setNotice(response.data);
+          console.log("공지사항 데이터:", response.data);
+        }
 
-        // 지연 시뮬레이션
-        setTimeout(() => {
-          setNotice(mockNotice);
-          setIsLoading(false);
-        }, 500);
+        setIsLoading(false);
       } catch (err) {
+        console.error("API 오류:", err);
         setError("공지사항을 불러오는데 실패했습니다.");
         setIsLoading(false);
         toast({
@@ -73,7 +68,7 @@ const NoticeDetail = () => {
   }, [noticeIdx, toast]);
 
   const handleGoBack = () => {
-    navigate(-1);
+    navigate("/notice/list");
   };
 
   const handleDeleteNotice = async (noticeIdx) => {
@@ -85,12 +80,15 @@ const NoticeDetail = () => {
     setIsDeleting(true);
 
     try {
-      // ==================== 실제 API 호출 코드 ====================
-      // await axiosInstance.delete(`/notice/admin/delete/${noticeIdx}`);
-      // ============================================================
+      // API 호출 코드
+      const token = localStorage.getItem("accessToken");
 
-      // 삭제 시뮬레이션 (목데이터용)
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await axiosInstance.delete(`/notice/admin/${noticeIdx}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       toast({
         title: "공지사항이 삭제되었습니다",
@@ -151,7 +149,7 @@ const NoticeDetail = () => {
             <p className="text-muted-foreground">{error}</p>
             <Button variant="outline" className="mt-4" onClick={handleGoBack}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              뒤로 가기
+              목록 보기
             </Button>
           </div>
         </div>
