@@ -66,10 +66,10 @@ function App() {
         >
           <Layout>
             <Routes>
-              {/* <Route path="/user/login" element={<Login />} />
-              <Route path="/user/signup" element={<Signup />} /> */}
+              <Route path="/user/login" element={<Login />} />
+              <Route path="/user/signup" element={<Signup />} />
               <Route
-                path="/user/challenges/write"
+                path="/challenges/write"
                 element={
                   <ProtectedRoute>
                     <ChallengeWritePage />

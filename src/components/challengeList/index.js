@@ -30,6 +30,13 @@ import axiosInstance from "@/api/axiosInstance";
 const ChallengeListForm = () => {
   const navigate = useNavigate();
 
+  // localStorage에서 accessToken과 userIdx 가져오기
+  const accessToken = localStorage.getItem("accessToken");
+  const userInfoString = localStorage.getItem("userInfo");
+  const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
+  const userIdx = userInfo?.userIdx || "21";
+  const roleStatus = userInfo?.roleStatus || false; // 기본값은 false
+
   // 상태 관리
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -245,6 +252,16 @@ const ChallengeListForm = () => {
             </SelectContent>
           </Select>
         </div>
+        {roleStatus === true && (
+          <div className="flex justify-center space-x-2 mt-6">
+            <Button
+              className="bg-black text-white"
+              onClick={() => navigate(`/challenges/write`)}
+            >
+              + 새 챌린지
+            </Button>
+          </div>
+        )}
       </div>
 
       {!Array.isArray(challenges) || challenges.length === 0 ? (
