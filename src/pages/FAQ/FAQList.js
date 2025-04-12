@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-
+import axiosInstance from "@/api/axiosInstance";
+import { useNavigate } from "react-router-dom";
 const faqData = [
-  // 👉 실제로는 더 많은 데이터를 넣을 수 있음
   {
     id: 1,
     category: "routine",
@@ -50,7 +50,7 @@ export default function FAQPage() {
   const [category, setCategory] = useState("all");
   const [openId, setOpenId] = useState(null);
   const [page, setPage] = useState(1);
-
+  const navigate = useNavigate();
   const filtered = faqData.filter(
     (item) =>
       (category === "all" || item.category === category) &&
@@ -125,6 +125,17 @@ export default function FAQPage() {
           ))}
         </div>
       )}
+      <div className="flex justify-end mt-6 mb-4">
+        <button
+          onClick={() => navigate("/inquiry")}
+          className="text-black  text-sm font-medium"
+        >
+          더 궁금한 것이 있으신가요?{" "}
+          <span className="font-bold hover:text-black hover:underline ">
+            1:1 문의
+          </span>
+        </button>
+      </div>
 
       {/* 페이지네이션 */}
       {totalPages > 1 && (

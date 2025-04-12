@@ -290,7 +290,7 @@ const ChallengeListForm = () => {
             ))}
           </div>
 
-          {/* 페이지네이션 컴포넌트 */}
+          {/* 페이지네이션*/}
           {totalPages >= 1 && (
             <Pagination>
               <PaginationContent>
