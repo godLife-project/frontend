@@ -15,6 +15,7 @@ import {
   Edit2,
   Clock,
   Trash2,
+  RefreshCcw,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import axiosInstance from "@/api/axiosInstance";
@@ -23,49 +24,85 @@ import axiosInstance from "@/api/axiosInstance";
 import { Viewer } from "@toast-ui/react-editor";
 import "@toast-ui/editor/dist/toastui-editor-viewer.css";
 
+// Mock 데이터 (API가 연결되지 않을 때 테스트용)
+// const MOCK_DATA = {
+//   noticeIdx: 55,
+//   noticeTitle: "제목이 바뀜ㅎ0410",
+//   noticeSub: "내용이셈",
+//   userIdx: 21,
+//   noticeDate: "2025-04-09 13:09:20",
+//   noticeModify: "2025-04-10 13:15:48",
+//   writeName: "테스트유저1",
+// };
+
 const NoticeDetail = () => {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   const { noticeIdx } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [notice, setNotice] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
 
-  useEffect(() => {
-    const fetchNoticeDetail = async () => {
-      setIsLoading(true);
-      try {
-        // API 호출 코드
-        const response = await axiosInstance.get(`/notice/${noticeIdx}`);
+  const userIdx = JSON.parse(localStorage.getItem("userInfo")).userIdx;
 
-        // 응답 구조에 맞게 데이터 처리
-        // response.data가 { code: 200, message: {...}, status: 'success' } 형태인 경우
-        if (response.data && response.data.message) {
-          setNotice(response.data.message);
-          console.log("API 응답:", response.data);
-          console.log("공지사항 데이터:", response.data.message);
-        } else {
-          // 기존 방식 (response.data가 직접 공지사항 데이터인 경우)
-          setNotice(response.data);
-          console.log("공지사항 데이터:", response.data);
-        }
+  const fetchNoticeDetail = async () => {
+    setIsLoading(true);
+    setIsRetrying(false);
 
-        setIsLoading(false);
-      } catch (err) {
-        console.error("API 오류:", err);
-        setError("공지사항을 불러오는데 실패했습니다.");
-        setIsLoading(false);
+    try {
+      // API 호출 코드
+      // 테스트를 위해 API 호출 부분을 주석 처리하고 Mock 데이터 사용
+      // 실제 환경에서는 아래 코드를 사용
+      const response = await axiosInstance.get(`/notice/${noticeIdx}`);
+
+      // 응답 구조에 맞게 데이터 처리
+      if (response.data && response.data.message) {
+        setNotice(response.data.message);
+      } else {
+        // 기존 방식 (response.data가 직접 공지사항 데이터인 경우)
+        setNotice(response.data);
+      }
+
+      // Mock 데이터 사용 (테스트용)
+      // 실제 사용 시 위의 API 호출 코드 주석 해제하고 이 부분 제거
+      // setTimeout(() => {
+      //   setNotice(MOCK_DATA);
+      //   setError(null);
+      //   setIsLoading(false);
+      //   setHasAttemptedFetch(true);
+      // }, 1000); // API 호출 지연 시뮬레이션 (1초)
+
+      return; // setTimeout을 사용하므로 여기서 함수 종료
+    } catch (err) {
+      console.error("API 오류:", err);
+      setError("공지사항을 불러오는데 실패했습니다.");
+      setIsLoading(false);
+      setHasAttemptedFetch(true);
+
+      // 첫 번째 시도에만 토스트 메시지 표시
+      if (!hasAttemptedFetch) {
         toast({
           title: "오류가 발생했습니다",
           description: err.message || "공지사항을 불러오는데 실패했습니다.",
           variant: "destructive",
         });
       }
-    };
+    }
+  };
 
+  useEffect(() => {
+    // 첫 번째 시도에만 fetchNoticeDetail 실행
+    if (!hasAttemptedFetch) {
+      fetchNoticeDetail();
+    }
+  }, [noticeIdx]);
+
+  const handleRetry = () => {
     fetchNoticeDetail();
-  }, [noticeIdx, toast]);
+  };
 
   const handleGoBack = () => {
     navigate("/notice/list");
@@ -80,7 +117,7 @@ const NoticeDetail = () => {
     setIsDeleting(true);
 
     try {
-      // API 호출 코드
+      // API 호출 코드 (테스트를 위해 주석 처리하고 Mock 응답 사용)
       const token = localStorage.getItem("accessToken");
 
       await axiosInstance.delete(`/notice/admin/${noticeIdx}`, {
@@ -89,6 +126,9 @@ const NoticeDetail = () => {
           Authorization: `Bearer ${token}`,
         },
       });
+
+      // Mock 응답 시뮬레이션 (테스트용)
+      // await new Promise((resolve) => setTimeout(resolve, 1500)); // 1.5초 지연
 
       toast({
         title: "공지사항이 삭제되었습니다",
@@ -147,10 +187,29 @@ const NoticeDetail = () => {
           <div className="text-center">
             <p className="text-red-500 text-lg mb-2">⚠️ 오류가 발생했습니다</p>
             <p className="text-muted-foreground">{error}</p>
-            <Button variant="outline" className="mt-4" onClick={handleGoBack}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              목록 보기
-            </Button>
+            <div className="flex justify-center gap-3 mt-4">
+              <Button variant="outline" onClick={handleGoBack}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                목록 보기
+              </Button>
+              <Button
+                variant="default"
+                onClick={handleRetry}
+                disabled={isRetrying}
+              >
+                {isRetrying ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    재시도 중...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCcw className="mr-2 h-4 w-4" />
+                    다시 시도
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -172,7 +231,7 @@ const NoticeDetail = () => {
       </div>
     );
   }
-
+  console.log(notice);
   return (
     <div className="container mx-auto py-8">
       <Button variant="ghost" className="mb-6 pl-2" onClick={handleGoBack}>
@@ -223,30 +282,36 @@ const NoticeDetail = () => {
         </CardContent>
 
         <CardFooter className="flex justify-end gap-2 pt-6 pb-6 px-6">
-          <Button
-            variant="outline"
-            onClick={() => navigate(`/notice/edit/${notice.noticeIdx}`)}
-          >
-            <Edit2 className="mr-2 h-4 w-4" />
-            수정
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => handleDeleteNotice(notice.noticeIdx)}
-            disabled={isDeleting}
-          >
-            {isDeleting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                삭제 중...
-              </>
-            ) : (
-              <>
-                <Trash2 className="mr-2 h-4 w-4" />
-                삭제
-              </>
-            )}
-          </Button>
+          {notice.userIdx === userIdx ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => navigate(`/notice/edit/${notice.noticeIdx}`)}
+              >
+                <Edit2 className="mr-2 h-4 w-4" />
+                수정
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => handleDeleteNotice(notice.noticeIdx)}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    삭제 중...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    삭제
+                  </>
+                )}
+              </Button>
+            </>
+          ) : (
+            <></>
+          )}
         </CardFooter>
       </Card>
     </div>

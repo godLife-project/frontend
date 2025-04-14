@@ -49,6 +49,9 @@ const NoticeCreateEdit = () => {
     getUserInfo();
   }, []);
 
+  const [startDatePopoverOpen, setStartDatePopoverOpen] = useState(false);
+  const [endDatePopoverOpen, setEndDatePopoverOpen] = useState(false);
+
   // 에디터가 초기화된 후와 원본 데이터가 로드된 후에 내용 설정
   useEffect(() => {
     if (!isLoading && originalNotice && editorRef.current) {
@@ -223,6 +226,18 @@ const NoticeCreateEdit = () => {
     navigate(-1);
   };
 
+  // 시작일 날짜 선택 핸들러
+  const handleStartDateSelect = (date) => {
+    setPopupStartDate(date);
+    setStartDatePopoverOpen(false); // 시작일 Popover 닫기
+  };
+
+  // 종료일 날짜 선택 핸들러
+  const handleDateSelect = (date) => {
+    setPopupEndDate(date);
+    setEndDatePopoverOpen(false); // 종료일 Popover 닫기
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-8">
@@ -312,7 +327,10 @@ const NoticeCreateEdit = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">팝업 시작일</label>
-                      <Popover>
+                      <Popover
+                        open={startDatePopoverOpen}
+                        onOpenChange={setStartDatePopoverOpen}
+                      >
                         <PopoverTrigger asChild>
                           <Button
                             variant={"outline"}
@@ -336,7 +354,7 @@ const NoticeCreateEdit = () => {
                             <CalendarComponent
                               mode="single"
                               selected={popupStartDate}
-                              onSelect={setPopupStartDate}
+                              onSelect={handleStartDateSelect}
                               initialFocus
                               className="bg-white"
                             />
@@ -347,7 +365,10 @@ const NoticeCreateEdit = () => {
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium">팝업 종료일</label>
-                      <Popover>
+                      <Popover
+                        open={endDatePopoverOpen}
+                        onOpenChange={setEndDatePopoverOpen}
+                      >
                         <PopoverTrigger asChild>
                           <Button
                             variant={"outline"}
@@ -371,7 +392,7 @@ const NoticeCreateEdit = () => {
                             <CalendarComponent
                               mode="single"
                               selected={popupEndDate}
-                              onSelect={setPopupEndDate}
+                              onSelect={handleDateSelect}
                               initialFocus
                               className="bg-white"
                               disabled={(date) =>
