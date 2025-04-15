@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import axiosInstance from "@/api/axiosInstance";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { MdOutlineMode } from "react-icons/md";
 import { MdOutlineDelete } from "react-icons/md";
+import { useToast } from "@/components/ui/use-toast";
 // 카테고리 목록 정의
 const categories = [
   { key: "all", label: "전체" },
@@ -16,6 +17,8 @@ const categories = [
 const PER_PAGE = 4;
 
 export default function FAQPage() {
+  const { toast } = useToast();
+  const { faqIdx } = useParams();
   const [faqData, setFaqData] = useState([]);
   const [faqDetails, setFaqDetails] = useState({});
   const [loading, setLoading] = useState(true);
@@ -137,41 +140,36 @@ export default function FAQPage() {
     return "답변을 불러오는 중...";
   };
 
-  // // 챌린지 삭제 버튼(관리자만)
-  // const deleteChallenge = async () => {
-  //   try {
-  //     setDeleting(true);
+  // FAQ 삭제 버튼(관리자만)
+  const deleteChallenge = async (faqIdx) => {
+    try {
+      setDeleting(true);
 
-  //     // PATCH 요청으로 챌린지 삭제
-  //     await axiosInstance.patch(
-  //       "/challenges/admin/delete",
-  //       { challIdx: challIdx }, // 요청 본문에 challIdx 포함
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${accessToken}`,
-  //           "Content-Type": "application/json",
-  //         },
-  //       }
-  //     );
+      await axiosInstance.delete(`/faq/admin/${faqIdx}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
 
-  //     toast({
-  //       title: "성공",
-  //       description: "챌린지가 성공적으로 삭제되었습니다.",
-  //     });
+      toast({
+        title: "성공",
+        description: "FAQ가 성공적으로 삭제되었습니다.",
+      });
 
-  //     // 삭제 후 챌린지 목록 페이지로 이동
-  //     navigate("/challenges");
-  //   } catch (err) {
-  //     console.error("챌린지 삭제 실패:", err);
-  //     toast({
-  //       title: "오류",
-  //       description: "챌린지 삭제에 실패했습니다. 다시 시도해주세요.",
-  //       variant: "destructive",
-  //     });
-  //   } finally {
-  //     setDeleting(false);
-  //   }
-  // };
+      // 삭제 후 FAQ 목록 페이지로 이동
+      navigate("/faq");
+    } catch (err) {
+      console.error("FAQ 삭제 실패:", err);
+      toast({
+        title: "오류",
+        description: "FAQ 삭제에 실패했습니다. 다시 시도해주세요.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
   // // 수정/삭제 버튼 (관리자만)
   // const ModifyDeleteButtons = () => {
   //   if (roleStatus === true) {
@@ -203,7 +201,7 @@ export default function FAQPage() {
   // };
   // 작성 버튼 (관리자만)
   const WriteButtons = () => {
-    if (roleStatus === false) {
+    if (roleStatus === true) {
       return (
         <Button
           className="ml-auto px-4 py-2 rounded text-sm"
@@ -218,15 +216,15 @@ export default function FAQPage() {
   };
 
   const ModifyButtons = () => {
-    if (roleStatus === false) {
+    if (roleStatus === true) {
       return <MdOutlineMode onClick={() => navigate(`/`)} />;
     }
     return;
   };
 
-  const DeleteButtons = () => {
-    if (roleStatus === false) {
-      return <MdOutlineDelete onClick={() => navigate(`/`)} />;
+  const DeleteButtons = ({ faqIdx }) => {
+    if (roleStatus === true) {
+      return <MdOutlineDelete onClick={() => deleteChallenge(faqIdx)} />;
     }
     return;
   };
@@ -287,7 +285,7 @@ export default function FAQPage() {
                 </span>
                 <div className="flex gap-2">
                   <ModifyButtons />
-                  <DeleteButtons />
+                  <DeleteButtons faqIdx={faq.faqIdx} />
                 </div>
               </div>
               <div className="font-semibold text-base flex justify-between items-center">
