@@ -11,28 +11,28 @@ import {
   PaginationPrevious,
   PaginationEllipsis,
 } from "@/components/ui/pagination";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import axiosInstance from "@/api/axiosInstance";
 
 // 목 데이터 생성
-const mockNotices = Array.from({ length: 35 }, (_, index) => ({
-  noticeIdx: index + 1,
-  noticeTitle: `공지사항 제목 ${index + 1}`,
-  noticeSub: `이것은 공지사항 ${
-    index + 1
-  }의 내용입니다. 여기에는 공지사항의 상세 내용이 들어갑니다. 공지사항에는 다양한 정보가 포함될 수 있습니다. 예를 들어 서비스 점검 일정, 새로운 기능 소개, 중요 정책 안내 등이 여기에 기재됩니다.`,
-  noticeDate: new Date(
-    2025,
-    3,
-    Math.floor(Math.random() * 30) + 1
-  ).toISOString(),
-  noticeModify:
-    Math.random() > 0.7
-      ? new Date(2025, 3, Math.floor(Math.random() * 30) + 1).toISOString()
-      : null,
-  writeName: ["관리자", "시스템", "운영팀"][Math.floor(Math.random() * 3)],
-  isPopup: Math.random() > 0.8 ? "Y" : "N",
-}));
+// const mockNotices = Array.from({ length: 35 }, (_, index) => ({
+//   noticeIdx: index + 1,
+//   noticeTitle: `공지사항 제목 ${index + 1}`,
+//   noticeSub: `이것은 공지사항 ${
+//     index + 1
+//   }의 내용입니다. 여기에는 공지사항의 상세 내용이 들어갑니다. 공지사항에는 다양한 정보가 포함될 수 있습니다. 예를 들어 서비스 점검 일정, 새로운 기능 소개, 중요 정책 안내 등이 여기에 기재됩니다.`,
+//   noticeDate: new Date(
+//     2025,
+//     3,
+//     Math.floor(Math.random() * 30) + 1
+//   ).toISOString(),
+//   noticeModify:
+//     Math.random() > 0.7
+//       ? new Date(2025, 3, Math.floor(Math.random() * 30) + 1).toISOString()
+//       : null,
+//   writeName: ["관리자", "시스템", "운영팀"][Math.floor(Math.random() * 3)],
+//   isPopup: Math.random() > 0.8 ? "Y" : "N",
+// }));
 
 const NoticeListPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -43,7 +43,6 @@ const NoticeListPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
   const navigate = useNavigate();
 
   // 페이지 변경 함수
@@ -58,47 +57,39 @@ const NoticeListPage = () => {
       setIsLoading(true);
       try {
         // API 호출 대신 목 데이터 사용
-        setTimeout(() => {
-          // 현재 페이지에 해당하는 데이터만 추출
-          const start = (currentPage - 1) * pageSize;
-          const end = start + pageSize;
-          const paginatedNotices = mockNotices.slice(start, end);
+        // setTimeout(() => {
+        //   // 현재 페이지에 해당하는 데이터만 추출
+        //   const start = (currentPage - 1) * pageSize;
+        //   const end = start + pageSize;
+        //   const paginatedNotices = mockNotices.slice(start, end);
 
-          // 데이터 및 페이지네이션 정보 설정
-          setNotices(paginatedNotices);
-          setTotalItems(mockNotices.length);
-          setTotalPages(Math.ceil(mockNotices.length / pageSize));
-          setIsLoading(false);
-        }, 500); // 로딩 시뮬레이션
+        //   // 데이터 및 페이지네이션 정보 설정
+        //   setNotices(paginatedNotices);
+        //   setTotalPages(Math.ceil(mockNotices.length / pageSize));
+        //   setIsLoading(false);
+        // }, 500); // 로딩 시뮬레이션
 
-        /* 실제 API 코드는 주석 처리
+        // 실제 API 코드
         const url = `/notice?page=${currentPage}&size=${pageSize}`;
         const response = await axiosInstance.get(url);
 
         console.log("API 응답 확인:", response.data);
+        setIsLoading(false);
 
         if (response.data && Array.isArray(response.data.data)) {
           setNotices(response.data.data);
-          
-          if (response.data.totalItems !== undefined) {
-            setTotalItems(response.data.totalItems);
-            setTotalPages(Math.ceil(response.data.totalItems / pageSize));
-          } else if (response.data.totalPages !== undefined) {
-            setTotalPages(response.data.totalPages);
-          } else {
-            setTotalPages(Math.max(1, Math.ceil(response.data.data.length / pageSize)));
-          }
+          setTotalPages(response.data.totalPages);
         } else {
           console.warn("예상치 못한 API 응답 구조:", response.data);
           setNotices([]);
           setTotalPages(1);
         }
-        */
       } catch (err) {
         setError(err.message || "공지사항을 불러오는데 실패했습니다.");
         console.error("공지사항 로딩 오류:", err);
         setNotices([]);
       }
+      setIsLoading(false);
     };
 
     fetchNotices();
@@ -114,16 +105,27 @@ const NoticeListPage = () => {
 
   // 페이지네이션 표시 함수
   const renderPagination = () => {
-    // 페이지 범위 계산 (최대 5개의 페이지 번호 표시)
-    let startPage = Math.max(1, currentPage - 2);
-    let endPage = Math.min(totalPages, startPage + 4);
+    // 한 번에 페이지 범위 계산
+    let startPage, endPage;
 
-    // 페이지 범위 조정
-    if (endPage - startPage < 4 && totalPages > 5) {
-      if (startPage === 1) {
-        endPage = Math.min(totalPages, 5);
-      } else if (endPage === totalPages) {
-        startPage = Math.max(1, totalPages - 4);
+    if (totalPages <= 5) {
+      // 전체 페이지가 5개 이하면 모든 페이지 표시
+      startPage = 1;
+      endPage = totalPages;
+    } else {
+      // 전체 페이지가 5개 초과일 때
+      if (currentPage <= 3) {
+        // 현재 페이지가 앞쪽에 있을 때
+        startPage = 1;
+        endPage = 5;
+      } else if (currentPage >= totalPages - 2) {
+        // 현재 페이지가 뒤쪽에 있을 때
+        startPage = totalPages - 4;
+        endPage = totalPages;
+      } else {
+        // 현재 페이지가 중간에 있을 때
+        startPage = currentPage - 2;
+        endPage = currentPage + 2;
       }
     }
 
@@ -133,7 +135,7 @@ const NoticeListPage = () => {
     );
 
     return (
-      <Pagination className="mt-6">
+      <Pagination className="mt-6 mb-6">
         <PaginationContent>
           <PaginationItem>
             <PaginationPrevious
@@ -220,6 +222,22 @@ const NoticeListPage = () => {
     }
   };
 
+  // 원본 날짜 또는 수정 날짜 선택 및 포맷팅
+  const getDisplayDate = (notice) => {
+    // 수정 날짜가 있고, 원본 날짜와 다른 경우에만 수정됨으로 표시
+    if (notice.noticeModify && notice.noticeDate !== notice.noticeModify) {
+      return {
+        date: formatDate(notice.noticeModify),
+        isModified: true,
+      };
+    }
+    // 그렇지 않으면 원본 작성 날짜 표시
+    return {
+      date: formatDate(notice.noticeDate),
+      isModified: false,
+    };
+  };
+
   return (
     <div className="container mx-auto py-8">
       <div className="mb-8 flex flex-col space-y-2">
@@ -267,54 +285,59 @@ const NoticeListPage = () => {
         ) : (
           <>
             <div className="divide-y divide-gray-100">
-              {notices.map((notice) => (
-                <div
-                  key={notice.noticeIdx}
-                  className="cursor-pointer p-6 transition-colors hover:bg-gray-50"
-                  onClick={() => handleViewNotice(notice.noticeIdx)}
-                >
-                  <div className="flex items-start justify-between mb-1">
-                    <div>
-                      <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700 ring-1 ring-inset ring-blue-700/10 mr-2">
-                        No.{notice.noticeIdx}
-                      </span>
-                      <h3 className="text-lg font-semibold inline">
-                        {notice.noticeTitle}
-                      </h3>
-                      {notice.isPopup === "Y" && (
-                        <span className="ml-2 inline-flex items-center rounded-full bg-red-50 px-2 py-1 text-xs text-red-700 ring-1 ring-inset ring-red-700/10">
-                          팝업
+              {notices.map((notice) => {
+                const displayDate = getDisplayDate(notice);
+
+                return (
+                  <div
+                    key={notice.noticeIdx}
+                    className="cursor-pointer p-6 transition-colors hover:bg-gray-50"
+                    onClick={() => handleViewNotice(notice.noticeIdx)}
+                  >
+                    <div className="flex items-start justify-between mb-1">
+                      <div>
+                        <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700 ring-1 ring-inset ring-blue-700/10 mr-2">
+                          No.{notice.noticeIdx}
                         </span>
+                        <h3 className="text-lg font-semibold inline">
+                          {notice.noticeTitle}
+                        </h3>
+                      </div>
+                      <time className="text-xs text-muted-foreground flex items-center">
+                        {displayDate.isModified && (
+                          <Clock className="mr-1 h-3 w-3" />
+                        )}
+                        {displayDate.date}
+                        {displayDate.isModified && (
+                          <span className="ml-1 text-xs">(수정됨)</span>
+                        )}
+                      </time>
+                    </div>
+
+                    <div className="flex items-center mt-2">
+                      <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs text-indigo-700 font-medium">
+                        {notice.writeName ? notice.writeName.charAt(0) : "?"}
+                      </div>
+                      <span className="ml-2 text-sm font-medium text-gray-600">
+                        {notice.writeName || "알 수 없음"}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 relative">
+                      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed pr-16">
+                        {notice.noticeSub}
+                      </p>
+                      {notice.noticeSub && notice.noticeSub.length > 100 && (
+                        <div className="absolute bottom-0 right-0 bg-gradient-to-l from-white via-white to-transparent w-20 h-full flex items-end justify-end">
+                          <span className="text-xs text-blue-500 px-2 py-1">
+                            더보기
+                          </span>
+                        </div>
                       )}
                     </div>
-                    <time className="text-xs text-muted-foreground">
-                      {formatDate(notice.noticeDate)}
-                    </time>
                   </div>
-
-                  <div className="flex items-center mt-2">
-                    <div className="h-6 w-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs text-indigo-700 font-medium">
-                      {notice.writeName ? notice.writeName.charAt(0) : "?"}
-                    </div>
-                    <span className="ml-2 text-sm font-medium text-gray-600">
-                      {notice.writeName || "알 수 없음"}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 relative">
-                    <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed pr-16">
-                      {notice.noticeSub}
-                    </p>
-                    {notice.noticeSub && notice.noticeSub.length > 100 && (
-                      <div className="absolute bottom-0 right-0 bg-gradient-to-l from-white via-white to-transparent w-20 h-full flex items-end justify-end">
-                        <span className="text-xs text-blue-500 px-2 py-1">
-                          더보기
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* 페이지네이션 컴포넌트 */}
@@ -322,13 +345,6 @@ const NoticeListPage = () => {
           </>
         )}
       </Card>
-
-      {!isLoading && !error && notices.length > 0 && (
-        <div className="mt-4 text-sm text-center text-muted-foreground">
-          전체 {totalItems || "?"}개 중 {(currentPage - 1) * pageSize + 1}-
-          {Math.min(currentPage * pageSize, totalItems || notices.length)} 표시
-        </div>
-      )}
     </div>
   );
 };

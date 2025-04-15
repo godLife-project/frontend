@@ -65,6 +65,8 @@ const NoticeDetail = () => {
         // 기존 방식 (response.data가 직접 공지사항 데이터인 경우)
         setNotice(response.data);
       }
+      console.log(response);
+      setIsLoading(false);
 
       // Mock 데이터 사용 (테스트용)
       // 실제 사용 시 위의 API 호출 코드 주석 해제하고 이 부분 제거
@@ -265,10 +267,10 @@ const NoticeDetail = () => {
 
             <div className="flex items-center mt-3">
               <div className="h-7 w-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs text-indigo-700 font-medium">
-                {notice.userName ? notice.userName.charAt(0) : "?"}
+                {notice.writeName ? notice.writeName.charAt(0) : "?"}
               </div>
               <span className="ml-2 text-sm font-medium text-gray-600">
-                {notice.userName || "알 수 없음"}
+                {notice.writeName || "알 수 없음"}
               </span>
             </div>
           </div>
