@@ -207,7 +207,7 @@ export default function FAQPage() {
       return (
         <Button
           className="ml-auto px-4 py-2 rounded text-sm"
-          // onClick={WriteChallenge}
+          onClick={() => navigate(`/faq/write`)}
           disabled={writing}
         >
           {writing ? "참여 신청 중..." : "작성하기"}

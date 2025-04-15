@@ -22,6 +22,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import ChallengModifyPage from "./pages/Challenge/Modify";
 import ChallengeListPage from "./pages/Challenge/List";
 import FAQListPage from "./pages/FAQ/FAQList";
+import FAQWritePage from "./pages/FAQ/Write";
 
 // 인증이 필요한 라우트를 위한 컴포넌트
 function AppRoutes() {
@@ -94,6 +95,7 @@ function App() {
                 element={<ChallengDetailPage />}
               />
               <Route path="/FAQ" element={<FAQListPage />} />
+              <Route path="/FAQ/write" element={<FAQWritePage />} />
               <Route path="/" element={<Home />} />
             </Routes>
           </Layout>
