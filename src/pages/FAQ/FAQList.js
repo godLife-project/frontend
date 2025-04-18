@@ -170,35 +170,6 @@ export default function FAQPage() {
       setDeleting(false);
     }
   };
-  // // 수정/삭제 버튼 (관리자만)
-  // const ModifyDeleteButtons = () => {
-  //   if (roleStatus === true) {
-  //     return (
-  //       <div className="flex space-x-2 mt-4">
-  //         <Button
-  //           variant="outline"
-  //           className="w-1/2"
-  //           onClick={() => navigate(`/`)}
-  //         >
-  //           수정하기
-  //         </Button>
-  //         <Button
-  //           variant="destructive"
-  //           className="w-1/2"
-  //           onClick={() => {
-  //             if (window.confirm("정말 이 챌린지를 삭제하시겠습니까?")) {
-  //               deleteChallenge();
-  //             }
-  //           }}
-  //           disabled={deleting}
-  //         >
-  //           {deleting ? "삭제 중..." : "삭제하기"}
-  //         </Button>
-  //       </div>
-  //     );
-  //   }
-  //   return;
-  // };
   // 작성 버튼 (관리자만)
   const WriteButtons = () => {
     if (roleStatus === true) {
@@ -215,9 +186,12 @@ export default function FAQPage() {
     return;
   };
 
-  const ModifyButtons = () => {
+  //수정 버튼(관리자만)
+  const ModifyButtons = ({ faqIdx }) => {
     if (roleStatus === true) {
-      return <MdOutlineMode onClick={() => navigate(`/`)} />;
+      return (
+        <MdOutlineMode onClick={() => navigate(`/faq/modify/${faqIdx}`)} />
+      );
     }
     return;
   };
@@ -284,7 +258,7 @@ export default function FAQPage() {
                   {faq.faqCategory}
                 </span>
                 <div className="flex gap-2">
-                  <ModifyButtons />
+                  <ModifyButtons faqIdx={faq.faqIdx} />
                   <DeleteButtons faqIdx={faq.faqIdx} />
                 </div>
               </div>
