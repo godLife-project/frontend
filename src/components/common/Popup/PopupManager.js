@@ -1,5 +1,6 @@
 // PopupManager.jsx
 import React, { useState, useEffect } from "react";
+import axiosInstance from "@/api/axiosInstance";
 import TimedPopup from "./TimedPopup";
 
 function PopupManager() {
@@ -16,9 +17,20 @@ function PopupManager() {
     const fetchPopupData = async () => {
       try {
         // 실제 API 호출
-        const response = await fetch("/notice/popup");
-        console.log(response.data);
-        const data = await response.data;
+        const response = await axiosInstance.get(`/notice/popup`);
+        console.log(response.data.notice);
+        const data = await response.data.notice;
+
+        const mappedData = data.map((item) => ({
+          id: item.noticeIdx.toString(),
+          title: item.noticeTitle,
+          content: item.noticeSub,
+          startDate: item.popupStartDate,
+          endDate: item.popupEndDate,
+          isActive: item.isPopup === "Y",
+          priority: 1, // 기본 우선순위
+          isHtmlContent: false, // 기본값 (필요시 API에서 제공하는 값으로 변경)
+        }));
 
         // 예시 데이터 (실제로는 API 응답으로 대체)
         // const mockData = [
@@ -64,7 +76,7 @@ function PopupManager() {
 
         // 실제로 표시할 팝업 필터링 (날짜 체크 & 이미 닫은 팝업 체크)
         const now = new Date();
-        const filteredPopups = data.filter((popup) => {
+        const filteredPopups = mappedData.filter((popup) => {
           const startDate = new Date(popup.startDate);
           const endDate = new Date(popup.endDate);
           endDate.setHours(23, 59, 59, 999); // 종료일 끝까지 포함
@@ -87,7 +99,6 @@ function PopupManager() {
 
           return true;
         });
-
         console.log("Filtered popups:", filteredPopups);
         setPopups(filteredPopups);
 
