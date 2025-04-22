@@ -23,6 +23,7 @@ import NoticeListPage from "./pages/Notice/NoticeList";
 import NoticeDetail from "./pages/Notice/NoticeDetail";
 import NoticeCreateEdit from "./pages/Notice/NoticeCreateEdit";
 import PopupManager from "./components/common/Popup/PopupManager";
+import FindPassword from "./pages/Auth/FindPassword";
 
 // 인증이 필요한 라우트를 위한 컴포넌트
 function ProtectedRoute({ children }) {
@@ -49,6 +50,7 @@ function AppContent() {
     <Layout>
       <PopupManager />
       <Routes>
+        <Route path="/user/find_password" element={<FindPassword />} />
         <Route path="/notice/detail/:noticeIdx" element={<NoticeDetail />} />
         <Route path="/notice/edit/:noticeIdx" element={<NoticeCreateEdit />} />
         <Route path="/notice/create" element={<NoticeCreateEdit />} />

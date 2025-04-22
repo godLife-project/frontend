@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import axiosInstance from "@/api/axiosInstance";
-import { useAuth } from "../../context/AuthContext"; 
+import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
 
@@ -55,11 +55,16 @@ const LoginForm = () => {
   const getTokens = (responseHeaders) => {
     if (!responseHeaders) return { accessToken: null, refreshToken: null };
 
-    const accessToken = responseHeaders["authorization"] || responseHeaders["Authorization"] || null;
+    const accessToken =
+      responseHeaders["authorization"] ||
+      responseHeaders["Authorization"] ||
+      null;
     const refreshToken = responseHeaders["refresh-token"] || null;
-    
+
     const cleanAccessToken = accessToken
-      ? accessToken.startsWith("Bearer ") ? accessToken.substring(7) : accessToken
+      ? accessToken.startsWith("Bearer ")
+        ? accessToken.substring(7)
+        : accessToken
       : null;
 
     return {
@@ -68,57 +73,56 @@ const LoginForm = () => {
     };
   };
 
-
   // 에러가 발생하면 실행됨
   // useEffect 부분 수정
-useEffect(() => {
-  if (data && !errorShown.current) {
-    console.log("API 응답 데이터:", data);
+  useEffect(() => {
+    if (data && !errorShown.current) {
+      console.log("API 응답 데이터:", data);
 
-    // 로그인 성공 처리 (한 번만 실행)
-    toast({
-      title: "로그인 성공",
-      description: "환영합니다!",
-    });
+      // 로그인 성공 처리 (한 번만 실행)
+      toast({
+        title: "로그인 성공",
+        description: "환영합니다!",
+      });
 
-    // 로그인 성공 후 리다이렉트
-    navigate("/");
+      // 로그인 성공 후 리다이렉트
+      navigate("/");
 
-    // 토스트가 표시되었음을 표시
-    errorShown.current = true;
-  }
-}, [data, navigate, toast]);
-
-// onSubmit 함수 수정
-const onSubmit = async (formData) => {
-  // 새 로그인 시도 시 에러 상태 초기화
-  errorShown.current = false;
-  console.log("로그인 시도:", formData);
-  setLoading(true);
-  
-  try {
-    const response = await axiosInstance.post("/user/login", formData, {
-      withCredentials: true
-    });
-    
-    // 응답 데이터 설정
-    setData(response.data);
-    
-    // 토큰 정보 가져오기 및 저장 (여기서는 토스트 없음)
-    const tokens = getTokens(response.headers);
-    if (response.data && tokens.accessToken) {
-      login(response.data, tokens); // 사용자 데이터와 토큰 전달
+      // 토스트가 표시되었음을 표시
+      errorShown.current = true;
     }
-    
-    // 에러 상태 초기화
-    setError(null);
-  } catch (err) {
-    console.error("로그인 오류:", err);
-    setError(err);
-  } finally {
-    setLoading(false);
-  }
-};
+  }, [data, navigate, toast]);
+
+  // onSubmit 함수 수정
+  const onSubmit = async (formData) => {
+    // 새 로그인 시도 시 에러 상태 초기화
+    errorShown.current = false;
+    console.log("로그인 시도:", formData);
+    setLoading(true);
+
+    try {
+      const response = await axiosInstance.post("/user/login", formData, {
+        withCredentials: true,
+      });
+
+      // 응답 데이터 설정
+      setData(response.data);
+
+      // 토큰 정보 가져오기 및 저장 (여기서는 토스트 없음)
+      const tokens = getTokens(response.headers);
+      if (response.data && tokens.accessToken) {
+        login(response.data, tokens); // 사용자 데이터와 토큰 전달
+      }
+
+      // 에러 상태 초기화
+      setError(null);
+    } catch (err) {
+      console.error("로그인 오류:", err);
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const togglePasswordVisibility = () => {
     setShowPassword((prev) => !prev);
@@ -210,7 +214,7 @@ const onSubmit = async (formData) => {
                 className="text-blue-600 hover:text-blue-800 font-medium"
                 onClick={(e) => {
                   e.preventDefault();
-                  // 비밀번호 찾기 페이지로 이동
+                  navigate("/user/find_password");
                 }}
               >
                 비밀번호를 잊으셨나요?
