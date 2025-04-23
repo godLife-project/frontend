@@ -10,31 +10,48 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError(''); // 초기화
-        // 로그인 처리 로직 추가 (API 호출 등)
+        setError('');
+
         try {
             const response = await fetch('http://localhost:9090/api/user/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({userId, userPw}),
+                body: JSON.stringify({ userId, userPw }),
             });
 
             if (!response.ok) {
-                throw new Error('로그인 실패: 아이디 또는 비밀번호가 잘못되었다고요.');
+                throw new Error('로그인 실패: 아이디 또는 비밀번호가 잘못되었습니다.');
             }
+
+            // ✅ accessToken은 응답 헤더의 Authorization에 있음
+            const accessTokenHeader = response.headers.get('Authorization');
+            if (accessTokenHeader) {
+                // "Bearer " 접두어 제거
+                const token = accessTokenHeader.replace(/^Bearer\s+/i, '');
+                localStorage.setItem('accessToken', token);
+                console.log('✅ AccessToken 저장 완료:', token);
+            } else {
+                console.warn('⚠️ 응답에 Authorization 헤더가 없습니다.');
+            }
+
 
             const data = await response.json();
             console.log('로그인 성공:', data);
 
-            // ✅ 로그인 성공 시, 메인 페이지(app.js)로 이동
-            navigate('/');
+            // 🎯 닉네임을 로컬스토리지에 저장
+            if (data.userNick) {
+                localStorage.setItem('userNick', data.userNick);
+                console.log('✅ 닉네임 저장 완료:', data.userNick);
+            }
 
+            navigate('/'); // 로그인 성공 시 메인으로 이동
         } catch (error) {
-            setError(error.message);  // 오류 메시지 상태 업데이트
+            setError(error.message);
         }
     };
+
 
     return (
         <div>

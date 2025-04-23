@@ -12,6 +12,8 @@ import Contact from './page/Contact';
 import Test from './page/Test';
 import Join from './page/Join';
 import Login from './page/Login';
+import QnaSubscriber from './page/QnaSubscriber';
+
 
 const App = () => {
     return (
@@ -27,6 +29,7 @@ const App = () => {
                     <Route path="/test" element={<Test />} />
                     <Route path="/join" element={<Join />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/chat" element={<QnaSubscriber />} />
                     {/* 다른 페이지들을 추가 */}
                 </Routes>
             </div>

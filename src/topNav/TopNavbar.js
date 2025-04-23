@@ -36,6 +36,8 @@ const TopNavbar = () => {
 
       {/* 오른쪽 메뉴 */}
       <div>
+        <Link to="/chat" style={{ marginRight: "15px", color: "white" }}>채팅</Link>
+        <Link to="/qnaService" style={{ marginRight: "15px", color: "white" }}>문의서비스</Link>
         <Link to="/login" style={{ marginRight: "15px", color: "white" }}>로그인</Link>
         <Link to="/join" style={{ color: "white" }}>회원가입</Link>
       </div>
