@@ -43,7 +43,8 @@ const Login = () => {
             // 🎯 닉네임을 로컬스토리지에 저장
             if (data.userNick) {
                 localStorage.setItem('userNick', data.userNick);
-                console.log('✅ 닉네임 저장 완료:', data.userNick);
+                localStorage.setItem('userName', data.userName);
+                console.log('✅ 닉네임 저장 완료:', data.userNick, data.userName);
             }
 
             navigate('/'); // 로그인 성공 시 메인으로 이동

@@ -75,8 +75,8 @@ const ChatRoom = () => {
 
 
   useEffect(() => {
-    const userNick = localStorage.getItem('userNick');
-    if (userNick) setCurrentUser(userNick);
+    const userName = localStorage.getItem('userName');
+    if (userName) setCurrentUser(userName);
 
     // STOMP 중복 연결 방지
     if (stompClientRef.current?.connected) {
@@ -287,44 +287,147 @@ const ChatRoom = () => {
       setExpandedQnaIdx(null);
 
       // 👉 요청 전송
-      stompClientRef.current?.send(
-        '/pub/close/detail',
-        null
-      );
+      try {
+        stompClientRef.current?.send('/pub/close/detail', null);
+      } catch (error) {
+        console.error("STOMP 요청 전송 실패:", error);
+      }
 
       // 👉 현재 구독 해제
-      qnaSubscriptionRef.current?.unsubscribe();
-      qnaSubscriptionRef.current = null;
+      try {
+        qnaSubscriptionRef.current?.unsubscribe();
+        qnaSubscriptionRef.current = null;
+      } catch (error) {
+        console.error("구독 해제 실패:", error);
+      }
       return;
     }
 
     // 👉 기존 구독 해제 후 새 구독 준비
-    qnaSubscriptionRef.current?.unsubscribe();
+    try {
+      qnaSubscriptionRef.current?.unsubscribe();
+    } catch (error) {
+      console.error("기존 구독 해제 실패:", error);
+    }
+
+    // 👉 메시지 수신 핸들러 정의
+    const handleQnaDetailMessage = (message) => {
+      let data;
+      try {
+        data = JSON.parse(message.body); // JSON 파싱 시 오류 처리
+      } catch (error) {
+        console.error("수신된 메시지 파싱 실패:", error);
+        return; // 파싱 실패 시 더 이상 처리하지 않음
+      }
+
+      const { status, qnaIdx } = data;
+
+      // 👉 수신 데이터 콘솔 로그
+      console.log("📩 받은 메시지 전체:", data);
+      console.log("📌 상태:", status);
+      console.log("📝 본문:", data.body);
+      console.log("💬 댓글들:", data.comments);
+
+      try {
+        switch (status) {
+          case "RELOAD":
+            setQnaContents((prev) => ({
+              ...prev,
+              [qnaIdx]: { body: data.body },
+            }));
+            setQnaComments((prev) => ({
+              ...prev,
+              [qnaIdx]: data.comments,
+            }));
+            break;
+
+          case "MOD_BODY":
+            setQnaContents((prev) => ({
+              ...prev,
+              [qnaIdx]: { body: data.body },
+            }));
+            break;
+
+          case "MOD_COMM":
+            if (!Array.isArray(data.comments) || data.comments.length === 0) {
+              console.warn("MOD_COMM 상태인데 comments 정보가 없습니다.", data);
+              break;
+            }
+            const updatedComment = data.comments[0];
+            setQnaComments((prev) => {
+              const existing = prev[qnaIdx] || [];
+              const updated = existing.map((comment) =>
+                comment.qnaReplyIdx === updatedComment.qnaReplyIdx ? updatedComment : comment
+              );
+              return {
+                ...prev,
+                [qnaIdx]: updated,
+              };
+            });
+            break;
+
+          case "ADD_COMM":
+            if (!Array.isArray(data.comments) || data.comments.length === 0) {
+              console.warn("ADD_COMM 상태인데 comments 정보가 없습니다.", data);
+              break;
+            }
+            const newComment = data.comments[0];
+            setQnaComments((prev) => {
+              const existing = prev[qnaIdx] || [];
+              const exists = existing.some(c => c.qnaReplyIdx === newComment.qnaReplyIdx);
+              return {
+                ...prev,
+                [qnaIdx]: exists ? existing : [...existing, newComment],
+              };
+            });
+            break;
+
+          case "DEL_COMM":
+            setQnaComments((prev) => {
+              const existing = prev[qnaIdx] || [];
+              const filtered = existing.filter(c => c.qnaReplyIdx !== data.qnaReplyIdx);
+              return {
+                ...prev,
+                [qnaIdx]: filtered,
+              };
+            });
+            break;
+
+          default:
+            console.warn("알 수 없는 상태입니다:", status);
+        }
+      } catch (error) {
+        console.error("메시지 처리 중 오류 발생:", error);
+      }
+
+      // 초기에 열린 상태 아니면 상태 설정
+      setExpandedQnaIdx(qnaIdx);
+    };
 
     // 👉 구독 먼저 등록
-    const newSubscription = stompClientRef.current?.subscribe(
-      `/user/queue/set/qna/detail/${qnaIdx}`,
-      (message) => {
-        const data = JSON.parse(message.body);
-        console.log("문의 상세 조회", data)
-
-        // 본문 내용과 댓글을 분리하여 상태에 저장
-        setQnaContents((prev) => ({ ...prev, [qnaIdx]: { body: data.body } }));
-        setQnaComments((prev) => ({ ...prev, [qnaIdx]: data.comments }));
-
-        setExpandedQnaIdx(qnaIdx);
-      }
-    );
-
-    qnaSubscriptionRef.current = newSubscription;
+    try {
+      const newSubscription = stompClientRef.current?.subscribe(
+        `/user/queue/set/qna/detail/${qnaIdx}`,
+        handleQnaDetailMessage
+      );
+      qnaSubscriptionRef.current = newSubscription;
+    } catch (error) {
+      console.error("STOMP 구독 등록 실패:", error);
+    }
 
     // 👉 요청 전송
-    stompClientRef.current?.send(
-      `/pub/get/matched/qna/detail/${qnaIdx}`,
-      { Authorization: `Bearer ${accessToken}` },
-      null
-    );
+    try {
+      stompClientRef.current?.send(
+        `/pub/get/matched/qna/detail/${qnaIdx}`,
+        { Authorization: `Bearer ${accessToken}` },
+        null
+      );
+    } catch (error) {
+      console.error("STOMP 요청 전송 실패:", error);
+    }
   };
+
+
 
 
 
@@ -442,20 +545,60 @@ const ChatRoom = () => {
                         <div style={{ marginTop: '16px' }}>
                           <strong>답변 목록:</strong>
                           {qnaComments[qna.qnaIdx]?.length > 0 ? (
-                            qnaComments[qna.qnaIdx].map((comment, index) => (
-                              <div key={comment.qnaReplyIdx} style={{ marginTop: '10px', padding: '6px', backgroundColor: '#f9f9f9', borderRadius: '4px' }}>
-                                <div style={{ fontSize: '12px', color: '#666' }}>
-                                  작성자: {comment.userIdx} | 작성일: {comment.createdAt}
+                            qnaComments[qna.qnaIdx].map((comment, index) => {
+                              const isMine = comment.userName === localStorage.getItem("userName");
+
+                              const commentContainerStyle = {
+                                display: 'flex',
+                                justifyContent: isMine ? 'flex-end' : 'flex-start',
+                              };
+
+                              const commentBoxStyle = {
+                                width: '85%', // 더 넓게
+                                marginLeft: isMine ? '40px' : '0',   // 내가 쓴 글은 왼쪽 여백
+                                marginRight: isMine ? '0' : '40px',  // 상대 글은 오른쪽 여백
+                                marginTop: '12px',
+                                padding: '10px',
+                                backgroundColor: isMine ? '#FFFACD' : '#f9f9f9',
+                                borderRadius: '10px',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                wordBreak: 'break-word',
+                              };
+
+                              const infoStyle = {
+                                fontSize: '12px',
+                                color: '#666',
+                                marginBottom: '6px',
+                              };
+
+                              return (
+                                <div key={comment.qnaReplyIdx} style={commentContainerStyle}>
+                                  <div style={commentBoxStyle}>
+                                    <div style={infoStyle}>
+                                      작성자: {comment.userName} | 작성일: {comment.createdAt}
+                                    </div>
+                                    <div style={{
+                                      backgroundColor: '#fefefe',
+                                      padding: '8px 12px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #eee',
+                                      marginTop: '6px'
+                                    }}>
+                                      <Viewer initialValue={comment.content} />
+                                    </div>
+                                  </div>
                                 </div>
-                                <Viewer initialValue={comment.content} />
-                              </div>
-                            ))
+                              );
+                            })
                           ) : (
                             <div style={{ marginTop: '10px', color: '#999' }}>답변이 없습니다.</div>
                           )}
+
+
                         </div>
                       </div>
                     )}
+
                   </li>
                 );
               })}
