@@ -1,51 +1,180 @@
-import { useState } from "react";
-import {
-  User,
-  Mail,
-  Phone,
-  Calendar,
-  UserCheck,
-  Award,
-  Target,
-  Briefcase,
-  Edit,
-  Lock,
-  Save,
-  X,
-  Eye,
-  EyeOff,
-  Heart,
-  CheckCircle,
-  Trophy,
-  ChevronRight,
-  ChevronDown,
-} from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Award, Save, X, Heart, CheckCircle, Trophy } from "lucide-react";
 import MyProfileForm from "./myprofile";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
+import axiosInstance from "@/api/axiosInstance";
 
 export default function MyPageForm() {
   const navigate = useNavigate();
-  // 유저 데이터를 상위 컴포넌트로 이동하여 공유
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  // 에러 알림이 표시되었는지 추적하는 ref
+  const errorNotifiedRef = useRef(false);
+  // 재시도 횟수를 추적하는 ref 추가
+  const retryCountRef = useRef(0);
+  const MAX_RETRY_COUNT = 5;
+
+  // 로컬스토리지 - 사용자 기본 정보
+  const userInfoString = localStorage.getItem("userInfo");
+  const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
+  const accessToken = localStorage.getItem("accessToken");
+
+  // 유저 데이터 상태 설정
   const [userData, setUserData] = useState({
-    userId: "user123",
-    userNick: "사용자",
-    nickTag: "#9876",
-    userExp: 7800,
-    maxExp: 10000,
-    combo: 12,
-    userLv: 42,
-    userName: "김철수",
-    userEmail: "user123@example.com",
-    userJoin: "2023-06-15",
-    userPhone: "010-1234-5678",
-    userGender: "남성",
-    userJob: "개발자",
-    userGoal: "풀스택 개발자 되기",
-    password: "myStrongPassword123",
+    userId: "",
+    userNick: "",
+    nickTag: "",
+    userExp: 0,
+    maxExp: "",
+    combo: 0,
+    userLv: 1,
+    userName: "",
+    userEmail: "",
+    userJoin: "",
+    userPhone: "",
+    userGender: "",
+    userJob: "",
+    targetIdx: "",
   });
 
+  useEffect(() => {
+    if (!accessToken) {
+      toast({
+        variant: "destructive",
+        title: "로그인이 필요합니다",
+        description: "마이페이지 접근을 위해 로그인해주세요.",
+      });
+      navigate("/user/login");
+      return;
+    }
+
+    // 로컬스토리 기본 정보 설정
+    if (userInfo) {
+      setUserData((prevData) => ({
+        ...prevData,
+        userId: userInfo.userIdx || "",
+        userNick: userInfo.userNick || "",
+        nickTag: userInfo.nickTag || "",
+        userExp: userInfo.userExp || 0,
+        combo: userInfo.combo || 0,
+        userLv: userInfo.userLv || 1,
+        userName: userInfo.userName || "",
+        maxExp: userInfo.maxExp || 0,
+      }));
+    }
+
+    // 재시도 카운트 초기화
+    retryCountRef.current = 0;
+
+    // 처음 데이터 로드 시도
+    fetchUserData();
+  }, []); // 의존성 배열 비움 - 컴포넌트 마운트 시 한 번만 실행
+
+  const fetchUserData = async () => {
+    if (retryCountRef.current >= MAX_RETRY_COUNT) {
+      setLoading(false);
+      setError(
+        `데이터 로딩 실패: 최대 시도 횟수(${MAX_RETRY_COUNT}회)에 도달했습니다.`
+      );
+
+      if (!errorNotifiedRef.current) {
+        toast({
+          variant: "destructive",
+          title: "데이터 로딩 오류",
+          description: `최대 시도 횟수(${MAX_RETRY_COUNT}회)에 도달했습니다. 나중에 다시 시도해주세요.`,
+        });
+        errorNotifiedRef.current = true;
+      }
+      return;
+    }
+
+    // 시도 횟수 증가
+    retryCountRef.current += 1;
+    console.log(`API 요청 시도 ${retryCountRef.current}/${MAX_RETRY_COUNT}`);
+
+    setLoading(true);
+    try {
+      const response = await axiosInstance.get("/myPage/auth/myAccount", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        timeout: 5000, // 5초 타임아웃 설정
+      });
+
+      // 응답 구조 확인을 위한 로그
+      console.log("전체 응답 구조:", JSON.stringify(response.data));
+
+      // 응답 구조에 따라 데이터 추출 (message 객체 내부 또는 직접 데이터)
+      const apiData = response.data.message || response.data;
+
+      // API 응답 데이터로 userData 업데이트
+      setUserData((prevData) => ({
+        ...prevData,
+        userId: apiData.userId || prevData.userId,
+        userEmail: apiData.userEmail || prevData.userEmail,
+        userJoin: apiData.userJoin || prevData.userJoin,
+        userPhone: apiData.userPhone || prevData.userPhone,
+        userGender: getGenderText(apiData.userGender),
+        userJob: apiData.jobInfos?.name || "정보 없음",
+        targetIdx: apiData.targetInfos?.name || "정보 없음",
+        maxExp: apiData.maxExp || prevData.maxExp,
+      }));
+
+      console.log("응답데이터:", response.data);
+      // 성공 시 에러 상태와 알림 플래그 초기화
+      setError(null);
+      errorNotifiedRef.current = false;
+      // 성공 시 카운터 리셋
+      retryCountRef.current = 0;
+
+      setLoading(false);
+    } catch (err) {
+      console.error(
+        `사용자 정보를 불러오는 중 오류 발생 (시도 ${retryCountRef.current}/${MAX_RETRY_COUNT}):`,
+        err
+      );
+
+      // 마지막 시도였으면 에러 메시지 표시
+      if (retryCountRef.current >= MAX_RETRY_COUNT) {
+        setError(
+          `최대 시도 횟수(${MAX_RETRY_COUNT}회) 도달: 사용자 정보를 불러오는 데 실패했습니다.`
+        );
+
+        if (!errorNotifiedRef.current) {
+          toast({
+            variant: "destructive",
+            title: "데이터 로딩 오류",
+            description: `최대 시도 횟수(${MAX_RETRY_COUNT}회)에 도달했습니다. 나중에 다시 시도해주세요.`,
+          });
+          errorNotifiedRef.current = true;
+        }
+
+        setLoading(false);
+      } else {
+        // 아직 시도 횟수가 남았으면 재시도 (1초 후)
+        setTimeout(() => {
+          fetchUserData();
+        }, 1000);
+      }
+    }
+  };
+
+  const getGenderText = (genderCode) => {
+    switch (genderCode) {
+      case 1:
+        return "남성";
+      case 2:
+        return "여성";
+      case 3:
+        return "선택 안함";
+      default:
+        return "정보 없음";
+    }
+  };
+
   const [activeSideTab, setActiveSideTab] = useState("routines");
-  const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
   const [editing, setEditing] = useState({
     userNick: false,
   });
@@ -69,15 +198,85 @@ export default function MyPageForm() {
   };
 
   // 수정 저장 핸들러
-  const handleSave = (field) => {
-    setUserData({ ...userData, [field]: tempData[field] });
-    setEditing({ ...editing, [field]: false });
+  const handleSave = async (field) => {
+    try {
+      // 닉네임 업데이트 요청 예시
+      if (field === "userNick") {
+        await axiosInstance.put(
+          "/myPage/auth/update/nickname",
+          { userNick: tempData.userNick },
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+            timeout: 5000, // 5초 타임아웃 설정
+          }
+        );
+      }
+
+      setUserData({ ...userData, [field]: tempData[field] });
+      setEditing({ ...editing, [field]: false });
+
+      toast({
+        title: "정보가 업데이트되었습니다",
+        description: "성공적으로 변경사항이 저장되었습니다.",
+      });
+
+      // 로컬 스토리지 업데이트 (필요한 경우)
+      if (field === "userNick" && userInfo) {
+        const updatedUserInfo = { ...userInfo, userNick: tempData.userNick };
+        localStorage.setItem("userInfo", JSON.stringify(updatedUserInfo));
+      }
+    } catch (err) {
+      console.error("정보 업데이트 중 오류 발생:", err);
+      toast({
+        variant: "destructive",
+        title: "업데이트 실패",
+        description: "정보를 업데이트하는 데 문제가 발생했습니다.",
+      });
+    }
   };
 
-  // 추가 정보 표시 토글
-  const toggleAdditionalInfo = () => {
-    setShowAdditionalInfo(!showAdditionalInfo);
+  // 다시 시도 핸들러
+  const handleRetry = () => {
+    // 다시 시도할 때 에러 알림 플래그와 시도 카운트 초기화
+    errorNotifiedRef.current = false;
+    retryCountRef.current = 0;
+    fetchUserData();
   };
+
+  if (loading) {
+    return (
+      <div className="w-full flex justify-center items-center p-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">사용자 정보를 불러오는 중...</p>
+          {retryCountRef.current > 1 && (
+            <p className="text-sm text-gray-500">
+              시도 {retryCountRef.current}/{MAX_RETRY_COUNT}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full p-8">
+        <div className="text-center text-red-500">
+          <p>{error}</p>
+          <button
+            onClick={handleRetry}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            다시 시도
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -142,10 +341,12 @@ export default function MyPageForm() {
             ></div>
           </div>
 
-          <div className="mt-4 flex items-center justify-center bg-indigo-100 p-2 rounded-lg">
-            <Award className="text-yellow-500 mr-2" size={20} />
-            <span className="font-bold">{userData.combo}일 연속 달성!</span>
-          </div>
+          {userData.combo > 0 && (
+            <div className="mt-4 flex items-center justify-center bg-indigo-100 p-2 rounded-lg">
+              <Award className="text-yellow-500 mr-2" size={20} />
+              <span className="font-bold">{userData.combo}일 연속 달성!</span>
+            </div>
+          )}
         </div>
 
         {/* 루틴/좋아요/챌린지 탭 */}
@@ -219,7 +420,7 @@ export default function MyPageForm() {
               <Trophy size={32} className="mx-auto text-gray-400 mb-2" />
               <p className="text-sm text-gray-500">참여한 챌린지가 없습니다.</p>
               <button
-                className="mt-3 text-xs px-3 py-1 bg-blue-600 text-white rounded-lg "
+                className="mt-3 text-xs px-3 py-1 bg-blue-600 text-white rounded-lg"
                 onClick={() => navigate(`/challenges/list`)}
               >
                 챌린지 참여하기
