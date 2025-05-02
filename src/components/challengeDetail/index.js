@@ -103,16 +103,21 @@ const ChallengeDetailForm = () => {
         duration: duration,
         challStartTime: startTime,
         challEndTime: endTime,
-        activity: "Jogging", // 기본 활동 유형 (사용자가 선택할 수 있도록 변경 가능)
       };
 
-      // POST 요청 보내기
-      await axiosInstance.post(`/challenges/auth/join/${challIdx}`, null, {
-        params: params,
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
+      await axiosInstance.post(
+        `/challenges/auth/join/${challIdx}`,
+        {
+          activity: challengeData.challTitle,
+          activityTime: challengeData.totalClearTime,
         },
-      });
+        {
+          params: params,
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
 
       toast({
         title: "성공",
