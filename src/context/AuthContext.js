@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
   // 로그인 함수
   const login = (userData, tokens = { accessToken: "default-token" }) => {
     console.log("로그인 함수 호출됨:", userData, tokens);
-    
+
     const { accessToken, refreshToken } = tokens;
 
     // 토큰 저장
@@ -53,8 +53,11 @@ export const AuthProvider = ({ children }) => {
     // 상태 업데이트
     setUser(userData);
     setIsAuthenticated(true);
-    
-    console.log("로그인 완료, 상태:", { isAuthenticated: true, user: userData });
+
+    console.log("로그인 완료, 상태:", {
+      isAuthenticated: true,
+      user: userData,
+    });
   };
 
   // 로그아웃 함수

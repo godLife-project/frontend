@@ -1,25 +1,28 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from "@/components/ui/button"
-import { Menu } from "lucide-react"
+// components/Navigation/SideNav.js
+import { React, useEffect } from "react";
+import { useApi } from "../../hooks/useApi";
+
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Menu } from "lucide-react";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
+} from "@/components/ui/sheet";
 
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"
+} from "@/components/ui/accordion";
 
 const MenuItem = ({ item }) => {
   const navigate = useNavigate();
-  
+
   if (item.submenu) {
     return (
       <Accordion type="single" collapsible>
@@ -43,13 +46,13 @@ const MenuItem = ({ item }) => {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-    )
+    );
   }
 
   return (
     <Accordion type="single">
       <AccordionItem value={item.topName} className="border-b">
-        <AccordionTrigger 
+        <AccordionTrigger
           className="py-2 hover:no-underline"
           hasSubmenu={false}
           onClick={() => navigate(item.topAddr)}
@@ -58,8 +61,8 @@ const MenuItem = ({ item }) => {
         </AccordionTrigger>
       </AccordionItem>
     </Accordion>
-  )
-}
+  );
+};
 
 const SideNav = ({ categories }) => {
   return (
@@ -88,7 +91,7 @@ const SideNav = ({ categories }) => {
         </SheetContent>
       </Sheet>
     </div>
-  )
-}
+  );
+};
 
-export default SideNav
+export default SideNav;

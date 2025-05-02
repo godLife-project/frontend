@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import axiosInstance from "@/api/axiosInstance";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useApi } from "../../hooks/useApi";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -36,13 +37,9 @@ const loginFormSchema = z.object({
 
 const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [data, setData] = useState(null);
+  const { data, loading, error, post, headers, getTokens } = useApi();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const errorShown = useRef(false);
-  const { login } = useAuth(); // useAuth 훅 사용
 
   const form = useForm({
     resolver: zodResolver(loginFormSchema),
@@ -199,11 +196,7 @@ const LoginForm = () => {
                     </FormItem>
                   )}
                 />
-                <Button
-                  type="submit"
-                  className="w-full bg-blue-500"
-                  disabled={loading}
-                >
+                <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "로그인 중..." : "로그인"}
                 </Button>
               </form>

@@ -1,3 +1,47 @@
+// import React from "react";
+// import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+// import { AuthProvider } from "./context/AuthContext";
+// import { ToastProvider } from "@/components/ui/use-toast";
+// import { Toaster } from "@/components/ui/toaster";
+// import Layout from "./components/layout/Layout";
+// import Home from "./pages/Home/Home";
+// import Signup from "./pages/Auth/SignUp";
+// import Login from "./pages/Auth/Login";
+// import ChallengeWritePage from "./pages/Challenge/Write";
+// // import RoutineCreator from "./pages/Routine/Create";
+// // import RoutineCreator2 from "./pages/Routine/Create copy 2";
+// // import RoutineCreatePage from "./pages/Routine/create copy";
+
+// function App() {
+//   return (
+//     <AuthProvider>
+//       <ToastProvider>
+//         <Router
+//           future={{
+//             v7_startTransition: true,
+//             v7_relativeSplatPath: true,
+//           }}
+//         >
+//           <Layout>
+//             <Routes>
+//               {/* <Route path="/routine/create3" element={<RoutineCreatePage />} />
+//               <Route path="/routine/create2" element={<RoutineCreator2 />} />
+//               <Route path="/routine/create" element={<RoutineCreator />} /> */}
+//               <Route path="/challenge/write" element={<ChallengeWritePage />} />
+//               <Route path="/user/login" element={<Login />} />
+//               <Route path="/user/signup" element={<Signup />} />
+//               <Route path="/" element={<Home />} />
+//             </Routes>
+//           </Layout>
+//           <Toaster />
+//         </Router>
+//       </ToastProvider>
+//     </AuthProvider>
+//   );
+// }
+
+// export default App;
+
 import React from "react";
 import {
   BrowserRouter as Router,
@@ -13,7 +57,9 @@ import TimedPopup from "./components/common/Popup/TimedPopup";
 import Home from "./pages/Home/Home";
 import Signup from "./pages/Auth/SignUp";
 import Login from "./pages/Auth/Login";
-import RoutineCreator from "./pages/Routine/Create";
+import ChallengeWritePage from "./pages/Challenge/Write";
+import ChallengDetailPage from "./pages/Challenge/Detail";
+import Challenge from "./page/Challenge";
 import RoutineDetailPage from "./pages/Routine/Detail";
 import MyRoutineList from "./pages/Routine/MyRoutineList";
 import RoutineListPage from "./pages/Routine/List";
@@ -50,6 +96,7 @@ function AppContent() {
     <Layout>
       <PopupManager />
       <Routes>
+        <Route path="/user/find_id" element={<FindId />} />
         <Route path="/user/find_password" element={<FindPassword />} />
         <Route path="/notice/detail/:noticeIdx" element={<NoticeDetail />} />
         <Route path="/notice/edit/:noticeIdx" element={<NoticeCreateEdit />} />
