@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import axiosInstance from "@/api/axiosInstance";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useApi } from "../../hooks/useApi";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -37,9 +36,13 @@ const loginFormSchema = z.object({
 
 const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const { data, loading, error, post, headers, getTokens } = useApi();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [data, setData] = useState(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const errorShown = useRef(false);
+  const { login } = useAuth(); // useAuth 훅 사용
 
   const form = useForm({
     resolver: zodResolver(loginFormSchema),
@@ -116,6 +119,10 @@ const LoginForm = () => {
     } catch (err) {
       console.error("로그인 오류:", err);
       setError(err);
+      toast({
+        title: "로그인 실패",
+        description: "아이디나 비밀번호를 확인해주세요",
+      });
     } finally {
       setLoading(false);
     }
@@ -196,7 +203,11 @@ const LoginForm = () => {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button
+                  type="submit"
+                  className="w-full bg-blue-500"
+                  disabled={loading}
+                >
                   {loading ? "로그인 중..." : "로그인"}
                 </Button>
               </form>
@@ -211,6 +222,18 @@ const LoginForm = () => {
                 }}
               >
                 비밀번호를 잊으셨나요?
+              </a>
+            </div>
+            <div className="mt-4 text-center text-sm">
+              <a
+                href="#"
+                className="text-blue-600 hover:text-blue-800 font-medium"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate("/user/find_id");
+                }}
+              >
+                아이디를 잊으셨나요?
               </a>
             </div>
           </CardContent>

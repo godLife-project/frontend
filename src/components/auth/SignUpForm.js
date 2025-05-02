@@ -498,10 +498,10 @@ const SignUpForm = () => {
                               {jobCategories.length > 0 ? (
                                 jobCategories.map((job) => (
                                   <SelectItem
-                                    key={job.jobIdx}
-                                    value={job.jobIdx.toString()}
+                                    key={job.idx}
+                                    value={job.idx.toString()}
                                   >
-                                    {job.jobName}
+                                    {job.name}
                                   </SelectItem>
                                 ))
                               ) : (
@@ -538,10 +538,10 @@ const SignUpForm = () => {
                               {targetCategories.length > 0 ? (
                                 targetCategories.map((target) => (
                                   <SelectItem
-                                    key={target.targetIdx}
-                                    value={target.targetIdx.toString()}
+                                    key={target.idx}
+                                    value={target.idx.toString()}
                                   >
-                                    {target.targetName}
+                                    {target.name}
                                   </SelectItem>
                                 ))
                               ) : (

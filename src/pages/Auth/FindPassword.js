@@ -1,4 +1,4 @@
-// FindPassword.jsx
+// FindPassword.js
 import React, { useState } from "react";
 import axiosInstance from "@/api/axiosInstance";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +26,8 @@ function FindPassword() {
   // 사용자 입력 상태
   const [userId, setUserId] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   // 서버에서 받은 데이터 관련 상태
   const [userEmail, setUserEmail] = useState("");
@@ -36,15 +38,16 @@ function FindPassword() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // 아이디 확인 및 이메일 조회
-  const checkUserId = async (e) => {
+  // 이메일 조회
+  const checkUserEmail = async (e) => {
     e.preventDefault();
+    console.log({ userEmail: userEmail });
 
-    if (!userId.trim()) {
+    if (!userEmail.trim()) {
       toast({
         variant: "destructive",
         title: "오류",
-        description: "아이디를 입력해주세요.",
+        description: "이메일을 입력해주세요.",
       });
       return;
     }
@@ -53,66 +56,35 @@ function FindPassword() {
     setError("");
 
     try {
-      const response = await axiosInstance.post("/user/check-id", { userId });
+      const response = await axiosInstance.post(
+        "/verify/emails/send/just/verification-requests",
+        { userEmail: userEmail }
+      );
 
-      if (response.data.success) {
-        setUserEmail(response.data.email);
+      console.log("인증메일 전송 서버 응답:", response); // 응답 구조 확인용
+
+      // API 응답 구조에 맞게 수정
+      if (response.status === 200) {
+        // 성공 조건을 API 응답에 맞게 수정
         toast({
-          title: "확인 완료",
-          description: "아이디가 확인되었습니다.",
+          title: "인증 메일 발송 완료",
+          description: "입력하신 이메일로 인증코드가 발송되었습니다.",
         });
-        // 단계 진행 (이메일 확인 단계로)
+        // 바로 인증코드 입력 단계로 진행
         setStep(2);
       } else {
         toast({
           variant: "destructive",
           title: "오류",
-          description: "존재하지 않는 아이디입니다.",
+          description: "이메일 발송에 실패했습니다.",
         });
       }
     } catch (error) {
-      console.error("아이디 확인 중 오류 발생:", error);
+      console.error("이메일 확인 중 오류 발생:", error);
       toast({
         variant: "destructive",
         title: "오류",
-        description: "아이디 확인 중 오류가 발생했습니다. 다시 시도해주세요.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 인증 코드 전송
-  const sendVerificationCode = async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await axiosInstance.post("/user/send-verification", {
-        userId,
-      });
-
-      if (response.data.success) {
-        toast({
-          title: "전송 완료",
-          description: "인증 코드가 이메일로 전송되었습니다.",
-        });
-        // 단계 진행 (인증 코드 입력 단계로)
-        setStep(3);
-      } else {
-        toast({
-          variant: "destructive",
-          title: "오류",
-          description: "인증 코드 전송에 실패했습니다.",
-        });
-      }
-    } catch (error) {
-      console.error("인증 코드 전송 중 오류 발생:", error);
-      toast({
-        variant: "destructive",
-        title: "오류",
-        description:
-          "인증 코드 전송 중 오류가 발생했습니다. 다시 시도해주세요.",
+        description: "이메일 확인 중 오류가 발생했습니다. 다시 시도해주세요.",
       });
     } finally {
       setLoading(false);
@@ -136,19 +108,21 @@ function FindPassword() {
     setError("");
 
     try {
-      const response = await axiosInstance.post("/user/verify-code", {
-        userId,
-        verificationCode,
-      });
-
-      if (response.data.success) {
-        setPassword(response.data.password);
+      const response = await axiosInstance.post(
+        `/verify/emails/just/verifications?code=${verificationCode}`,
+        {
+          userEmail: userEmail,
+        }
+      );
+      console.log("코드인증 확인 서버 응답:", response); // 응답 구조 확인용
+      if (response.data.verified) {
+        // 인증 성공하면 비밀번호 변경 화면으로
         toast({
           title: "인증 성공",
-          description: "인증이 완료되었습니다.",
+          description: "새로운 비밀번호를 설정해주세요.",
         });
-        // 단계 진행 (비밀번호 표시 단계로)
-        setStep(4);
+        // 단계 진행 비번 변경 화면으로
+        setStep(3);
       } else {
         toast({
           variant: "destructive",
@@ -169,17 +143,79 @@ function FindPassword() {
     }
   };
 
-  // 1단계: 아이디 입력
+  // 비밀번호 변경
+  const changePassword = async (e) => {
+    e.preventDefault();
+
+    if (!newPassword.trim()) {
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: "새 비밀번호를 입력해주세요.",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: "비밀번호가 일치하지 않습니다.",
+      });
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      // 비밀번호 변경 API 호출
+      const response = await axiosInstance.patch(
+        `/user/find/userPw/${userEmail}`,
+        {
+          userPw: newPassword,
+          userPwConfirm: confirmPassword,
+        }
+      );
+
+      if (response.status === 200) {
+        toast({
+          title: "비밀번호 변경 완료",
+          description: "비밀번호가 성공적으로 변경되었습니다.",
+        });
+        // 로그인 페이지로 이동
+        navigate("/user/login");
+      } else {
+        toast({
+          variant: "destructive",
+          title: "오류",
+          description: "비밀번호 변경에 실패했습니다.",
+        });
+      }
+    } catch (error) {
+      console.error("비밀번호 변경 중 오류 발생:", error);
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: "비밀번호 변경 중 오류가 발생했습니다. 다시 시도해주세요.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 1단계: 이메일 입력
   const renderStep1 = () => (
-    <form onSubmit={checkUserId} className="space-y-4">
+    <form onSubmit={checkUserEmail} className="space-y-4">
       <div className="relative">
         <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
         <Input
-          placeholder="아이디"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
+          placeholder="이메일"
+          value={userEmail}
+          onChange={(e) => setUserEmail(e.target.value)}
           className="pl-10"
           disabled={loading}
+          type="email"
         />
       </div>
 
@@ -187,13 +223,13 @@ function FindPassword() {
         {loading ? "처리 중..." : "다음"}
       </Button>
 
-      <div className="text-center text-sm mt-4">
+      <div className="mt-4 text-center text-sm">
         <a
-          href="/find-id"
+          href="#"
           className="text-blue-600 hover:text-blue-800 font-medium"
           onClick={(e) => {
             e.preventDefault();
-            navigate("/find-id");
+            navigate("/user/find_id");
           }}
         >
           아이디를 잊으셨나요?
@@ -202,49 +238,8 @@ function FindPassword() {
     </form>
   );
 
-  // 2단계: 이메일 확인 및 인증코드 전송
+  // 2단계: 인증 코드 입력
   const renderStep2 = () => (
-    <div className="space-y-4">
-      <div className="border p-3 rounded-md bg-gray-50">
-        <div className="flex items-center">
-          <Mail className="h-5 w-5 text-gray-500 mr-2" />
-          <span className="text-gray-700">
-            {/* 이메일 일부를 가려서 표시 */}
-            {userEmail.replace(/(\w{2})[\w.-]+@([\w.]+\w)/, "$1***@$2")}
-          </span>
-        </div>
-      </div>
-
-      <p className="text-sm text-gray-600">
-        입력하신 아이디와 연결된 이메일로 인증 코드를 보내시겠습니까?
-      </p>
-
-      <Button
-        onClick={sendVerificationCode}
-        className="w-full bg-blue-500"
-        disabled={loading}
-      >
-        {loading ? "전송 중..." : "인증 코드 전송"}
-      </Button>
-
-      <Button
-        onClick={() => {
-          setStep(1);
-          setError("");
-          setSuccess("");
-        }}
-        variant="outline"
-        className="w-full"
-        disabled={loading}
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        뒤로 가기
-      </Button>
-    </div>
-  );
-
-  // 3단계: 인증 코드 입력
-  const renderStep3 = () => (
     <form onSubmit={verifyCode} className="space-y-4">
       <p className="text-sm text-gray-600 mb-2">
         이메일로 전송된 인증 코드를 입력해주세요.
@@ -268,7 +263,7 @@ function FindPassword() {
 
       <Button
         onClick={() => {
-          setStep(2);
+          setStep(1);
           setVerificationCode("");
           setError("");
           setSuccess("");
@@ -283,25 +278,57 @@ function FindPassword() {
     </form>
   );
 
-  // 4단계: 비밀번호 표시 및 로그인 유도
-  const renderStep4 = () => (
-    <div className="space-y-4">
-      <div className="border p-4 rounded-md bg-gray-50 text-center">
-        <p className="text-sm text-gray-500 mb-2">회원님의 비밀번호</p>
-        <div className="font-bold text-lg">{password}</div>
-      </div>
-
-      <p className="text-sm text-gray-600">
-        로그인 후 보안을 위해 비밀번호를 변경하시는 것을 권장합니다.
+  // 3단계: 새 비밀번호 설정
+  const renderStep3 = () => (
+    <form onSubmit={changePassword} className="space-y-4">
+      <p className="text-sm text-gray-600 mb-2">
+        새로운 비밀번호를 입력해주세요.
       </p>
 
-      <Button
-        onClick={() => navigate("/user/login")}
-        className="w-full bg-blue-500"
-      >
-        로그인 페이지로 이동
+      <div className="relative">
+        <Key className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+        <Input
+          type="password"
+          placeholder="새 비밀번호"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          className="pl-10"
+          disabled={loading}
+        />
+      </div>
+
+      <div className="relative">
+        <Key className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+        <Input
+          type="password"
+          placeholder="새 비밀번호 확인"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className="pl-10"
+          disabled={loading}
+        />
+      </div>
+
+      <Button type="submit" className="w-full bg-blue-500" disabled={loading}>
+        {loading ? "변경 중..." : "비밀번호 변경"}
       </Button>
-    </div>
+
+      <Button
+        onClick={() => {
+          setStep(2);
+          setNewPassword("");
+          setConfirmPassword("");
+          setError("");
+          setSuccess("");
+        }}
+        variant="outline"
+        className="w-full"
+        disabled={loading}
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        뒤로 가기
+      </Button>
+    </form>
   );
 
   // 현재 단계에 따라 적절한 컴포넌트 렌더링
@@ -313,8 +340,6 @@ function FindPassword() {
         return renderStep2();
       case 3:
         return renderStep3();
-      case 4:
-        return renderStep4();
       default:
         return renderStep1();
     }
@@ -329,10 +354,9 @@ function FindPassword() {
               비밀번호 찾기
             </CardTitle>
             <CardDescription className="text-center">
-              {step === 1 && "아이디를 입력하여 비밀번호를 찾으세요"}
-              {step === 2 && "이메일 확인 및 인증코드 전송"}
-              {step === 3 && "인증 코드 확인"}
-              {step === 4 && "비밀번호 확인 완료"}
+              {step === 1 && "이메일을 입력하여 비밀번호를 찾으세요"}
+              {step === 2 && "인증 코드 입력"}
+              {step === 3 && "새 비밀번호 설정"}
             </CardDescription>
           </CardHeader>
           <CardContent>{renderCurrentStep()}</CardContent>
@@ -344,11 +368,8 @@ function FindPassword() {
                 </span>{" "}
                 <a
                   href="#"
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate("/user/login");
-                  }}
+                  className="text-blue-600 hover:text-blue-800 font-medium"
+                  onClick={() => navigate("/user/login")}
                 >
                   로그인
                 </a>
