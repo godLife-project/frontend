@@ -38,6 +38,7 @@ export default function MyProfileForm({ userData, setUserData }) {
       }));
     }
   }, []);
+
   // 비밀번호 표시 여부
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -79,6 +80,7 @@ export default function MyProfileForm({ userData, setUserData }) {
         return 0;
     }
   };
+
   //직업 카테고리
   useEffect(() => {
     const fetchJobCategories = async () => {
@@ -156,6 +158,18 @@ export default function MyProfileForm({ userData, setUserData }) {
   // 수정 중인 데이터를 저장할 임시 state
   const [tempData, setTempData] = useState({ ...userData });
 
+  // 편집 상태가 변경될 때 tempData 업데이트
+  useEffect(() => {
+    if (editing.careerInfo) {
+      console.log("편집 상태 변경 감지, 현재 userData:", userData);
+      setTempData((prev) => ({
+        ...prev,
+        userJob: userData.userJob,
+        targetIdx: userData.targetIdx,
+      }));
+    }
+  }, [editing.careerInfo, userData]);
+
   // 수정 시작 핸들러
   const handleEdit = (field) => {
     if (field === "userEmail") {
@@ -164,14 +178,32 @@ export default function MyProfileForm({ userData, setUserData }) {
       setEmailVerified(false);
       setVerificationCode("");
       setInputVerificationCode("");
+      setTempData({ ...userData });
     } else if (field === "password") {
       // 비밀번호 필드 수정 시 입력값 초기화
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      setTempData({ ...userData });
+    } else if (field === "careerInfo") {
+      // 커리어 정보 편집 시 현재 선택된 값으로 초기화
+      console.log("커리어 정보 수정 시작, 현재 userData:", userData);
+
+      // 명시적으로 현재 선택된 값으로 초기화
+      const initialTempData = {
+        ...userData,
+        userJob: userData.userJob, // 명시적으로 현재 값 설정
+        targetIdx: userData.targetIdx, // 명시적으로 현재 값 설정
+      };
+      console.log("초기화할 tempData:", initialTempData);
+      setTempData(initialTempData);
+    } else {
+      // 다른 필드들은 일반적인 방식으로 처리
+      setTempData({ ...userData });
     }
+
+    // 편집 상태 활성화
     setEditing({ ...editing, [field]: true });
-    setTempData({ ...userData });
   };
 
   // 수정 취소 핸들러
@@ -194,6 +226,7 @@ export default function MyProfileForm({ userData, setUserData }) {
 
   // 필드 변경 핸들러
   const handleChange = (field, value) => {
+    console.log(`${field} 필드 변경: ${value}`);
     setTempData({ ...tempData, [field]: value });
     if (field === "userEmail") {
       // 이메일 변경 시 인증 상태 초기화
@@ -208,33 +241,6 @@ export default function MyProfileForm({ userData, setUserData }) {
     if (field === "userEmail" && !emailVerified) {
       alert("이메일 인증을 완료해주세요.");
       return;
-    }
-
-    // 비밀번호 변경의 경우 유효성 검사
-    if (field === "password") {
-      // 현재 비밀번호 확인 (실제 구현에서는 API를 통해 확인)
-      if (!currentPassword) {
-        alert("현재 비밀번호를 입력해주세요.");
-        return;
-      }
-
-      // 새 비밀번호 유효성 검사
-      if (!newPassword) {
-        alert("새 비밀번호를 입력해주세요.");
-        return;
-      }
-
-      // 비밀번호 일치 확인
-      if (newPassword !== confirmPassword) {
-        alert("새 비밀번호와 확인 비밀번호가 일치하지 않습니다.");
-        return;
-      }
-
-      // 실제 구현에서는 API 호출을 통해 비밀번호 변경
-      setUserData({ ...userData, password: newPassword });
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
     } else {
       // 이메일 또는 다른 필드 저장
       setUserData({ ...userData, ...tempData });
@@ -375,6 +381,141 @@ export default function MyProfileForm({ userData, setUserData }) {
       setIsSubmitting(false);
     }
   };
+
+  // 커리어저장(직업,목표) 저장 핸들러
+  const CareerlInfoSave = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      console.log("커리어 정보 저장 시작, tempData:", tempData);
+
+      // 변경된 필드만 업데이트하고, 변경되지 않은 필드는 기존 값 유지
+      const jobIdxValue = Number(tempData.userJob || userData.userJob);
+      const targetIdxValue = Number(tempData.targetIdx || userData.targetIdx);
+
+      console.log("전송할 값:", { jobIdxValue, targetIdxValue });
+
+      // API 호출
+      const response = await axiosInstance.patch(
+        "/myPage/auth/myAccount/modify/job-target",
+        {
+          jobIdx: jobIdxValue,
+          targetIdx: targetIdxValue,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 5000,
+        }
+      );
+
+      console.log("API 응답:", response.data);
+
+      // 업데이트된 직업 이름과 목표 이름 찾기
+      const updatedJobName =
+        jobCategories.find(
+          (job) => job.jobIdx.toString() === jobIdxValue.toString()
+        )?.jobName || userData.userJobName;
+
+      const updatedTargetName =
+        targetCategories.find(
+          (target) => target.targetIdx.toString() === targetIdxValue.toString()
+        )?.targetName || userData.targetName;
+
+      // userData 상태 업데이트 (문자열로 저장)
+      const updatedUserData = {
+        ...userData,
+        userJob: jobIdxValue.toString(),
+        targetIdx: targetIdxValue.toString(),
+        userJobName: updatedJobName,
+        targetName: updatedTargetName,
+      };
+
+      console.log("업데이트된 userData:", updatedUserData);
+      setUserData(updatedUserData);
+
+      setEditing({ ...editing, careerInfo: false });
+
+      toast({
+        title: "커리어정보 변경 완료",
+        description: "커리어정보가 성공적으로 변경되었습니다.",
+      });
+    } catch (err) {
+      console.error("커리어정보 업데이트 중 오류 발생:", err);
+      console.error("오류 상세 정보:", err.response?.data);
+
+      toast({
+        variant: "destructive",
+        title: "업데이트 실패",
+        description:
+          err.message || "커리어정보를 업데이트하는 데 문제가 발생했습니다.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 비밀번호 수정 저장 핸들러
+  const PasswordSave = async () => {
+    try {
+      // 비밀번호 일치 확인
+      if (newPassword !== confirmPassword) {
+        toast({
+          variant: "destructive",
+          title: "비밀번호 불일치",
+          description: "새 비밀번호와 확인 비밀번호가 일치하지 않습니다.",
+        });
+        return;
+      }
+
+      // 비밀번호 업데이트 요청
+      await axiosInstance.patch(
+        "/myPage/auth/security/change/password",
+        {
+          originalPw: currentPassword,
+          userPw: newPassword,
+          userPwConfirm: confirmPassword,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 5000, // 5초 타임아웃 설정
+        }
+      );
+
+      // 성공 메시지
+      toast({
+        title: "비밀번호가 업데이트되었습니다",
+        description: "성공적으로 비밀번호가 변경되었습니다.",
+      });
+
+      // 입력 필드 초기화
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+
+      // 편집 모드 종료
+      setEditing({ ...editing, password: false });
+    } catch (err) {
+      console.error("비밀번호 업데이트 중 오류 발생:", err);
+
+      // 오류 메시지 처리
+      const errorMessage =
+        err.response?.data?.message ||
+        "비밀번호를 업데이트하는 데 문제가 발생했습니다.";
+
+      toast({
+        variant: "destructive",
+        title: "업데이트 실패",
+        description: errorMessage,
+      });
+    }
+  };
+
   // 회원탈퇴 처리
   const handleDeleteAccount = () => {
     // 실제 구현에서는 API 호출이 필요합니다
@@ -725,7 +866,7 @@ export default function MyProfileForm({ userData, setUserData }) {
                     <div className="flex items-center">
                       <select
                         className="border-b border-indigo-300 bg-transparent mr-2 focus:outline-none"
-                        value={tempData.userJob}
+                        value={tempData.userJob || ""}
                         onChange={(e) =>
                           handleChange("userJob", e.target.value)
                         }
@@ -754,7 +895,7 @@ export default function MyProfileForm({ userData, setUserData }) {
                     <div className="flex items-center">
                       <select
                         className="border-b border-indigo-300 bg-transparent mr-2 focus:outline-none"
-                        value={tempData.targetIdx}
+                        value={tempData.targetIdx || ""}
                         onChange={(e) =>
                           handleChange("targetIdx", e.target.value)
                         }
@@ -781,7 +922,7 @@ export default function MyProfileForm({ userData, setUserData }) {
               {editing.careerInfo && (
                 <div className="flex justify-end space-x-1 mt-2">
                   <button
-                    onClick={() => handleSave("careerInfo")}
+                    onClick={() => CareerlInfoSave("careerInfo")}
                     className="text-green-500 flex items-center"
                   >
                     <Save size={16} className="mr-1" />
@@ -883,7 +1024,7 @@ export default function MyProfileForm({ userData, setUserData }) {
 
                     <div className="flex justify-end space-x-1 mt-2">
                       <button
-                        onClick={() => handleSave("password")}
+                        onClick={PasswordSave}
                         className="text-green-500 flex items-center"
                       >
                         <Save size={16} className="mr-1" />
