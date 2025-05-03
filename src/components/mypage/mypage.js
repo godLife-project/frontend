@@ -50,7 +50,7 @@ export default function MyPageForm() {
       return;
     }
 
-    // 로컬스토리 기본 정보 설정
+    // 로컬스토리지 기본 정보 설정
     if (userInfo) {
       setUserData((prevData) => ({
         ...prevData,
@@ -200,10 +200,10 @@ export default function MyPageForm() {
   // 수정 저장 핸들러
   const handleSave = async (field) => {
     try {
-      // 닉네임 업데이트 요청 예시
+      // 닉네임 업데이트 요청
       if (field === "userNick") {
-        await axiosInstance.put(
-          "/myPage/auth/update/nickname",
+        await axiosInstance.patch(
+          "/api/myPage/auth/myAccount/modify/nickName",
           { userNick: tempData.userNick },
           {
             headers: {
