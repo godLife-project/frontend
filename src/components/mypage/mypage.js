@@ -203,7 +203,7 @@ export default function MyPageForm() {
       // 닉네임 업데이트 요청
       if (field === "userNick") {
         await axiosInstance.patch(
-          "/api/myPage/auth/myAccount/modify/nickName",
+          "/myPage/auth/myAccount/modify/nickName",
           { userNick: tempData.userNick },
           {
             headers: {
@@ -389,6 +389,18 @@ export default function MyPageForm() {
                   챌린지
                 </button>
               </li>
+              <li className="mr-2">
+                <button
+                  className={`py-2 px-3 border-b-2 ${
+                    activeSideTab === "mypage"
+                      ? "text-blue-600 border-blue-600"
+                      : "border-transparent hover:text-gray-600 hover:border-gray-300"
+                  }`}
+                  onClick={() => setActiveSideTab("mypage")}
+                >
+                  내 프로필
+                </button>
+              </li>
             </ul>
           </div>
 
@@ -427,11 +439,13 @@ export default function MyPageForm() {
               </button>
             </div>
           )}
+
+          {activeSideTab === "mypage" && (
+            //userData와 setUserData를 프로필 컴포넌트에 전달
+            <MyProfileForm userData={userData} setUserData={setUserData} />
+          )}
         </div>
       </div>
-
-      {/* userData와 setUserData를 프로필 컴포넌트에 전달 */}
-      <MyProfileForm userData={userData} setUserData={setUserData} />
     </div>
   );
 }
