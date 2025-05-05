@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { Input } from "@/components/ui/input";
 import {
   User,
   Mail,
@@ -17,6 +18,17 @@ import {
   Send,
   Check,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import axiosInstance from "@/api/axiosInstance";
 
 export default function MyProfileForm({ userData, setUserData }) {
@@ -46,6 +58,12 @@ export default function MyProfileForm({ userData, setUserData }) {
 
   // 회원탈퇴 확인 모달
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // 회원탈퇴 관련 상태
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deletePasswordError, setDeletePasswordError] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
 
   // 이메일 인증 관련 상태
   const [verificationCode, setVerificationCode] = useState("");
@@ -517,10 +535,62 @@ export default function MyProfileForm({ userData, setUserData }) {
   };
 
   // 회원탈퇴 처리
-  const handleDeleteAccount = () => {
-    // 실제 구현에서는 API 호출이 필요합니다
-    alert("회원탈퇴 처리가 완료되었습니다.");
-    setShowDeleteModal(false);
+  const handleDeleteAccount = async () => {
+    // 비밀번호 입력 확인
+    if (!deletePassword) {
+      setDeletePasswordError("비밀번호를 입력해주세요.");
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeletePasswordError("");
+
+    try {
+      // 회원탈퇴 API 요청
+      await axiosInstance.patch(
+        "/myPage/auth/accountDeletion",
+        {
+          userPw: deletePassword,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 5000, // 5초 타임아웃 설정
+        }
+      );
+
+      toast({
+        title: "회원탈퇴 완료",
+        description: "계정이 성공적으로 삭제되었습니다.",
+      });
+
+      // 토스트 메시지가 보일 수 있도록 짧은 딜레이 후 리다이렉트
+      setTimeout(() => {
+        // 로그아웃 및 홈 페이지로 리다이렉트 처리
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("userInfo");
+
+        // 리다이렉트 처리
+        window.location.href = "/";
+      }, 2000); // 2초 딜레이
+    } catch (err) {
+      console.error("회원탈퇴 중 오류 발생:", err);
+      const errorMessage =
+        err.response?.data?.message || "회원탈퇴 처리 중 문제가 발생했습니다.";
+
+      setDeletePasswordError(errorMessage);
+
+      toast({
+        variant: "destructive",
+        title: "회원탈퇴 실패",
+        description: errorMessage,
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirmDialog(false); // 모달 닫기
+    }
   };
 
   // 비밀번호를 마스킹 처리하는 함수
@@ -1055,43 +1125,58 @@ export default function MyProfileForm({ userData, setUserData }) {
             </div>
           </div>
 
-          {/* 회원 탈퇴 버튼 - 오른쪽 정렬로 변경 */}
+          {/* 회원 탈퇴 버튼 - AlertDialog로 변경 */}
           <div className="flex justify-end">
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              className="text-sm text-red-500 hover:text-red-700"
+            <AlertDialog
+              open={showDeleteConfirmDialog}
+              onOpenChange={setShowDeleteConfirmDialog}
             >
-              회원 탈퇴
-            </button>
+              <AlertDialogTrigger asChild>
+                <button className="text-sm text-red-500 hover:text-red-700">
+                  회원 탈퇴
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>정말 탈퇴하시겠습니까?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    이 작업은 되돌릴 수 없습니다. 본인 확인을 위해 비밀번호를
+                    입력해주세요.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+
+                <div className="py-4">
+                  <Input
+                    type="password"
+                    placeholder="비밀번호를 입력하세요"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    className={deletePasswordError ? "border-red-500" : ""}
+                  />
+                  {deletePasswordError && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {deletePasswordError}
+                    </p>
+                  )}
+                </div>
+
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeleting}>
+                    취소
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteAccount}
+                    disabled={isDeleting}
+                    className="bg-red-500 hover:bg-red-600"
+                  >
+                    {isDeleting ? "처리 중..." : "탈퇴하기"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </div>
-
-      {/* 회원탈퇴 확인 모달 */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-sm mx-auto">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">회원탈퇴</h3>
-            <p className="text-gray-600 mb-4">
-              정말로 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.
-            </p>
-            <div className="flex justify-end space-x-2">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleDeleteAccount}
-                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-              >
-                탈퇴하기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
