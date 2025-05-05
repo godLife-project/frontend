@@ -71,11 +71,6 @@ export default function MyProfileForm({ userData, setUserData }) {
   const [emailVerificationSent, setEmailVerificationSent] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
 
-  // 비밀번호 변경 관련 상태
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-
   // 카테고리 상태 관리
   const [jobCategories, setJobCategories] = useState([]);
   const [targetCategories, setTargetCategories] = useState([]);
@@ -197,12 +192,6 @@ export default function MyProfileForm({ userData, setUserData }) {
       setVerificationCode("");
       setInputVerificationCode("");
       setTempData({ ...userData });
-    } else if (field === "password") {
-      // 비밀번호 필드 수정 시 입력값 초기화
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setTempData({ ...userData });
     } else if (field === "careerInfo") {
       // 커리어 정보 편집 시 현재 선택된 값으로 초기화
       console.log("커리어 정보 수정 시작, 현재 userData:", userData);
@@ -234,11 +223,6 @@ export default function MyProfileForm({ userData, setUserData }) {
       setEmailVerified(false);
       setVerificationCode("");
       setInputVerificationCode("");
-    } else if (field === "password") {
-      // 비밀번호 수정 취소 시 입력값 초기화
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
     }
   };
 
@@ -472,65 +456,6 @@ export default function MyProfileForm({ userData, setUserData }) {
       });
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  // 비밀번호 수정 저장 핸들러
-  const PasswordSave = async () => {
-    try {
-      // 비밀번호 일치 확인
-      if (newPassword !== confirmPassword) {
-        toast({
-          variant: "destructive",
-          title: "비밀번호 불일치",
-          description: "새 비밀번호와 확인 비밀번호가 일치하지 않습니다.",
-        });
-        return;
-      }
-
-      // 비밀번호 업데이트 요청
-      await axiosInstance.patch(
-        "/myPage/auth/security/change/password",
-        {
-          originalPw: currentPassword,
-          userPw: newPassword,
-          userPwConfirm: confirmPassword,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          timeout: 5000, // 5초 타임아웃 설정
-        }
-      );
-
-      // 성공 메시지
-      toast({
-        title: "비밀번호가 업데이트되었습니다",
-        description: "성공적으로 비밀번호가 변경되었습니다.",
-      });
-
-      // 입력 필드 초기화
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-
-      // 편집 모드 종료
-      setEditing({ ...editing, password: false });
-    } catch (err) {
-      console.error("비밀번호 업데이트 중 오류 발생:", err);
-
-      // 오류 메시지 처리
-      const errorMessage =
-        err.response?.data?.message ||
-        "비밀번호를 업데이트하는 데 문제가 발생했습니다.";
-
-      toast({
-        variant: "destructive",
-        title: "업데이트 실패",
-        description: errorMessage,
-      });
     }
   };
 
@@ -1007,121 +932,6 @@ export default function MyProfileForm({ userData, setUserData }) {
                   </button>
                 </div>
               )}
-            </div>
-
-            <div className="border-t border-gray-200 mx-4" />
-
-            {/* 비밀번호 필드 */}
-            <div className="flex items-center p-4">
-              <Lock className="text-indigo-500 mr-3" size={20} />
-              <div className="flex-1">
-                <div className="text-sm text-gray-500">비밀번호</div>
-                {editing.password ? (
-                  <div className="space-y-3">
-                    {/* 현재 비밀번호 */}
-                    <div className="flex items-center">
-                      <div className="relative flex-1">
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="현재 비밀번호"
-                          className="w-full border-b border-indigo-300 bg-transparent focus:outline-none pr-8"
-                          value={currentPassword}
-                          onChange={(e) => setCurrentPassword(e.target.value)}
-                        />
-                        <button
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-500"
-                          type="button"
-                        >
-                          {showPassword ? (
-                            <EyeOff size={16} />
-                          ) : (
-                            <Eye size={16} />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* 새 비밀번호 */}
-                    <div className="flex items-center">
-                      <div className="relative flex-1">
-                        <input
-                          type={showNewPassword ? "text" : "password"}
-                          placeholder="새 비밀번호"
-                          className="w-full border-b border-indigo-300 bg-transparent focus:outline-none pr-8"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                        />
-                        <button
-                          onClick={() => setShowNewPassword(!showNewPassword)}
-                          className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-500"
-                          type="button"
-                        >
-                          {showNewPassword ? (
-                            <EyeOff size={16} />
-                          ) : (
-                            <Eye size={16} />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* 새 비밀번호 확인 */}
-                    <div className="flex items-center">
-                      <div className="relative flex-1">
-                        <input
-                          type={showConfirmPassword ? "text" : "password"}
-                          placeholder="새 비밀번호 확인"
-                          className="w-full border-b border-indigo-300 bg-transparent focus:outline-none pr-8"
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                        />
-                        <button
-                          onClick={() =>
-                            setShowConfirmPassword(!showConfirmPassword)
-                          }
-                          className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-500"
-                          type="button"
-                        >
-                          {showConfirmPassword ? (
-                            <EyeOff size={16} />
-                          ) : (
-                            <Eye size={16} />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end space-x-1 mt-2">
-                      <button
-                        onClick={PasswordSave}
-                        className="text-green-500 flex items-center"
-                      >
-                        <Save size={16} className="mr-1" />
-                        <span className="text-sm">저장하기</span>
-                      </button>
-                      <button
-                        onClick={() => handleCancel("password")}
-                        className="text-red-500 flex items-center"
-                      >
-                        <X size={16} className="mr-1" />
-                        <span className="text-sm">취소하기</span>
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{maskPassword()}</span>
-                    <button
-                      onClick={() => handleEdit("password")}
-                      className="text-indigo-500 hover:text-indigo-700 flex items-center"
-                    >
-                      <Edit size={16} className="mr-1" />
-                      <span className="text-sm">수정하기</span>
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 

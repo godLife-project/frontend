@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Award, Save, X, Heart, CheckCircle, Trophy } from "lucide-react";
 import MyProfileForm from "./myprofile";
+import PasswordSection from "./Security Settings";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import axiosInstance from "@/api/axiosInstance";
@@ -444,6 +445,11 @@ export default function MyPageForm() {
             //userData와 setUserData를 프로필 컴포넌트에 전달
             <MyProfileForm userData={userData} setUserData={setUserData} />
           )}
+          <div className="pt-3">
+            {activeSideTab === "mypage" && (
+              <PasswordSection userData={userData} setUserData={setUserData} />
+            )}
+          </div>
         </div>
       </div>
     </div>
