@@ -57,11 +57,9 @@ import TimedPopup from "./components/common/Popup/TimedPopup";
 import Home from "./pages/Home/Home";
 import Signup from "./pages/Auth/SignUp";
 import Login from "./pages/Auth/Login";
-import ChallengeWritePage from "./pages/Challenge/Write";
-import ChallengDetailPage from "./pages/Challenge/Detail";
-import Challenge from "./page/Challenge";
-import RoutineDetailPage from "./pages/Routine/Detail";
 import MyRoutineList from "./pages/Routine/MyRoutineList";
+import RoutineDetailPage from "./pages/Routine/Detail";
+import RoutineCreatePage from "./pages/Routine/Create";
 import RoutineListPage from "./pages/Routine/List";
 import SimpleChat from "./components/SimpleChat";
 import SocketChat from "./components/SoketChat";
@@ -70,6 +68,9 @@ import NoticeDetail from "./pages/Notice/NoticeDetail";
 import NoticeCreateEdit from "./pages/Notice/NoticeCreateEdit";
 import PopupManager from "./components/common/Popup/PopupManager";
 import FindPassword from "./pages/Auth/FindPassword";
+import FindId from "./pages/Auth/FindId";
+import QnaAdminDashboard from "./pages/QnA/QnDashboard";
+import QnACreate from "./pages/QnA/QnACreate";
 
 // 인증이 필요한 라우트를 위한 컴포넌트
 function ProtectedRoute({ children }) {
@@ -96,6 +97,8 @@ function AppContent() {
     <Layout>
       <PopupManager />
       <Routes>
+        <Route path="/qna/create" element={<QnACreate />} />
+        <Route path="/qna" element={<QnaAdminDashboard />} />
         <Route path="/user/find_id" element={<FindId />} />
         <Route path="/user/find_password" element={<FindPassword />} />
         <Route path="/notice/detail/:noticeIdx" element={<NoticeDetail />} />
@@ -114,7 +117,7 @@ function AppContent() {
           path="/routine/create"
           element={
             isAuthenticated ? (
-              <RoutineCreator />
+              <RoutineCreatePage />
             ) : (
               <Navigate to="/user/login" replace />
             )
