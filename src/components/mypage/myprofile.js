@@ -70,6 +70,7 @@ export default function MyProfileForm({ userData, setUserData }) {
   const [inputVerificationCode, setInputVerificationCode] = useState("");
   const [emailVerificationSent, setEmailVerificationSent] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   // 카테고리 상태 관리
   const [jobCategories, setJobCategories] = useState([]);
@@ -228,7 +229,6 @@ export default function MyProfileForm({ userData, setUserData }) {
 
   // 필드 변경 핸들러
   const handleChange = (field, value) => {
-    console.log(`${field} 필드 변경: ${value}`);
     setTempData({ ...tempData, [field]: value });
     if (field === "userEmail") {
       // 이메일 변경 시 인증 상태 초기화
@@ -261,37 +261,134 @@ export default function MyProfileForm({ userData, setUserData }) {
   };
 
   // 이메일 인증번호 발송 핸들러
-  const handleSendVerification = () => {
-    // 이메일 형식 검증
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(tempData.userEmail)) {
-      alert("유효한 이메일 주소를 입력해주세요.");
-      return;
-    }
+  const handleSendVerification = async () => {
+    try {
+      // API 호출하여 인증코드 발송
+      await axiosInstance.post(
+        "/verify/emails/send/verification-requests",
+        {
+          userEmail: tempData.userEmail,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          timeout: 5000, // 5초 타임아웃 설정
+        }
+      );
 
-    // 실제 구현에서는 API를 통해 서버에서 인증번호 발급 및 발송
-    // 테스트를 위해 간단한 랜덤 코드 생성
-    const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
-    setVerificationCode(randomCode);
-    setEmailVerificationSent(true);
-    alert(`인증번호가 발송되었습니다: ${randomCode}`);
-    // 실제 구현에서는 이 alert는 제거하고 서버에서 이메일로 발송
+      setEmailVerificationSent(true);
+      toast({
+        title: "인증번호 전송 완료",
+        description:
+          "이메일로 인증번호가 발송되었습니다. 메일함을 확인해주세요.",
+      });
+    } catch (err) {
+      console.error("이메일 인증번호 발송 중 오류 발생:", err);
+      toast({
+        variant: "destructive",
+        title: "인증번호 발송 실패",
+        description:
+          err.response?.data?.message ||
+          "인증번호를 발송하는 데 문제가 발생했습니다.",
+      });
+    }
   };
 
   // 이메일 인증번호 확인 핸들러
-  const handleVerifyCode = () => {
-    if (inputVerificationCode === verificationCode) {
+  const handleVerifyCode = async () => {
+    if (!inputVerificationCode) {
+      alert("인증번호를 입력해주세요.");
+      return;
+    }
+
+    setIsVerifying(true);
+
+    try {
+      // API 호출하여 인증코드 검증
+      await axiosInstance.post(
+        `/verify/emails/verifications?code=${inputVerificationCode}`,
+        {
+          userEmail: tempData.userEmail,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          timeout: 5000, // 5초 타임아웃 설정
+        }
+      );
+
       setEmailVerified(true);
-      alert("이메일 인증이 완료되었습니다.");
-      // 인증 성공 시 이메일 즉시 업데이트
+      toast({
+        title: "이메일 인증 완료",
+        description:
+          "이메일 인증이 성공적으로 완료되었습니다. 변경하기 버튼을 눌러 이메일을 변경하세요.",
+      });
+
+      // 인증코드 입력필드 초기화
+      setInputVerificationCode("");
+    } catch (err) {
+      console.error("이메일 인증코드 확인 중 오류 발생:", err);
+      toast({
+        variant: "destructive",
+        title: "인증코드 확인 실패",
+        description:
+          err.response?.data?.message || "인증번호가 일치하지 않습니다.",
+      });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // 이메일 수정 저장 핸들러
+  const handleEmailUpdate = async () => {
+    if (!emailVerified) {
+      toast({
+        variant: "destructive",
+        title: "이메일 인증 필요",
+        description: "이메일 변경을 위해 먼저 인증을 완료해주세요.",
+      });
+      return;
+    }
+
+    try {
+      // 이메일 수정 API 호출
+      await axiosInstance.patch(
+        "/myPage/auth/myAccount/modify/email",
+        {
+          userEmail: tempData.userEmail,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 5000, // 5초 타임아웃 설정
+        }
+      );
+
+      // 이메일 업데이트 성공 시 상태 업데이트
       setUserData({ ...userData, userEmail: tempData.userEmail });
       setEditing({ ...editing, userEmail: false });
+
+      toast({
+        title: "이메일 변경 완료",
+        description: "이메일이 성공적으로 변경되었습니다.",
+      });
+
       // 인증 상태 초기화
       setEmailVerificationSent(false);
-      setVerificationCode("");
-      setInputVerificationCode("");
-    } else {
-      alert("인증번호가 일치하지 않습니다.");
+      setEmailVerified(false);
+    } catch (err) {
+      console.error("이메일 업데이트 중 오류 발생:", err);
+      toast({
+        variant: "destructive",
+        title: "이메일 변경 실패",
+        description:
+          err.response?.data?.message ||
+          "이메일을 변경하는 데 문제가 발생했습니다.",
+      });
     }
   };
 
@@ -798,12 +895,16 @@ export default function MyProfileForm({ userData, setUserData }) {
                         />
                         <button
                           onClick={handleVerifyCode}
+                          disabled={isVerifying}
                           className="px-2 py-1 text-xs rounded bg-indigo-500 text-white hover:bg-indigo-600 mr-1"
                         >
-                          <span className="flex items-center">확인</span>
+                          <span className="flex items-center">
+                            {isVerifying ? "확인 중..." : "확인"}
+                          </span>
                         </button>
                         <button
                           onClick={() => handleCancel("userEmail")}
+                          disabled={isVerifying}
                           className="px-2 py-1 text-xs rounded bg-gray-500 text-white hover:bg-gray-600"
                         >
                           <span className="flex items-center">취소</span>
@@ -813,10 +914,25 @@ export default function MyProfileForm({ userData, setUserData }) {
 
                     {emailVerified && (
                       <div className="flex items-center mt-2">
-                        <span className="text-green-500 flex items-center">
+                        <span className="text-green-500 flex items-center mr-2">
                           <Check size={12} className="mr-1" />
                           인증완료
                         </span>
+                        <button
+                          onClick={handleEmailUpdate}
+                          className="px-2 py-1 text-xs rounded bg-green-500 mr-1"
+                        >
+                          <span className="flex items-center">
+                            <Save size={16} className="mr-1" />
+                            변경하기
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => handleCancel("userEmail")}
+                          className="px-2 py-1 text-xs rounded bg-gray-500"
+                        >
+                          <span className="flex items-center">취소</span>
+                        </button>
                       </div>
                     )}
                   </div>
