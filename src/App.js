@@ -72,7 +72,7 @@ function App() {
               <Route path="/user/login" element={<Login />} />
               <Route path="/user/signup" element={<Signup />} />
               <Route
-                path="/challenges/write"
+                path="/challenge/write"
                 element={
                   <ProtectedRoute>
                     <ChallengeWritePage />
@@ -80,7 +80,7 @@ function App() {
                 }
               />
               <Route
-                path="/challenges/detail/:challIdx"
+                path="/challenge/detail/:challIdx"
                 element={
                   <ProtectedRoute>
                     <ChallengDetailPage />
@@ -88,12 +88,12 @@ function App() {
                 }
               />
               <Route
-                path="/challenges/modify/:challIdx"
+                path="/challenge/modify/:challIdx"
                 element={<ChallengModifyPage />}
               />
-              <Route path="/challenges/list" element={<ChallengeListPage />} />
+              <Route path="/challenge" element={<ChallengeListPage />} />
               <Route
-                path="/challenges/list/:challIdx"
+                path="/challenge/list/:challIdx"
                 element={<ChallengDetailPage />}
               />
               <Route path="/FAQ" element={<FAQListPage />} />

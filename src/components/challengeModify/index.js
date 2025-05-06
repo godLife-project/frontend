@@ -218,7 +218,7 @@ const ChallengeModifyPage = () => {
       console.log("accessToken:", accessToken);
 
       // 성공 시 챌린지 상세 페이지로 이동
-      navigate(`/challenges/detail/${challIdx}`);
+      navigate(`/challenge/detail/${challIdx}`);
     } catch (error) {
       console.error("챌린지 수정 중 오류 발생:", error);
       toast({

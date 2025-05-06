@@ -103,7 +103,7 @@ const ChallengeListForm = () => {
   // 챌린지 상세 페이지로 이동하는 핸들러
   const handleChallengeClick = (challIdx) => {
     // 상세 페이지로 이동
-    navigate(`/challenges/detail/${challIdx}`);
+    navigate(`/challenge/detail/${challIdx}`);
   };
 
   // 날짜 포맷팅 함수
@@ -256,7 +256,7 @@ const ChallengeListForm = () => {
           <div className="flex justify-center space-x-2 mt-6">
             <Button
               className="bg-black text-white"
-              onClick={() => navigate(`/challenges/write`)}
+              onClick={() => navigate(`/challenge/write`)}
             >
               + 새 챌린지
             </Button>

@@ -446,9 +446,7 @@ export default function MyPageForm() {
             <MyProfileForm userData={userData} setUserData={setUserData} />
           )}
           <div className="pt-3">
-            {activeSideTab === "mypage" && (
-              <PasswordSection userData={userData} setUserData={setUserData} />
-            )}
+            {activeSideTab === "mypage" && <PasswordSection />}
           </div>
         </div>
       </div>

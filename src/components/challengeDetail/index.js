@@ -170,7 +170,7 @@ const ChallengeDetailForm = () => {
       });
 
       // 삭제 후 챌린지 목록 페이지로 이동
-      navigate("/challenges");
+      navigate("/challenge");
     } catch (err) {
       console.error("챌린지 삭제 실패:", err);
       toast({
@@ -194,7 +194,7 @@ const ChallengeDetailForm = () => {
           <Button
             variant="outline"
             className="w-1/2"
-            onClick={() => navigate(`/challenges/modify/${challIdx}`)}
+            onClick={() => navigate(`/challenge/modify/${challIdx}`)}
           >
             수정하기
           </Button>
