@@ -67,6 +67,11 @@ export default function MyProfileForm({ userData, setUserData }) {
   const [jobCategories, setJobCategories] = useState([]);
   const [targetCategories, setTargetCategories] = useState([]);
 
+  // 닉네임 수정 관련 상태
+  const [showNickModal, setShowNickModal] = useState(false);
+  const [tempNickname, setTempNickname] = useState("");
+  const [isUpdatingNick, setIsUpdatingNick] = useState(false);
+
   const accessToken = localStorage.getItem("accessToken");
   const { toast } = useToast();
 
@@ -196,13 +201,19 @@ export default function MyProfileForm({ userData, setUserData }) {
       };
       console.log("초기화할 tempData:", initialTempData);
       setTempData(initialTempData);
+    } else if (field === "userNick") {
+      // 닉네임 수정을 위한 모달 열기 (AlertDialog 사용)
+      setTempNickname(userData.userNick);
+      setShowNickModal(true);
     } else {
       // 다른 필드들은 일반적인 방식으로 처리
       setTempData({ ...userData });
     }
 
-    // 편집 상태 활성화
-    setEditing({ ...editing, [field]: true });
+    // 편집 상태 활성화 (닉네임은 모달로 변경했으므로 제외)
+    if (field !== "userNick") {
+      setEditing({ ...editing, [field]: true });
+    }
   };
 
   // 수정 취소 핸들러
@@ -383,44 +394,47 @@ export default function MyProfileForm({ userData, setUserData }) {
     }
   };
 
-  // 닉네임 수정 저장 핸들러
-  const NickNameSave = async (field) => {
+  // 닉네임 수정 저장 핸들러 (AlertDialog와 함께 사용)
+  const handleNickNameSave = async () => {
+    setIsUpdatingNick(true);
     try {
       // 닉네임 업데이트 요청
-      if (field === "userNick") {
-        await axiosInstance.patch(
-          "/myPage/auth/myAccount/modify/nickName",
-          { userNick: tempData.userNick },
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-            timeout: 5000, // 5초 타임아웃 설정
-          }
-        );
-      }
+      await axiosInstance.patch(
+        "/myPage/auth/myAccount/modify/nickName",
+        { userNick: tempNickname },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 5000, // 5초 타임아웃 설정
+        }
+      );
 
-      setUserData({ ...userData, [field]: tempData[field] });
-      setEditing({ ...editing, [field]: false });
+      // 업데이트 성공 시 상태 업데이트
+      setUserData({ ...userData, userNick: tempNickname });
+      setShowNickModal(false);
 
       toast({
-        title: "정보가 업데이트되었습니다",
-        description: "성공적으로 변경사항이 저장되었습니다.",
+        title: "닉네임 변경 완료",
+        description: "닉네임이 성공적으로 변경되었습니다.",
       });
 
-      // 로컬 스토리지 업데이트 (필요한 경우)
-      if (field === "userNick") {
-        const updatedUserInfo = { userNick: tempData.userNick };
-        localStorage.setItem("userInfo", JSON.stringify(updatedUserInfo));
-      }
+      // 로컬 스토리지 업데이트
+      const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+      userInfo.userNick = tempNickname;
+      localStorage.setItem("userInfo", JSON.stringify(userInfo));
     } catch (err) {
-      console.error("정보 업데이트 중 오류 발생:", err);
+      console.error("닉네임 업데이트 중 오류 발생:", err);
       toast({
         variant: "destructive",
-        title: "업데이트 실패",
-        description: "정보를 업데이트하는 데 문제가 발생했습니다.",
+        title: "닉네임 변경 실패",
+        description:
+          err.response?.data?.message ||
+          "닉네임을 변경하는 데 문제가 발생했습니다.",
       });
+    } finally {
+      setIsUpdatingNick(false);
     }
   };
 
@@ -603,53 +617,65 @@ export default function MyProfileForm({ userData, setUserData }) {
             </div>
 
             <div className="border-t border-gray-200 mx-4"></div>
-            {/* 닉네임 필드 */}
+            {/* 닉네임 필드 - AlertDialog 사용 */}
             <div className="flex items-center p-4">
               <User className="text-indigo-500 mr-3" size={20} />
               <div className="flex-1">
                 <div className="text-sm text-gray-500">닉네임</div>
-                {editing.userNick ? (
-                  <div className="flex items-center">
-                    <input
-                      type="text"
-                      className="border-b border-indigo-300 bg-transparent mr-2 focus:outline-none"
-                      value={tempData.userNick}
-                      onChange={(e) => handleChange("userNick", e.target.value)}
-                    />
-                    <div className="flex space-x-1">
-                      <button
-                        onClick={() => NickNameSave("userNick")}
-                        className="text-green-500 flex items-center"
-                      >
-                        <Save size={16} className="mr-1" />
-                        <span className="text-sm">저장하기</span>
-                      </button>
-                      <button
-                        onClick={() => handleCancel("userNick")}
-                        className="text-red-500 flex items-center"
-                      >
-                        <X size={16} className="mr-1" />
-                        <span className="text-sm">취소하기</span>
-                      </button>
-                    </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-medium">{userData.userNick}</span>
+                    <span className="ml-1 text-gray-500 text-sm">
+                      {userData.nickTag}
+                    </span>
                   </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-medium">{userData.userNick}</span>
-                      <span className="ml-1 text-gray-500 text-sm">
-                        {userData.nickTag}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => handleEdit("userNick")}
-                      className="text-indigo-500 hover:text-indigo-700 flex items-center"
-                    >
-                      <Edit size={16} className="mr-1" />
-                      <span className="text-sm">수정하기</span>
-                    </button>
-                  </div>
-                )}
+
+                  {/* AlertDialog 컴포넌트로 변경 */}
+                  <AlertDialog
+                    open={showNickModal}
+                    onOpenChange={setShowNickModal}
+                  >
+                    <AlertDialogTrigger asChild>
+                      <button
+                        onClick={() => handleEdit("userNick")}
+                        className="text-indigo-500 hover:text-indigo-700 flex items-center"
+                      >
+                        <Edit size={16} className="mr-1" />
+                        <span className="text-sm">수정하기</span>
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>닉네임 변경</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          변경할 닉네임을 입력해주세요.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+
+                      <div className="py-4">
+                        <Input
+                          type="text"
+                          placeholder="새 닉네임 입력"
+                          value={tempNickname}
+                          onChange={(e) => setTempNickname(e.target.value)}
+                        />
+                      </div>
+
+                      <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isUpdatingNick}>
+                          취소
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleNickNameSave}
+                          disabled={isUpdatingNick}
+                          className="bg-indigo-500 hover:bg-indigo-600"
+                        >
+                          {isUpdatingNick ? "처리 중..." : "변경하기"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
             </div>
 
