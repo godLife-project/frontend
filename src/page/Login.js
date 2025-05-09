@@ -1,6 +1,8 @@
 // Login.js
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axiosInstance from '../api/axiosInstance';
+
 
 const Login = () => {
     const [userId, setUserId] = useState('');
@@ -9,49 +11,46 @@ const Login = () => {
     const navigate = useNavigate(); // 페이지 이동을 위한 Hook
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError('');
+      e.preventDefault();
+      setError('');
 
-        try {
-            const response = await fetch('http://localhost:9090/api/user/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ userId, userPw }),
-            });
+      try {
+        const response = await axiosInstance.post(
+          '/user/login',
+          { userId, userPw }, // ← 이게 body입니다
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            withCredentials: true // ← 쿠키 포함 시 필요 (Refresh Token 등)
+          }
+        );
 
-            if (!response.ok) {
-                throw new Error('로그인 실패: 아이디 또는 비밀번호가 잘못되었습니다.');
-            }
-
-            // ✅ accessToken은 응답 헤더의 Authorization에 있음
-            const accessTokenHeader = response.headers.get('Authorization');
-            if (accessTokenHeader) {
-                // "Bearer " 접두어 제거
-                const token = accessTokenHeader.replace(/^Bearer\s+/i, '');
-                localStorage.setItem('accessToken', token);
-                console.log('✅ AccessToken 저장 완료:', token);
-            } else {
-                console.warn('⚠️ 응답에 Authorization 헤더가 없습니다.');
-            }
-
-
-            const data = await response.json();
-            console.log('로그인 성공:', data);
-
-            // 🎯 닉네임을 로컬스토리지에 저장
-            if (data.userNick) {
-                localStorage.setItem('userNick', data.userNick);
-                localStorage.setItem('userName', data.userName);
-                console.log('✅ 닉네임 저장 완료:', data.userNick, data.userName);
-            }
-
-            navigate('/'); // 로그인 성공 시 메인으로 이동
-        } catch (error) {
-            setError(error.message);
+        // ✅ accessToken은 응답 헤더에서 추출
+        const accessTokenHeader = response.headers['authorization'];
+        if (accessTokenHeader) {
+          const token = accessTokenHeader.replace(/^Bearer\s+/i, '');
+          localStorage.setItem('accessToken', token);
+          console.log('✅ AccessToken 저장 완료:', token);
+        } else {
+          console.warn('⚠️ 응답에 Authorization 헤더가 없습니다.');
         }
+
+        const data = response.data;
+        console.log('로그인 성공:', data);
+
+        if (data.userNick) {
+          localStorage.setItem('userNick', data.userNick);
+          localStorage.setItem('userName', data.userName);
+        }
+
+        navigate('/');
+      } catch (error) {
+        console.error(error);
+        setError('로그인 실패: 아이디 또는 비밀번호가 잘못되었습니다.');
+      }
     };
+
 
 
     return (

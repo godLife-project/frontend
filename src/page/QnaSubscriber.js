@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import SockJS from 'sockjs-client';
 import { Stomp } from '@stomp/stompjs';
 import axiosInstance from "../api/axiosInstance";
@@ -23,6 +23,9 @@ const ChatRoom = () => {
   const [matchedStatusMessage, setMatchedStatusMessage] = useState('');
 
   const [isVisible, setIsVisible] = useState(false);
+
+  const [adminList, setAdminList] = useState([]);
+
 
 
   // 메시지 표시 및 자동 사라짐 함수
@@ -73,19 +76,48 @@ const ChatRoom = () => {
     );
   };
 
+  const handleTokenReissue = useCallback(async (stompClient) => {
+    try {
+      const response = await axiosInstance.post('/reissue', null, {
+        withCredentials: true,
+      });
+
+      const newAccessToken = response.headers['authorization'];
+      if (newAccessToken) {
+        const token = newAccessToken.replace('Bearer ', '');
+        localStorage.setItem('accessToken', token);
+        alert('🔐 AccessToken이 재발급되었습니다.');
+
+        // 💡 기존 연결 끊고 새로 연결
+          if (stompClient?.connected) {
+            stompClient.disconnect(() => {
+              console.log('🔄 STOMP 연결 재시도');
+              window.location.reload(); // 또는 reconnectStompClient(token) 같은 함수로 재연결
+            });
+          }
+      } else {
+        alert('⚠️ 새 accessToken이 없습니다.');
+      }
+    } catch (err) {
+      console.error('토큰 갱신 중 에러:', err);
+      alert('인증 만료로 연결이 종료됩니다.');
+    }
+  }, []);
+
+
 
   useEffect(() => {
     const userName = localStorage.getItem('userName');
     if (userName) setCurrentUser(userName);
 
-    // STOMP 중복 연결 방지
+    // 이전 연결이 있으면 먼저 끊기
     if (stompClientRef.current?.connected) {
-      console.log('이미 연결됨');
-      setConnectionStatus('연결됨');
-      return;
+      stompClientRef.current.disconnect(() => {
+        console.log('🔌 이전 STOMP 연결 해제됨 (accessToken 변경 등)');
+      });
     }
 
-    // ws-stomp 경로를 통해 STOMP 연결 시도
+    // 새 연결 생성
     const socket = new SockJS('http://localhost:9090/ws-stomp');
     const stompClient = Stomp.over(socket);
     stompClientRef.current = stompClient;
@@ -98,28 +130,18 @@ const ChatRoom = () => {
         console.log('✅ STOMP 연결 성공');
         setConnectionStatus('연결됨');
 
-        stompClient.send('/pub/get/waitList/init', {}, JSON.stringify({}));
-        stompClient.send('/pub/get/matched/qna/init', {
-          Authorization: `Bearer ${accessToken}`,
-        });
-
-        // 대기 상태 문의 리스트 수신
-        // 각 상태에 따라 초기화, 추가, 삭제, 최신화 기능 수행
+        // 1. 대기중 문의 리스트 수신
         stompClient.subscribe('/sub/waitList', (message) => {
           try {
             let { waitQnA, status } = JSON.parse(message.body);
             console.log('📥 대기중 문의 수신:', status, waitQnA);
-
-            if (!Array.isArray(waitQnA)) {
-              waitQnA = [waitQnA];  // 단일 객체를 배열로 감싸기
-            }
+            if (!Array.isArray(waitQnA)) waitQnA = [waitQnA];
 
             setWaitList((prevList) => {
               switch (status) {
                 case 'RELOAD':
                   showWaitListMessage('🔄 대기중 문의 리스트 새로고침');
                   return waitQnA;
-
                 case 'ADD': {
                   const newItems = waitQnA.filter(
                     newItem => !prevList.some(existing => existing.qnaIdx === newItem.qnaIdx)
@@ -129,13 +151,11 @@ const ChatRoom = () => {
                   }
                   return [...prevList, ...newItems];
                 }
-
                 case 'REMOVE': {
                   const removeIds = waitQnA.map(item => item.qnaIdx);
                   showWaitListMessage(`🗑️ ${removeIds.join(', ')}번 문의 삭제됨`);
                   return prevList.filter(item => !removeIds.includes(item.qnaIdx));
                 }
-
                 case 'UPDATE': {
                   const updateIds = waitQnA.map(item => item.qnaIdx);
                   showWaitListMessage(`✏️ ${updateIds.join(', ')}번 문의 수정됨`);
@@ -144,7 +164,6 @@ const ChatRoom = () => {
                     return updatedItem ? updatedItem : item;
                   });
                 }
-
                 default:
                   console.warn('❓ 알 수 없는 상태:', status);
                   return prevList;
@@ -156,31 +175,17 @@ const ChatRoom = () => {
           }
         });
 
-
-        stompClient.subscribe(`/sub/roomChat/${roomNo}`, (message) => {
-          const received = JSON.parse(message.body);
-          setChatList((prev) => [...prev, received]);
-        });
-
-        // 나에게 할당된 문의 리스트 수신
-        // 각 상태에 따라 초기화, 추가, 삭제, 최신화 기능 수행
+        // 2. 매칭된 문의 리스트 수신
         stompClient.subscribe('/user/queue/matched/qna', (message) => {
           try {
             let { matchedQnA, status } = JSON.parse(message.body);
-            console.log('✅매칭된 문의 리스트 수신:', status, matchedQnA);
-
-            // 👉 matchedQnA가 배열이 아니면 배열로 감싸기
-            if (!Array.isArray(matchedQnA)) {
-              matchedQnA = [matchedQnA];
-            }
+            if (!Array.isArray(matchedQnA)) matchedQnA = [matchedQnA];
 
             setPersonalMessageList((prevList) => {
               switch (status) {
-                case 'RELOAD': {
+                case 'RELOAD':
                   showMatchedListMessage('🔄 매칭된 문의가 새로고침 되었습니다.');
                   return matchedQnA;
-                }
-
                 case 'ADD': {
                   const newItems = matchedQnA.filter(
                     newItem => !prevList.some(existing => existing.qnaIdx === newItem.qnaIdx)
@@ -190,13 +195,11 @@ const ChatRoom = () => {
                   }
                   return [...prevList, ...newItems];
                 }
-
                 case 'REMOVE': {
                   const removeIds = matchedQnA.map(item => item.qnaIdx);
                   showMatchedListMessage(`🗑️ 문의 ${removeIds.join(', ')}번이 삭제되었습니다.`);
                   return prevList.filter(item => !removeIds.includes(item.qnaIdx));
                 }
-
                 case 'UPDATE': {
                   const updateIds = matchedQnA.map(item => item.qnaIdx);
                   showMatchedListMessage(`✏️ 문의 ${updateIds.join(', ')}번이 수정되었습니다.`);
@@ -205,12 +208,10 @@ const ChatRoom = () => {
                     return updatedItem ? updatedItem : item;
                   });
                 }
-
                 default:
                   console.warn('📛 알 수 없는 상태:', status);
                   return prevList;
               }
-
             });
           } catch (error) {
             console.error('📛 JSON 파싱 오류:', error);
@@ -218,19 +219,54 @@ const ChatRoom = () => {
           }
         });
 
-        // 각종 에러메세지를 수신
-        stompClient.subscribe('/user/queue/admin/errors', (message) => {
-          const error = JSON.parse(message.body);
-          alert(`🚨 ${error.message}`);
-        });
+        // 접속 중인 관리자 목록 수신
+        stompClient.subscribe('/sub/access/list', (message) => {
+          try {
+            const accessAdmin = JSON.parse(message.body);
+            console.log('접속 중인 관리자 목록', accessAdmin);
 
-        // 수동 할당 시 응답 결과 수신
-        stompClient.subscribe('/user/queue/isMatched/waitQna', (message) => {
-          if (message && message.body) {
-            alert(`📩 응답 메시지: ${message.body}`);
+            // 접속 중인 관리자 데이터가 배열이 아닌 객체일 경우 처리
+            if (Array.isArray(accessAdmin)) {
+              setAdminList(accessAdmin); // 기존 데이터를 덮어쓰는 방식으로 처리
+            } else {
+              setAdminList([accessAdmin]); // 단일 객체를 덮어쓰기 위해 배열로 감싸서 처리
+            }
+          } catch (error) {
+            console.error('📛 JSON 파싱 오류:', error);
+            showMatchedListMessage('❗데이터 처리 중 오류가 발생했습니다.');
           }
         });
 
+
+
+
+        // 3. 채팅 수신
+        stompClient.subscribe(`/sub/roomChat/${roomNo}`, (message) => {
+          const received = JSON.parse(message.body);
+          setChatList((prev) => [...prev, received]);
+        });
+
+        // 4. 오류 처리 및 토큰 재발급
+        stompClient.subscribe('/user/queue/admin/errors', async (message) => {
+          const error = JSON.parse(message.body);
+          if (error.code === 4001) {
+            await handleTokenReissue(stompClient);
+          } else {
+            alert(`🚨 ${error.message}`);
+          }
+        });
+
+        // 5. 수동 할당 응답
+        stompClient.subscribe('/user/queue/isMatched/waitQna', (message) => {
+          if (message?.body) alert(`📩 응답 메시지: ${message.body}`);
+        });
+
+        // 초기 데이터 요청
+        stompClient.send('/pub/get/waitList/init', {}, JSON.stringify({}));
+        stompClient.send('/pub/get/matched/qna/init', {
+          Authorization: `Bearer ${accessToken}`,
+        });
+        stompClient.send('/pub/get/access/serviceCenter', {}, JSON.stringify({}));
       },
       (error) => {
         console.error('❌ STOMP 연결 실패:', error);
@@ -239,13 +275,14 @@ const ChatRoom = () => {
     );
 
     return () => {
-      if (stompClient.connected) {
-        stompClient.disconnect(() => {
+      if (stompClientRef.current?.connected) {
+        stompClientRef.current.disconnect(() => {
           console.log('🔌 STOMP 연결 해제');
         });
       }
     };
   }, [accessToken]);
+
 
   const sendMessage = () => {
     if (!message.trim()) return;
@@ -278,7 +315,6 @@ const ChatRoom = () => {
       alert('상태 전환에 실패했습니다.');
     }
   };
-
 
   const qnaSubscriptionRef = useRef(null);
 
@@ -383,9 +419,14 @@ const ChatRoom = () => {
             break;
 
           case "DEL_COMM":
+            if (!Array.isArray(data.comments) || data.comments.length === 0) {
+              console.warn("DEL_COMM 상태인데 comments 정보가 없습니다.", data);
+              break;
+            }
+            const deleteQnaReplyIdx = data.comments[0].qnaReplyIdx;
             setQnaComments((prev) => {
               const existing = prev[qnaIdx] || [];
-              const filtered = existing.filter(c => c.qnaReplyIdx !== data.qnaReplyIdx);
+              const filtered = existing.filter(c => c.qnaReplyIdx !== deleteQnaReplyIdx);
               return {
                 ...prev,
                 [qnaIdx]: filtered,
@@ -426,11 +467,6 @@ const ChatRoom = () => {
       console.error("STOMP 요청 전송 실패:", error);
     }
   };
-
-
-
-
-
 
   const toggleWaitList = () => {
     setIsWaitListOpen((prev) => !prev);  // 대기중인 문의 리스트 열기/닫기 토글
@@ -473,11 +509,59 @@ const ChatRoom = () => {
         </div>
       )}
 
-
-
       <div style={{ marginTop: '20px' }}>
+        <div style={{
+          padding: '15px',
+          backgroundColor: '#f0f0f0', // 컨테이너 배경색 추가
+          borderRadius: '8px', // 전체 컨테이너에 둥근 모서리 적용
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', // 컨테이너 그림자 추가
+          width: '500px', // 고정된 너비 (픽셀 값)
+          height: 'auto', // 높이는 자동으로 설정
+          boxSizing: 'border-box' // 여백을 포함한 크기 계산
+        }}>
+          <h3 style={{ fontSize: '1.3em', marginBottom: '10px', color: '#4CAF50' }}>
+            접속 중인 관리자 목록
+          </h3>
+
+          {adminList.length > 0 ? (
+            <ul style={{ listStyle: 'none', padding: '0' }}>
+              {adminList.map((admin, index) => (
+                <li key={index} style={{
+                  backgroundColor: '#fff', // 각 카드 배경색
+                  marginBottom: '10px',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  boxShadow: '0 3px 5px rgba(0, 0, 0, 0.1)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: '0.9em',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                    <div style={{ fontWeight: 'bold', color: '#333' }}>이름: {admin.userName}</div>
+                    <div style={{ color: '#555' }}><strong>매칭 수:</strong> {admin.matched}</div>
+                    <div style={{
+                      backgroundColor: admin.status === 0 ? '#b0b0b0' : '#4CAF50', // 비활성 상태는 회색, 활성 상태는 녹색
+                      color: 'white',
+                      padding: '4px 12px',
+                      borderRadius: '5px',
+                      fontWeight: 'bold',
+                      textAlign: 'center',
+                      fontSize: '0.8em'
+                    }}>
+                      상태: {admin.status === 0 ? '비활성' : '활성'}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ fontSize: '1em', color: '#999' }}>접속 중인 관리자가 없습니다.</p>
+          )}
+        </div>
         <button onClick={sendPersonalMessage}>🔒 개인 메시지 테스트</button>
         <button onClick={handleSwitchStatus} style={{ marginLeft: '10px' }}>🔄 상태 전환</button>
+        <button onClick={handleTokenReissue}>🔁 토큰 재발급</button>
 
         {personalMessageList.length > 0 && (
           <div style={{ marginTop: '20px' }}>
@@ -538,7 +622,10 @@ const ChatRoom = () => {
                       <div style={{ marginTop: '8px', padding: '6px', backgroundColor: '#fff', borderRadius: '6px', border: '1px solid #ddd' }}>
                         <strong>본문:</strong>
                         <div style={{ marginTop: '5px' }}>
-                          <Viewer initialValue={qnaContents[qna.qnaIdx]?.body || '로딩 중...'} />
+                          <Viewer
+                            key={qnaContents[qna.qnaIdx]?.body}  // body가 바뀔 때 Viewer가 재마운트됨
+                            initialValue={qnaContents[qna.qnaIdx]?.body || '로딩 중...'}
+                          />
                         </div>
 
                         {/* 답변 렌더링 */}
@@ -584,7 +671,7 @@ const ChatRoom = () => {
                                       border: '1px solid #eee',
                                       marginTop: '6px'
                                     }}>
-                                      <Viewer initialValue={comment.content} />
+                                      <Viewer key={comment.qnaReplyIdx + comment.modifiedAt} initialValue={comment.content} />
                                     </div>
                                   </div>
                                 </div>
@@ -593,8 +680,6 @@ const ChatRoom = () => {
                           ) : (
                             <div style={{ marginTop: '10px', color: '#999' }}>답변이 없습니다.</div>
                           )}
-
-
                         </div>
                       </div>
                     )}
@@ -606,7 +691,6 @@ const ChatRoom = () => {
             </ul>
           </div>
         )}
-
       </div>
 
       <div style={{
