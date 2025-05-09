@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import AccountDeletion from "./AccountDeletion";
 import axiosInstance from "@/api/axiosInstance";
 
 export default function PasswordSection() {
@@ -239,6 +240,9 @@ export default function PasswordSection() {
               </div>
             </div>
           </div>
+        </div>
+        <div className="pt-6 self-end">
+          <AccountDeletion />
         </div>
       </div>
     </div>
