@@ -78,7 +78,7 @@ export default function MyProfileForm({ userData, setUserData }) {
   //개인정보(이름,전화번호,성별) 상태 관리
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // showPersonalModal 상태 및 tempPersonalData 상태 추가
+  // 개인정보 상태 관리
   const [showPersonalModal, setShowPersonalModal] = useState(false);
   const [tempPersonalData, setTempPersonalData] = useState({
     userName: userData.userName || "",
@@ -86,6 +86,14 @@ export default function MyProfileForm({ userData, setUserData }) {
     userPhone: userData.userPhone || "",
   });
   const [isUpdatingPersonal, setIsUpdatingPersonal] = useState(false);
+
+  // 커리어 상태 관리
+  const [showCareerModal, setShowCareerModal] = useState(false);
+  const [tempCareerData, setTempCareerData] = useState({
+    userJob: userData.userJob || "",
+    targetIdx: userData.targetIdx || "",
+  });
+  const [isUpdatingCareer, setIsUpdatingCareer] = useState(false);
 
   const getGenderCode = (genderText) => {
     switch (genderText) {
@@ -210,6 +218,21 @@ export default function MyProfileForm({ userData, setUserData }) {
       };
       console.log("초기화할 tempData:", initialTempData);
       setTempData(initialTempData);
+    } else if (field === "personalInfo") {
+    // 개인정보 모달 열기
+    setTempPersonalData({
+      userName: userData.userName,
+      userGender: userData.userGender,
+      userPhone: userData.userPhone
+    });
+    setShowPersonalModal(true);
+  } else if (field === "careerInfo") {
+      // 커리어 정보 모달 열기
+      setTempCareerData({
+        userJob: userData.userJob,
+        targetIdx: userData.targetIdx,
+      });
+      setShowCareerModal(true);
     } else if (field === "userNick") {
       // 닉네임 수정을 위한 모달 열기 (AlertDialog 사용)
       setTempNickname(userData.userNick);
@@ -495,15 +518,16 @@ export default function MyProfileForm({ userData, setUserData }) {
   };
 
   // 커리어저장(직업,목표) 저장 핸들러
-  const CareerlInfoSave = async () => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
+  const handleCareerSave = async () => {
+    setIsUpdatingCareer(true);
     try {
-      console.log("커리어 정보 저장 시작, tempData:", tempData);
+      console.log("커리어 정보 저장 시작, tempCareerData:", tempCareerData);
 
       // 변경된 필드만 업데이트하고, 변경되지 않은 필드는 기존 값 유지
-      const jobIdxValue = Number(tempData.userJob || userData.userJob);
-      const targetIdxValue = Number(tempData.targetIdx || userData.targetIdx);
+      const jobIdxValue = Number(tempCareerData.userJob || userData.userJob);
+      const targetIdxValue = Number(
+        tempCareerData.targetIdx || userData.targetIdx
+      );
 
       console.log("전송할 값:", { jobIdxValue, targetIdxValue });
 
@@ -548,7 +572,7 @@ export default function MyProfileForm({ userData, setUserData }) {
       console.log("업데이트된 userData:", updatedUserData);
       setUserData(updatedUserData);
 
-      setEditing({ ...editing, careerInfo: false });
+      setShowCareerModal(false);
 
       toast({
         title: "커리어정보 변경 완료",
@@ -565,7 +589,7 @@ export default function MyProfileForm({ userData, setUserData }) {
           err.message || "커리어정보를 업데이트하는 데 문제가 발생했습니다.",
       });
     } finally {
-      setIsSubmitting(false);
+      setIsUpdatingCareer(false);
     }
   };
 
@@ -919,97 +943,114 @@ export default function MyProfileForm({ userData, setUserData }) {
             <div className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-medium text-gray-700">커리어 정보</div>
-                {!editing.careerInfo && (
-                  <button
-                    onClick={() => handleEdit("careerInfo")}
-                    className="text-indigo-500 hover:text-indigo-700 flex items-center"
-                  >
-                    <Edit size={16} className="mr-1" />
-                    <span className="text-sm">수정하기</span>
-                  </button>
-                )}
+                <AlertDialog
+                  open={showCareerModal}
+                  onOpenChange={setShowCareerModal}
+                >
+                  <AlertDialogTrigger asChild>
+                    <button
+                      onClick={() => handleEdit("careerInfo")}
+                      className="text-indigo-500 hover:text-indigo-700 flex items-center"
+                    >
+                      <Edit size={16} className="mr-1" />
+                      <span className="text-sm">수정하기</span>
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>커리어 정보 변경</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        변경할 직업과 목표를 선택해주세요.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <div className="py-4 space-y-4">
+                      {/* 직업 선택 */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">직업</label>
+                        <select
+                          className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          value={tempCareerData.userJob || ""}
+                          onChange={(e) =>
+                            setTempCareerData({
+                              ...tempCareerData,
+                              userJob: e.target.value,
+                            })
+                          }
+                        >
+                          {jobCategories.map((category) => (
+                            <option
+                              key={category.jobIdx}
+                              value={category.jobIdx}
+                            >
+                              {category.jobName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* 목표 선택 */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">목표</label>
+                        <select
+                          className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          value={tempCareerData.targetIdx || ""}
+                          onChange={(e) =>
+                            setTempCareerData({
+                              ...tempCareerData,
+                              targetIdx: e.target.value,
+                            })
+                          }
+                        >
+                          {targetCategories.map((category) => (
+                            <option
+                              key={category.targetIdx}
+                              value={category.targetIdx}
+                            >
+                              {category.targetName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isUpdatingCareer}>
+                        취소
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleCareerSave}
+                        disabled={isUpdatingCareer}
+                        className="bg-indigo-500 hover:bg-indigo-600"
+                      >
+                        {isUpdatingCareer ? "처리 중..." : "변경하기"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
 
-              {/* 직업 필드 */}
+              {/* 직업 필드 - 읽기 전용 표시 */}
               <div className="flex items-center py-2">
                 <Briefcase className="text-indigo-500 mr-3" size={20} />
                 <div className="flex-1">
                   <div className="text-sm text-gray-500">직업</div>
-                  {editing.careerInfo ? (
-                    <div className="flex items-center">
-                      <select
-                        className="border-b border-indigo-300 bg-transparent mr-2 focus:outline-none"
-                        value={tempData.userJob || ""}
-                        onChange={(e) =>
-                          handleChange("userJob", e.target.value)
-                        }
-                      >
-                        {jobCategories.map((category) => (
-                          <option key={category.jobIdx} value={category.jobIdx}>
-                            {category.jobName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : (
-                    <div className="font-medium">
-                      {getJobName(userData.userJob)}
-                    </div>
-                  )}
+                  <div className="font-medium">
+                    {getJobName(userData.userJob)}
+                  </div>
                 </div>
               </div>
 
-              {/* 목표 필드 (targetIdx) */}
+              {/* 목표 필드 - 읽기 전용 표시 */}
               <div className="flex items-center py-2">
                 <Target className="text-indigo-500 mr-3" size={20} />
                 <div className="flex-1">
                   <div className="text-sm text-gray-500">목표</div>
-                  {editing.careerInfo ? (
-                    <div className="flex items-center">
-                      <select
-                        className="border-b border-indigo-300 bg-transparent mr-2 focus:outline-none"
-                        value={tempData.targetIdx || ""}
-                        onChange={(e) =>
-                          handleChange("targetIdx", e.target.value)
-                        }
-                      >
-                        {targetCategories.map((category) => (
-                          <option
-                            key={category.targetIdx}
-                            value={category.targetIdx}
-                          >
-                            {category.targetName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : (
-                    <div className="font-medium">
-                      {getTargetName(userData.targetIdx)}
-                    </div>
-                  )}
+                  <div className="font-medium">
+                    {getTargetName(userData.targetIdx)}
+                  </div>
                 </div>
               </div>
-
-              {/* 수정 버튼 그룹 */}
-              {editing.careerInfo && (
-                <div className="flex justify-end space-x-1 mt-2">
-                  <button
-                    onClick={() => CareerlInfoSave("careerInfo")}
-                    className="text-green-500 flex items-center"
-                  >
-                    <Save size={16} className="mr-1" />
-                    <span className="text-sm">저장하기</span>
-                  </button>
-                  <button
-                    onClick={() => handleCancel("careerInfo")}
-                    className="text-red-500 flex items-center"
-                  >
-                    <X size={16} className="mr-1" />
-                    <span className="text-sm">취소하기</span>
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         </div>
