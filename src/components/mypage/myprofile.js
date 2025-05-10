@@ -78,6 +78,15 @@ export default function MyProfileForm({ userData, setUserData }) {
   //개인정보(이름,전화번호,성별) 상태 관리
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // showPersonalModal 상태 및 tempPersonalData 상태 추가
+  const [showPersonalModal, setShowPersonalModal] = useState(false);
+  const [tempPersonalData, setTempPersonalData] = useState({
+    userName: userData.userName || "",
+    userGender: userData.userGender || "",
+    userPhone: userData.userPhone || "",
+  });
+  const [isUpdatingPersonal, setIsUpdatingPersonal] = useState(false);
+
   const getGenderCode = (genderText) => {
     switch (genderText) {
       case "남성":
@@ -439,17 +448,16 @@ export default function MyProfileForm({ userData, setUserData }) {
   };
 
   // 개인정보(이름, 성별, 전화번호) 저장 핸들러
-  const PersonalInfoSave = async () => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
+  const handlePersonalSave = async () => {
+    setIsUpdatingPersonal(true);
     try {
       // 개인정보(이름, 성별, 전화번호) 변경 API 호출
       await axiosInstance.patch(
         "/myPage/auth/myAccount/modify/personal",
         {
-          userName: tempData.userName,
-          userGender: getGenderCode(tempData.userGender),
-          userPhone: tempData.userPhone,
+          userName: tempPersonalData.userName,
+          userGender: getGenderCode(tempPersonalData.userGender),
+          userPhone: tempPersonalData.userPhone,
         },
         {
           headers: {
@@ -463,12 +471,12 @@ export default function MyProfileForm({ userData, setUserData }) {
       // 업데이트된 userData 상태 설정
       setUserData({
         ...userData,
-        userName: tempData.userName,
-        userGender: tempData.userGender,
-        userPhone: tempData.userPhone,
+        userName: tempPersonalData.userName,
+        userGender: tempPersonalData.userGender,
+        userPhone: tempPersonalData.userPhone,
       });
 
-      setEditing({ ...editing, personalInfo: false });
+      setShowPersonalModal(false);
 
       toast({
         title: "개인정보 변경 완료",
@@ -482,7 +490,7 @@ export default function MyProfileForm({ userData, setUserData }) {
         description: "개인정보를 업데이트하는 데 문제가 발생했습니다.",
       });
     } finally {
-      setIsSubmitting(false);
+      setIsUpdatingPersonal(false);
     }
   };
 
@@ -685,48 +693,55 @@ export default function MyProfileForm({ userData, setUserData }) {
             <div className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-medium text-gray-700">개인정보</div>
-                {!editing.personalInfo && (
-                  <button
-                    onClick={() => handleEdit("personalInfo")}
-                    className="text-indigo-500 hover:text-indigo-700 flex items-center"
-                  >
-                    <Edit size={16} className="mr-1" />
-                    <span className="text-sm">수정하기</span>
-                  </button>
-                )}
-              </div>
+                <AlertDialog
+                  open={showPersonalModal}
+                  onOpenChange={setShowPersonalModal}
+                >
+                  <AlertDialogTrigger asChild>
+                    <button
+                      onClick={() => handleEdit("personalInfo")}
+                      className="text-indigo-500 hover:text-indigo-700 flex items-center"
+                    >
+                      <Edit size={16} className="mr-1" />
+                      <span className="text-sm">수정하기</span>
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>개인정보 변경</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        변경할 개인정보를 입력해주세요.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
 
-              {editing.personalInfo ? (
-                <>
-                  {/* 이름 필드 */}
-                  <div className="flex items-center py-2">
-                    <User className="text-indigo-500 mr-3" size={20} />
-                    <div className="flex-1">
-                      <div className="text-sm text-gray-500">이름</div>
-                      <div className="flex items-center">
-                        <input
+                    <div className="py-4 space-y-4">
+                      {/* 이름 입력 */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">이름</label>
+                        <Input
                           type="text"
-                          className="border-b border-indigo-300 bg-transparent mr-2 focus:outline-none"
-                          value={tempData.userName}
+                          value={tempPersonalData.userName}
                           onChange={(e) =>
-                            handleChange("userName", e.target.value)
+                            setTempPersonalData({
+                              ...tempPersonalData,
+                              userName: e.target.value,
+                            })
                           }
+                          className="w-full"
                         />
                       </div>
-                    </div>
-                  </div>
 
-                  {/* 성별 필드 */}
-                  <div className="flex items-center py-2">
-                    <UserCheck className="text-indigo-500 mr-3" size={20} />
-                    <div className="flex-1">
-                      <div className="text-sm text-gray-500">성별</div>
-                      <div className="flex items-center">
+                      {/* 성별 선택 */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">성별</label>
                         <select
-                          className="border-b border-indigo-300 bg-transparent mr-2 focus:outline-none"
-                          value={tempData.userGender}
+                          className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          value={tempPersonalData.userGender}
                           onChange={(e) =>
-                            handleChange("userGender", e.target.value)
+                            setTempPersonalData({
+                              ...tempPersonalData,
+                              userGender: e.target.value,
+                            })
                           }
                         >
                           <option value="남성">남성</option>
@@ -734,78 +749,67 @@ export default function MyProfileForm({ userData, setUserData }) {
                           <option value="선택 안함">선택 안함</option>
                         </select>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* 전화번호 필드 */}
-                  <div className="flex items-center py-2">
-                    <Phone className="text-indigo-500 mr-3" size={20} />
-                    <div className="flex-1">
-                      <div className="text-sm text-gray-500">전화번호</div>
-                      <div className="flex items-center">
-                        <input
+                      {/* 전화번호 입력 */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">전화번호</label>
+                        <Input
                           type="tel"
-                          className="border-b border-indigo-300 bg-transparent mr-2 focus:outline-none"
-                          value={tempData.userPhone}
+                          value={tempPersonalData.userPhone}
                           onChange={(e) =>
-                            handleChange("userPhone", e.target.value)
+                            setTempPersonalData({
+                              ...tempPersonalData,
+                              userPhone: e.target.value,
+                            })
                           }
+                          className="w-full"
                         />
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex justify-end space-x-1 mt-2">
-                    <button
-                      onClick={() => PersonalInfoSave("personalInfo")}
-                      className="text-green-500 flex items-center"
-                      disabled={isSubmitting}
-                    >
-                      <Save size={16} className="mr-1" />
-                      <span className="text-sm">저장하기</span>
-                    </button>
-                    <button
-                      onClick={() => handleCancel("personalInfo")}
-                      className="text-red-500 flex items-center"
-                      disabled={isSubmitting}
-                    >
-                      <X size={16} className="mr-1" />
-                      <span className="text-sm">취소하기</span>
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* 이름 필드 */}
-                  <div className="flex items-center py-2">
-                    <User className="text-indigo-500 mr-3" size={20} />
-                    <div className="flex-1">
-                      <div className="text-sm text-gray-500">이름</div>
-                      <div className="font-medium">{userData.userName}</div>
-                    </div>
-                  </div>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isUpdatingPersonal}>
+                        취소
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handlePersonalSave}
+                        disabled={isUpdatingPersonal}
+                        className="bg-indigo-500 hover:bg-indigo-600"
+                      >
+                        {isUpdatingPersonal ? "처리 중..." : "변경하기"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
 
-                  {/* 성별 필드 */}
-                  <div className="flex items-center py-2">
-                    <UserCheck className="text-indigo-500 mr-3" size={20} />
-                    <div className="flex-1">
-                      <div className="text-sm text-gray-500">성별</div>
-                      <div className="font-medium">{userData.userGender}</div>
-                    </div>
-                  </div>
+              {/* 이름 필드 - 읽기 전용 표시 */}
+              <div className="flex items-center py-2">
+                <User className="text-indigo-500 mr-3" size={20} />
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500">이름</div>
+                  <div className="font-medium">{userData.userName}</div>
+                </div>
+              </div>
 
-                  {/* 전화번호 필드 */}
-                  <div className="flex items-center py-2">
-                    <Phone className="text-indigo-500 mr-3" size={20} />
-                    <div className="flex-1">
-                      <div className="text-sm text-gray-500">전화번호</div>
-                      <div className="font-medium">{userData.userPhone}</div>
-                    </div>
-                  </div>
-                </>
-              )}
+              {/* 성별 필드 - 읽기 전용 표시 */}
+              <div className="flex items-center py-2">
+                <UserCheck className="text-indigo-500 mr-3" size={20} />
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500">성별</div>
+                  <div className="font-medium">{userData.userGender}</div>
+                </div>
+              </div>
+
+              {/* 전화번호 필드 - 읽기 전용 표시 */}
+              <div className="flex items-center py-2">
+                <Phone className="text-indigo-500 mr-3" size={20} />
+                <div className="flex-1">
+                  <div className="text-sm text-gray-500">전화번호</div>
+                  <div className="font-medium">{userData.userPhone}</div>
+                </div>
+              </div>
             </div>
-
             <div className="border-t border-gray-200 mx-4" />
 
             {/* 이메일 필드 - 인증 기능 추가 */}
