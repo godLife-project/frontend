@@ -405,7 +405,7 @@ export default function MyPageForm() {
               <li className="mr-2">
                 <button
                   className={`py-2 px-3 border-b-2 ${
-                    activeSideTab === "mypage"
+                    activeSideTab === "chat"
                       ? "text-blue-600 border-blue-600"
                       : "border-transparent hover:text-gray-600 hover:border-gray-300"
                   }`}

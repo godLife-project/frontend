@@ -25,6 +25,7 @@ import FAQListPage from "./pages/FAQ/FAQList";
 import FAQWritePage from "./pages/FAQ/Write";
 import FAQEditPage from "./pages/FAQ/Modify";
 import MyPage from "./pages/MyPage/MyPage";
+import AdminDashboard from "./pages/ServiceAdmin/List";
 
 // 인증이 필요한 라우트를 위한 컴포넌트
 function AppRoutes() {
@@ -108,6 +109,7 @@ function App() {
               <Route path="/FAQ/write" element={<FAQWritePage />} />
               <Route path="/" element={<Home />} />
               <Route path="/user/MyPage" element={<MyPage />} />
+              <Route path="adminBoard" element={<AdminDashboard />} />
             </Routes>
           </Layout>
           <Toaster />
