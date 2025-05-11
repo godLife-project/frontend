@@ -402,6 +402,18 @@ export default function MyPageForm() {
                   내 프로필
                 </button>
               </li>
+              <li className="mr-2">
+                <button
+                  className={`py-2 px-3 border-b-2 ${
+                    activeSideTab === "mypage"
+                      ? "text-blue-600 border-blue-600"
+                      : "border-transparent hover:text-gray-600 hover:border-gray-300"
+                  }`}
+                  onClick={() => setActiveSideTab("chat")}
+                >
+                  1:1 문의
+                </button>
+              </li>
             </ul>
           </div>
 
@@ -448,6 +460,19 @@ export default function MyPageForm() {
           <div className="pt-3">
             {activeSideTab === "mypage" && <PasswordSection />}
           </div>
+
+          {activeSideTab === "chat" && (
+            <div className="p-5 text-center">
+              <Trophy size={32} className="mx-auto text-gray-400 mb-2" />
+              <p className="text-sm text-gray-500">문의내역이 없습니다.</p>
+              <button
+                className="mt-3 text-xs px-3 py-1 bg-blue-600 text-white rounded-lg"
+                // onClick={() => navigate(``)}
+              >
+                1:1 문의하기
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
