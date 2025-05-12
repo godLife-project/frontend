@@ -118,15 +118,17 @@ const ChatRoom = () => {
     }
 
     // 새 연결 생성
-    const socket = new SockJS('http://localhost:9090/ws-stomp');
-    const stompClient = Stomp.over(socket);
+    const socket = new SockJS('/ws-stomp');
+
+    // 2. STOMP 클라이언트를 WebSocket으로 감싸기
+    const stompClient = Stomp.over(() => socket);
     stompClientRef.current = stompClient;
 
     stompClient.connect(
       {
         Authorization: `Bearer ${accessToken}`,
       },
-      () => {
+      (frame) => {
         console.log('✅ STOMP 연결 성공');
         setConnectionStatus('연결됨');
 
@@ -135,6 +137,7 @@ const ChatRoom = () => {
           try {
             let { waitQnA, status } = JSON.parse(message.body);
             console.log('📥 대기중 문의 수신:', status, waitQnA);
+            console.log('대기중인 문의 수신 데이터 전체:', JSON.parse(message.body));
             if (!Array.isArray(waitQnA)) waitQnA = [waitQnA];
 
             setWaitList((prevList) => {
@@ -179,6 +182,7 @@ const ChatRoom = () => {
         stompClient.subscribe('/user/queue/matched/qna', (message) => {
           try {
             let { matchedQnA, status } = JSON.parse(message.body);
+            console.log('매칭된 문의 수신 데이터 전체:', JSON.parse(message.body));
             if (!Array.isArray(matchedQnA)) matchedQnA = [matchedQnA];
 
             setPersonalMessageList((prevList) => {
@@ -243,12 +247,14 @@ const ChatRoom = () => {
         // 3. 채팅 수신
         stompClient.subscribe(`/sub/roomChat/${roomNo}`, (message) => {
           const received = JSON.parse(message.body);
+          console.log("채팅 메세지 수신 : ", received)
           setChatList((prev) => [...prev, received]);
         });
 
         // 4. 오류 처리 및 토큰 재발급
         stompClient.subscribe('/user/queue/admin/errors', async (message) => {
           const error = JSON.parse(message.body);
+          console.log("에러 메세지:", error)
           if (error.code === 4001) {
             await handleTokenReissue(stompClient);
           } else {
@@ -281,7 +287,7 @@ const ChatRoom = () => {
         });
       }
     };
-  }, [accessToken]);
+  }, [accessToken, handleTokenReissue]);
 
 
   const sendMessage = () => {
@@ -292,9 +298,11 @@ const ChatRoom = () => {
   };
 
   const sendPersonalMessage = () => {
-    stompClientRef.current?.send('/pub/get/matched/qna/init', {
-      Authorization: `Bearer ${accessToken}`,
-    });
+    if (stompClientRef.current) {
+      stompClientRef.current.send('/pub/get/matched/qna/init', {
+                                   Authorization: `Bearer ${accessToken}`,
+                                 });
+    }
   };
 
   const handleSwitchStatus = async () => {
@@ -324,14 +332,18 @@ const ChatRoom = () => {
 
       // 👉 요청 전송
       try {
-        stompClientRef.current?.send('/pub/close/detail', null);
+        if (stompClientRef.current) {
+          stompClientRef.current.send('/pub/close/detail', null);
+        }
       } catch (error) {
         console.error("STOMP 요청 전송 실패:", error);
       }
 
       // 👉 현재 구독 해제
       try {
-        qnaSubscriptionRef.current?.unsubscribe();
+        if(qnaSubscriptionRef.current){
+          qnaSubscriptionRef.current.unsubscribe();
+        }
         qnaSubscriptionRef.current = null;
       } catch (error) {
         console.error("구독 해제 실패:", error);
@@ -341,7 +353,9 @@ const ChatRoom = () => {
 
     // 👉 기존 구독 해제 후 새 구독 준비
     try {
-      qnaSubscriptionRef.current?.unsubscribe();
+      if (qnaSubscriptionRef.current){
+        qnaSubscriptionRef.current.unsubscribe();
+      }
     } catch (error) {
       console.error("기존 구독 해제 실패:", error);
     }
@@ -458,11 +472,14 @@ const ChatRoom = () => {
 
     // 👉 요청 전송
     try {
-      stompClientRef.current?.send(
-        `/pub/get/matched/qna/detail/${qnaIdx}`,
-        { Authorization: `Bearer ${accessToken}` },
-        null
-      );
+
+      if (qnaSubscriptionRef.current) {
+        stompClientRef.current.send(
+                `/pub/get/matched/qna/detail/${qnaIdx}`,
+                { Authorization: `Bearer ${accessToken}` },
+                null
+              );
+      }
     } catch (error) {
       console.error("STOMP 요청 전송 실패:", error);
     }
@@ -474,7 +491,7 @@ const ChatRoom = () => {
 
   return (
     <div style={{ padding: '20px' }}>
-      <h2>📢 채팅방: {roomNo}</h2>
+      <h2><span role="img" aria-label="announcement">📢</span> 채팅방: {roomNo}</h2>
       <div style={{ marginTop: '10px', fontSize: '1.2em', color: connectionStatus === '연결됨' ? 'green' : 'red' }}>
         {connectionStatus}
       </div>
@@ -559,13 +576,13 @@ const ChatRoom = () => {
             <p style={{ fontSize: '1em', color: '#999' }}>접속 중인 관리자가 없습니다.</p>
           )}
         </div>
-        <button onClick={sendPersonalMessage}>🔒 개인 메시지 테스트</button>
-        <button onClick={handleSwitchStatus} style={{ marginLeft: '10px' }}>🔄 상태 전환</button>
-        <button onClick={handleTokenReissue}>🔁 토큰 재발급</button>
+        <button onClick={sendPersonalMessage}><span role="img" aria-label="privacy">🔒</span>  개인 메시지 테스트</button>
+        <button onClick={handleSwitchStatus} style={{ marginLeft: '10px' }}><span role="img" aria-label="switch">🔄</span>  상태 전환</button>
+        <button onClick={handleTokenReissue}><span role="img" aria-label="refresh">🔁</span>  토큰 재발급</button>
 
         {personalMessageList.length > 0 && (
           <div style={{ marginTop: '20px' }}>
-            <h3>🔐 개인 메시지 응답 목록:</h3>
+            <h3><span role="img" aria-label="privacy-key">🔐</span> 개인 메시지 응답 목록:</h3>
             <ul style={{ listStyle: 'none', padding: 0 }}>
               {personalMessageList.map((msg, idx) => {
                 const qna = msg;

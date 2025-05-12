@@ -3,15 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@stomp/stompjs": "^7.1.1",
-    "@toast-ui/react-editor": "^3.2.3",
+    "@stomp/stompjs": "^6.1.2",
+    "@toast-ui/react-editor": "^3.1.0",
     "axios": "^1.7.9",
-    "cra-template": "1.2.0",
+    "cra-template": "^1.2.0",
+    "http-proxy-middleware": "^3.0.5",
     "lucide-react": "^0.488.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^7.1.5",
-    "react-scripts": "5.0.1",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
+    "react-router-dom": "^6.4.3",
+    "react-scripts": "^3.0.1",
     "sockjs-client": "^1.6.1",
     "web-vitals": "^4.2.4"
   },
@@ -19,7 +20,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "dev": "set NODE_OPTIONS=--openssl-legacy-provider && react-scripts start"
   },
   "eslintConfig": {
     "extends": [
@@ -40,7 +42,7 @@
     ]
   },
   "devDependencies": {
+    "@babel/plugin-proposal-optional-chaining": "^7.21.0",
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11"
-  },
-  "proxy": "https://localhost:3000"
+  }
 }
