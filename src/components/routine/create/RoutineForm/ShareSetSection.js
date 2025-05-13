@@ -1,5 +1,10 @@
 import React from "react";
-import { FormField, FormItem, FormControl, FormMessage } from "@/components/ui/form";
+import {
+  FormField,
+  FormItem,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 
 const ShareSetSection = ({ control }) => {

@@ -19,6 +19,36 @@ export default function useRoutineDetail(planIdx, navigate) {
   const [certificationStreak, setCertificationStreak] = useState(0);
   const [showCompletionMessage, setShowCompletionMessage] = useState(false);
 
+  // fetchLikeStatus 함수 - 루틴의 추천 상태를 가져오는 함수
+  const fetchLikeStatus = useCallback(async (planId) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) return null;
+
+      // 추천 상태 확인 API 호출
+      const response = await axiosInstance.get(`/plan/checkLike/${planId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // response.data.message가 true/false인 경우 처리
+      if (typeof response.data.message === "boolean") {
+        // API 응답이 단순 불리언인 경우 포스트맨에서 본 데이터를 유지 (또는 별도 API 호출)
+        return {
+          isLiked: response.data.message,
+          // 여기서는 원래 루틴 데이터의 likeCount 유지
+        };
+      }
+
+      // 기존 처리 유지 (객체 형태로 오는 경우)
+      return response.data.message;
+    } catch (error) {
+      console.error("루틴 추천 상태 가져오기 실패:", error);
+      return null;
+    }
+  }, []);
+
   // fetchRoutineData 함수를 useCallback으로 컴포넌트 레벨에서 정의
   const fetchRoutineData = useCallback(async () => {
     setIsLoading(true);
@@ -70,6 +100,25 @@ export default function useRoutineDetail(planIdx, navigate) {
         }
       }
 
+      // 추천 상태 가져오기
+      if (token) {
+        const likeStatus = await fetchLikeStatus(planIdx);
+        console.log("좋아요 상태 API 응답:", likeStatus);
+
+        if (likeStatus !== null) {
+          // isLiked 값은 항상 설정
+          routineData.isLiked = likeStatus.isLiked || false;
+
+          // likeCount는 API에서 제공하는 경우에만 덮어쓰기
+          if (likeStatus.likeCount !== undefined) {
+            routineData.likeCount = likeStatus.likeCount;
+          }
+          // likeCount가 없을 경우 원래 값 유지 (API에서 받은 초기값)
+
+          console.log("좋아요 정보 업데이트 후:", routineData);
+        }
+      }
+
       setRoutineData(routineData);
 
       // 인증 데이터 가져오기
@@ -84,7 +133,7 @@ export default function useRoutineDetail(planIdx, navigate) {
     } finally {
       setIsLoading(false);
     }
-  }, [planIdx, navigate]);
+  }, [planIdx, navigate, fetchLikeStatus]);
 
   // 초기 데이터 로드
   useEffect(() => {
@@ -365,6 +414,115 @@ export default function useRoutineDetail(planIdx, navigate) {
     }
   };
 
+  // 루틴 추천 함수
+  const handleLike = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+      const userIdx = userInfo.userIdx || 1;
+
+      if (!token) {
+        alert("로그인이 필요한 기능입니다.");
+        navigate("/user/login");
+        return;
+      }
+
+      // 요청 데이터 구성
+      const likeData = {
+        userIdx: parseInt(userIdx),
+      };
+
+      console.log("루틴 추천하기 데이터", likeData);
+      // API 요청
+      const response = await axiosInstance.post(
+        `/plan/auth/likePlan/${planIdx}`,
+        likeData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success || response.data.code === 200) {
+        // 최신 데이터로 갱신
+        await fetchRoutineData();
+      } else {
+        console.error("추천 실패:", response.data);
+        alert(response.data.message || "추천 처리에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("추천 실패:", error);
+      if (error.response && error.response.status === 401) {
+        // 토큰 만료 시 재발급 처리
+        try {
+          const newToken = await reissueToken();
+          if (newToken) {
+            // 토큰 재발급 성공 시 다시 시도
+            await handleLike();
+          }
+        } catch (tokenError) {
+          console.error("토큰 재발급 실패:", tokenError);
+          alert("로그인이 만료되었습니다. 다시 로그인해주세요.");
+          navigate("/user/login");
+        }
+      } else {
+        alert("추천 처리에 실패했습니다. 다시 시도해주세요.");
+      }
+    }
+  };
+
+  // 루틴 추천 취소 함수
+  const handleUnlike = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+      const userIdx = userInfo.userIdx || 1;
+
+      if (!token) {
+        alert("로그인이 필요한 기능입니다.");
+        navigate("/user/login");
+        return;
+      }
+
+      // API 요청 (URL 파라미터 방식)
+      const response = await axiosInstance.delete(
+        `/plan/auth/unLikePlan/${planIdx}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success || response.data.code === 200) {
+        // 최신 데이터로 갱신
+        await fetchRoutineData();
+      } else {
+        console.error("추천 취소 실패:", response.data);
+        alert(response.data.message || "추천 취소 처리에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("추천 취소 실패:", error);
+      if (error.response && error.response.status === 401) {
+        // 토큰 만료 시 재발급 처리
+        try {
+          const newToken = await reissueToken();
+          if (newToken) {
+            // 토큰 재발급 성공 시 다시 시도
+            await handleUnlike();
+          }
+        } catch (tokenError) {
+          console.error("토큰 재발급 실패:", tokenError);
+          alert("로그인이 만료되었습니다. 다시 로그인해주세요.");
+          navigate("/user/login");
+        }
+      } else {
+        alert("추천 취소 처리에 실패했습니다. 다시 시도해주세요.");
+      }
+    }
+  };
+
   // 리뷰 날짜 포맷팅 함수
   const formatReviewDate = (dateString) => {
     const options = { year: "numeric", month: "long", day: "numeric" };
@@ -413,6 +571,8 @@ export default function useRoutineDetail(planIdx, navigate) {
     formatReviewDate,
     handleActivityCertification,
     handleRoutineAction,
+    handleLike, // 추천 함수 추가
+    handleUnlike, // 추천 취소 함수 추가
     getStatusBadgeStyle,
     getStatusText,
     fetchRoutineData, // 함수를 외부로 노출

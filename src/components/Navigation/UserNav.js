@@ -38,43 +38,49 @@ export function UserNav() {
 
   // 로그아웃 처리 함수
   const handleLogout = async () => {
-    const cookies = document.cookie.split(';');
-const refreshToken = cookies.find(cookie => cookie.trim().startsWith('refresh='))?.split('=')[1];
-
+    const cookies = document.cookie.split(";");
+    const refreshToken = cookies
+      .find((cookie) => cookie.trim().startsWith("refresh="))
+      ?.split("=")[1];
 
     try {
       // 로그아웃 API 호출
-      await axiosInstance.post("/user/logout", {}, {
-        headers: {
-          'X-Refresh-Token': refreshToken
+      await axiosInstance.post(
+        "/user/logout",
+        {},
+        {
+          headers: {
+            "X-Refresh-Token": refreshToken,
+          },
         }
-      });
-      
+      );
+
       // 성공 메시지 표시
       toast({
         title: "로그아웃 성공",
         description: "성공적으로 로그아웃되었습니다.",
         duration: 3000,
       });
-      
+
       // 로그아웃 함수 호출 (로컬 스토리지 정리 및 상태 업데이트)
       logout();
-      
+
       // 로그인 페이지로 리다이렉트
       navigate("/user/login");
     } catch (error) {
       console.error("로그아웃 오류:", error);
-      
+
       // API 호출이 실패하더라도 클라이언트 측에서는 로그아웃 처리
       logout();
-      
+
       toast({
         title: "로그아웃",
-        description: "로컬에서 로그아웃되었습니다. 서버 연결에 문제가 있을 수 있습니다.",
+        description:
+          "로컬에서 로그아웃되었습니다. 서버 연결에 문제가 있을 수 있습니다.",
         variant: "warning",
         duration: 3000,
       });
-      
+
       navigate("/user/login");
     }
   };
@@ -88,11 +94,16 @@ const refreshToken = cookies.find(cookie => cookie.trim().startsWith('refresh=')
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56 bg-blue-50 dark:bg-slate-800 shadow-lg" align="end" forceMount>
+      <DropdownMenuContent
+        className="w-56 bg-blue-50 dark:bg-slate-800 shadow-lg"
+        align="end"
+        forceMount
+      >
         <DropdownMenuLabel className="font-normal">
           <div className="flex space-y-1">
             <p className="text-sm font-medium leading-none">
-              {user?.userNick || "사용자"}{user?.nickTag || "user"}
+              {user?.userNick || "사용자"}
+              {user?.nickTag || "user"}
             </p>
           </div>
         </DropdownMenuLabel>

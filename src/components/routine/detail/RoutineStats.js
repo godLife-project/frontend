@@ -1,8 +1,94 @@
-// src/components/routine/detail/RoutineStats.jsx
 import React from "react";
-import { Eye, Heart, Award, Share2, Flame } from "lucide-react";
+import { Eye, Heart, Share2, GitFork } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-const RoutineStats = ({ routineData, certificationStreak }) => {
+const RoutineStats = ({
+  routineData,
+  certificationStreak,
+  handleLike,
+  handleUnlike,
+}) => {
+  const navigate = useNavigate();
+
+  // 좋아요 상태 확인
+  const isLiked = routineData.isLiked || false;
+
+  // 좋아요 클릭 이벤트 핸들러
+  const handleLikeClick = () => {
+    if (isLiked) {
+      // 이미 좋아요 상태이면 취소
+      handleUnlike();
+    } else {
+      // 좋아요 상태가 아니면 추가
+      handleLike();
+    }
+  };
+
+  // Fork 클릭 이벤트 핸들러 추가
+  const handleForkClick = () => {
+    console.log("포크 버튼 클릭됨", routineData);
+
+    try {
+      // repeatDays 데이터 처리 - 서로 다른 형식을 올바르게 처리
+      let repeatDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]; // 기본값
+
+      if (routineData.repeatDays) {
+        // repeatDays가 배열이면 그대로 사용
+        if (Array.isArray(routineData.repeatDays)) {
+          repeatDays = routineData.repeatDays;
+        }
+        // repeatDays가 문자열이면 배열로 변환 (쉼표로 구분된 경우)
+        else if (
+          typeof routineData.repeatDays === "string" &&
+          routineData.repeatDays.includes(",")
+        ) {
+          repeatDays = routineData.repeatDays.split(",");
+        }
+        // 다른 형식이면 기본값 유지
+      }
+
+      // 현재 루틴 데이터를 세션 스토리지에 저장
+      sessionStorage.setItem(
+        "forkRoutineData",
+        JSON.stringify({
+          planTitle: `${routineData.planTitle} (복사본)`,
+          endTo: routineData.endTo,
+          targetIdx: routineData.targetIdx,
+          isShared: routineData.isShared,
+          planImp: routineData.planImp,
+          jobIdx: routineData.jobIdx,
+          jobEtcCateDTO: routineData.jobEtcCateDTO,
+          // 모든 필요한 필드를 포함한 activities 매핑
+          activities: routineData.activities.map((activity) => ({
+            activityTitle:
+              activity.activityName || activity.activityTitle || "",
+            activityName: activity.activityName || activity.activityTitle || "",
+            description: activity.description || "",
+            activityImp: activity.activityImp || 5,
+            setTime: activity.setTime || "12:00",
+            planIdx: null, // 새 루틴이므로 null로 설정
+            activityIdx: null, // 새 루틴이므로 null로 설정
+            verified: false, // 기본값은 false
+          })),
+          // 반드시 배열 형태로 저장
+          repeatDays: repeatDays,
+          // 포크 관련 필드 추가 - API 요구사항
+          forkIdx: routineData.planIdx, // 원본 루틴의 인덱스 번호
+          forked: true, // 루틴을 따라함을 표시
+        })
+      );
+
+      // 저장 후 확인 (디버깅용)
+      const savedData = sessionStorage.getItem("forkRoutineData");
+      console.log("저장된 데이터:", savedData);
+
+      // 루틴 생성 페이지로 이동
+      navigate("/routine/create");
+    } catch (error) {
+      console.error("포크 처리 중 오류 발생:", error);
+      alert("포크 처리 중 오류가 발생했습니다: " + error.message);
+    }
+  };
   return (
     <div className="absolute left-0 right-0 bottom-0 transform translate-y-1/2 px-8">
       <div className="bg-white rounded-lg shadow-md p-4">
@@ -17,9 +103,18 @@ const RoutineStats = ({ routineData, certificationStreak }) => {
             </span>
           </div>
 
-          <div className="flex flex-col items-center justify-center p-2">
-            <div className="flex items-center text-red-500 mb-1">
-              <Heart className="w-4 h-4 mr-1" />
+          <div
+            className="flex flex-col items-center justify-center p-2 cursor-pointer"
+            onClick={handleLikeClick}
+          >
+            <div
+              className="flex items-center mb-1"
+              style={{ color: isLiked ? "#FF4136" : "#FF6B6B" }}
+            >
+              <Heart
+                className="w-4 h-4 mr-1"
+                fill={isLiked ? "#FF4136" : "none"}
+              />
               <span className="text-sm font-medium">좋아요</span>
             </div>
             <span className="text-lg font-bold">
@@ -27,22 +122,18 @@ const RoutineStats = ({ routineData, certificationStreak }) => {
             </span>
           </div>
 
-          <div className="flex flex-col items-center justify-center p-2">
-            <div className="flex items-center text-yellow-500 mb-1">
-              <Award className="w-4 h-4 mr-1" />
-              <span className="text-sm font-medium">인증</span>
+          {/* Fork 클릭 이벤트 추가 */}
+          <div
+            className="flex flex-col items-center justify-center p-2 cursor-pointer hover:bg-purple-50 transition-colors rounded"
+            onClick={handleForkClick}
+          >
+            <div className="flex items-center text-purple-500 mb-1">
+              <GitFork className="w-4 h-4 mr-1" />
+              <span className="text-sm font-medium">포크</span>
             </div>
-            <div className="flex items-center">
-              <span className="text-lg font-bold">
-                {routineData.certExp || 0}
-              </span>
-              {certificationStreak > 0 && (
-                <div className="flex items-center ml-2 bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full text-xs">
-                  <Flame className="w-3 h-3 mr-1" />
-                  {certificationStreak}일째
-                </div>
-              )}
-            </div>
+            <span className="text-lg font-bold">
+              {routineData.forkCount || 0}
+            </span>
           </div>
 
           <div className="flex flex-col items-center justify-center p-2">

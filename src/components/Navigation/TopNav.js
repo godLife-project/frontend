@@ -1,15 +1,15 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from "@/components/ui/button"
-import { 
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from "@/components/ui/dropdown-menu"
-import { ChevronDown } from "lucide-react" 
-import { Bell } from 'lucide-react'
-import { UserNav } from './UserNav'
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown } from "lucide-react";
+import { Bell } from "lucide-react";
+import { UserNav } from "./UserNav";
 
 const NavItem = ({ item }) => {
   const navigate = useNavigate();
@@ -25,21 +25,28 @@ const NavItem = ({ item }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           {item.submenu.map((subItem) => (
-            <DropdownMenuItem key={subItem.href} onClick= {()=> navigate(subItem.href)}>
+            <DropdownMenuItem
+              key={subItem.href}
+              onClick={() => navigate(subItem.href)}
+            >
               {subItem.topName}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-    )
+    );
   }
 
   return (
-    <Button variant="ghost" className="font-medium" onClick={() => navigate(item.topAddr)}>
+    <Button
+      variant="ghost"
+      className="font-medium"
+      onClick={() => navigate(item.topAddr)}
+    >
       {item.topName}
     </Button>
-  )
-}
+  );
+};
 
 const TopNav = ({ categories }) => {
   return (
@@ -70,9 +77,8 @@ const TopNav = ({ categories }) => {
         </Button>
         <UserNav />
       </div>
-      
     </div>
-  )
-}
+  );
+};
 
-export default TopNav
+export default TopNav;
