@@ -23,6 +23,17 @@ import NoticeListPage from "./pages/Notice/NoticeList";
 import NoticeDetail from "./pages/Notice/NoticeDetail";
 import NoticeCreateEdit from "./pages/Notice/NoticeCreateEdit";
 import PopupManager from "./components/common/Popup/PopupManager";
+import ChallengDetailPage from "./pages/Challenge/Detail";
+import ChallengeWritePage from "./pages/Challenge/Write";
+import ChallengeForm from "./components/challenge";
+import ProtectedRoute from "./components/ProtectedRoute";
+import ChallengModifyPage from "./pages/Challenge/Modify";
+import ChallengeListPage from "./pages/Challenge/List";
+import FAQListPage from "./pages/FAQ/FAQList";
+import FAQWritePage from "./pages/FAQ/Write";
+import FAQEditPage from "./pages/FAQ/Modify";
+import MyPage from "./pages/MyPage/MyPage";
+import AdminDashboard from "./pages/ServiceAdmin/List";
 
 // 인증이 필요한 라우트를 위한 컴포넌트
 function ProtectedRoute({ children }) {
@@ -90,6 +101,50 @@ function App() {
             v7_relativeSplatPath: true,
           }}
         >
+          <Layout>
+            <Routes>
+              <Route path="/user/login" element={<Login />} />
+              <Route path="/user/signup" element={<Signup />} />
+              <Route
+                path="/challenge/write"
+                element={
+                  <ProtectedRoute>
+                    <ChallengeWritePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/challenge/detail/:challIdx"
+                element={
+                  <ProtectedRoute>
+                    <ChallengDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/challenge/modify/:challIdx"
+                element={<ChallengModifyPage />}
+              />
+              <Route path="/challenge" element={<ChallengeListPage />} />
+              <Route
+                path="/challenge/list/:challIdx"
+                element={<ChallengDetailPage />}
+              />
+              <Route path="/FAQ" element={<FAQListPage />} />
+              <Route
+                path="/FAQ/modify/:faqIdx"
+                element={
+                  <ProtectedRoute>
+                    <FAQEditPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/FAQ/write" element={<FAQWritePage />} />
+              <Route path="/" element={<Home />} />
+              <Route path="/user/MyPage" element={<MyPage />} />
+              <Route path="adminBoard" element={<AdminDashboard />} />
+            </Routes>
+          </Layout>
           <AppContent />
           <Toaster />
         </Router>
