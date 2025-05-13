@@ -8,14 +8,12 @@ const DeleteConfirmModal = ({ isOpen, onClose, onDelete, item, itemType }) => {
   const getDeleteMessage = () => {
     const itemName = item?.name || "항목";
     switch (itemType) {
-      //   case "목표":
-      //     return `정말로 '${itemName}' 목표를 삭제하시겠습니까?`;
+      case "목표":
+        return `정말로 '${itemName}' 목표를 삭제하시겠습니까?`;
       case "직업":
         return `정말로 '${itemName}' 직업을 삭제하시겠습니까?`;
-      //   case "아이콘":
-      //     return `정말로 '${itemName}' 아이콘을 삭제하시겠습니까?`;
-      default:
-        return `정말로 '${itemName}'을(를) 삭제하시겠습니까?`;
+      case "아이콘":
+        return `정말로 '${itemName}' 아이콘을 삭제하시겠습니까?`;
     }
   };
 

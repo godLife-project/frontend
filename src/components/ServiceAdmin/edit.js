@@ -37,12 +37,12 @@ const EditItemModal = ({ isOpen, onClose, onEdit, item, itemType }) => {
   // 모달 타이틀 설정
   const getModalTitle = () => {
     switch (itemType) {
-      //   case "목표":
-      //     return "목표 수정";
+      case "목표":
+        return "목표 수정";
       case "직업":
         return "직업 수정";
-      //   case "아이콘":
-      //     return "아이콘 수정";
+      case "아이콘":
+        return "아이콘 수정";
       default:
         return "항목 수정";
     }

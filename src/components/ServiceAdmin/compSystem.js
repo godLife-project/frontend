@@ -7,7 +7,7 @@ import EditItemModal from "./edit";
 import AddItemModal from "./add";
 
 const CompSystem = () => {
-  const [activeTab, setActiveTab] = useState("작업");
+  const [activeTab, setActiveTab] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemData, setItemData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,14 +23,14 @@ const CompSystem = () => {
   // API 경로 설정 (탭에 따라 다르게 설정)
   const getApiPath = () => {
     switch (activeTab) {
-      //   case "목표":
-      //     return "/admin/component/goalCategory";
+      case "목표":
+        return "/admin/component/targetCategory";
       case "직업":
         return "/admin/component/jobCategory";
-      //   case "아이콘":
-      //     return "/admin/component/iconCategory";
+      case "아이콘":
+        return "/admin/compSystem/icon"; //주소 확인 필요
       default:
-        return "/admin/component/jobCategory";
+        return "/admin/component/targetCategory";
     }
   };
 
@@ -200,9 +200,9 @@ const CompSystem = () => {
         </button>
         <button
           className={`px-6 py-3 rounded-md ${
-            activeTab === "작업" ? "bg-blue-500 text-white" : "bg-gray-200"
+            activeTab === "직직업" ? "bg-blue-500 text-white" : "bg-gray-200"
           }`}
-          onClick={() => handleTabChange("작업")}
+          onClick={() => handleTabChange("직업")}
         >
           직업
         </button>
