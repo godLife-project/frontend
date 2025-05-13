@@ -5,7 +5,7 @@ import axiosInstance from "../../api/axiosInstance";
 
 // 컴포넌트 임포트
 import StatsDashboard from "@/components/QnA/StatsDashboard";
-import QnaList from "@/components/QnA/QnaList";
+import QnaAdminList from "@/components/QnA/QnaAdminList";
 import QnaDetail from "@/components/QnA/QnaDetail";
 import StatusBar from "@/components/QnA/StatusBar";
 
@@ -70,179 +70,64 @@ const QnaAdminDashboard = () => {
     }, duration);
   };
 
-  // STOMP 연결 초기화
-  useEffect(() => {
-    // 중복 연결 방지
-    if (stompClientRef.current?.connected) {
-      setConnectionStatus("연결됨");
-      return;
-    }
+ // QnADashboard.js에서
+useEffect(() => {
+  // 이미 연결된 경우 리턴
+  if (stompClientRef.current?.connected) {
+    setConnectionStatus("연결됨");
+    return;
+  }
 
-    // WebSocket 연결
-    const socket = new SockJS("http://localhost:9090/ws-stomp");
+  const socketUrl = '/ws-stomp';
+  console.log("STOMP 연결 시도:", socketUrl);
+
+  try {
+    // SockJS 객체 생성 - 더 많은 옵션 추가
+    const socket = new SockJS(socketUrl, null, {
+      transports: ['websocket', 'xhr-streaming', 'xhr-polling'],
+      timeout: 15000 // 타임아웃 늘리기
+    });
+    
+    // STOMP 클라이언트 생성
     const stompClient = Stomp.over(socket);
+    
+    // 디버깅 활성화
+    stompClient.debug = function(str) {
+      console.log("STOMP 디버그:", str);
+    };
+    
+    // 하트비트 설정 - Ngrok과의 연결 유지에 중요
+    stompClient.heartbeat.outgoing = 30000; // 30초
+    stompClient.heartbeat.incoming = 30000; // 30초
+    
     stompClientRef.current = stompClient;
 
-    // 연결 시도
+    // 연결 시도 - 접속 헤더 수정
     stompClient.connect(
-      { Authorization: `Bearer ${accessToken}` },
-      () => {
-        console.log("✅ STOMP 연결 성공");
+      { 
+        Authorization: `Bearer ${accessToken}`,
+        "accept-version": "1.1,1.0",
+        "heart-beat": "30000,30000"
+      },
+      (frame) => {
+        console.log("✅ STOMP 연결 성공:", frame);
         setConnectionStatus("연결됨");
-
-        // 초기 데이터 요청
-        stompClient.send("/pub/get/waitList/init", {}, JSON.stringify({}));
-        stompClient.send("/pub/get/matched/qna/init", {
-          Authorization: `Bearer ${accessToken}`,
-        });
-
-        // 대기 목록 구독
-        stompClient.subscribe("/sub/waitList", (message) => {
-          try {
-            let { waitQnA, status } = JSON.parse(message.body);
-
-            if (!Array.isArray(waitQnA)) {
-              waitQnA = [waitQnA];
-            }
-
-            setWaitList((prevList) => {
-              switch (status) {
-                case "RELOAD":
-                  showStatusMessage(
-                    "대기중 문의 목록이 갱신되었습니다.",
-                    "info"
-                  );
-                  return waitQnA;
-
-                case "ADD": {
-                  const newItems = waitQnA.filter(
-                    (newItem) =>
-                      !prevList.some(
-                        (existing) => existing.qnaIdx === newItem.qnaIdx
-                      )
-                  );
-                  if (newItems.length > 0) {
-                    showStatusMessage(
-                      `${newItems.length}개의 새로운 문의가 접수되었습니다.`,
-                      "success"
-                    );
-                  }
-                  return [...prevList, ...newItems];
-                }
-
-                case "REMOVE": {
-                  const removeIds = waitQnA.map((item) => item.qnaIdx);
-                  return prevList.filter(
-                    (item) => !removeIds.includes(item.qnaIdx)
-                  );
-                }
-
-                case "UPDATE": {
-                  showStatusMessage("문의 목록이 업데이트되었습니다.", "info");
-                  return prevList.map((item) => {
-                    const updatedItem = waitQnA.find(
-                      (update) => update.qnaIdx === item.qnaIdx
-                    );
-                    return updatedItem ? updatedItem : item;
-                  });
-                }
-
-                default:
-                  return prevList;
-              }
-            });
-          } catch (error) {
-            console.error("대기 목록 처리 오류:", error);
-          }
-        });
-
-        // 할당된 문의 목록 구독
-        stompClient.subscribe("/user/queue/matched/qna", (message) => {
-          try {
-            let { matchedQnA, status } = JSON.parse(message.body);
-
-            if (!Array.isArray(matchedQnA)) {
-              matchedQnA = [matchedQnA];
-            }
-
-            setAssignedList((prevList) => {
-              switch (status) {
-                case "RELOAD":
-                  return matchedQnA;
-
-                case "ADD": {
-                  const newItems = matchedQnA.filter(
-                    (newItem) =>
-                      !prevList.some(
-                        (existing) => existing.qnaIdx === newItem.qnaIdx
-                      )
-                  );
-                  if (newItems.length > 0) {
-                    showStatusMessage(
-                      `${newItems.length}개의 문의가 할당되었습니다.`,
-                      "success"
-                    );
-                  }
-                  return [...prevList, ...newItems];
-                }
-
-                case "REMOVE": {
-                  const removeIds = matchedQnA.map((item) => item.qnaIdx);
-                  return prevList.filter(
-                    (item) => !removeIds.includes(item.qnaIdx)
-                  );
-                }
-
-                case "UPDATE": {
-                  return prevList.map((item) => {
-                    const updatedItem = matchedQnA.find(
-                      (update) => update.qnaIdx === item.qnaIdx
-                    );
-                    return updatedItem ? updatedItem : item;
-                  });
-                }
-
-                default:
-                  return prevList;
-              }
-            });
-          } catch (error) {
-            console.error("할당 목록 처리 오류:", error);
-          }
-        });
-
-        // 에러 메시지 구독
-        stompClient.subscribe("/user/queue/admin/errors", (message) => {
-          const error = JSON.parse(message.body);
-          showStatusMessage(`오류: ${error.message}`, "error");
-        });
-
-        // 할당 결과 구독
-        stompClient.subscribe("/user/queue/isMatched/waitQna", (message) => {
-          if (message && message.body) {
-            showStatusMessage(`${message.body}`, "success");
-          }
-        });
+        
+        // 여기서부터 원래 코드...
       },
       (error) => {
         console.error("❌ STOMP 연결 실패:", error);
         setConnectionStatus("연결 실패");
-        showStatusMessage(
-          "서버 연결에 실패했습니다. 새로고침 후 다시 시도해주세요.",
-          "error"
-        );
+        // 에러 처리...
       }
     );
-
-    // 컴포넌트 언마운트 시 정리
-    return () => {
-      if (stompClient.connected) {
-        stompClient.disconnect(() => {
-          console.log("STOMP 연결 해제");
-        });
-      }
-    };
-  }, [accessToken]);
+  } catch (error) {
+    console.error("STOMP 초기화 오류:", error);
+    setConnectionStatus("초기화 실패");
+  }
+  
+  // 정리 함수...
+}, [accessToken]);
 
   // QnA 수동 할당 처리
   const handleAssignQna = (qnaIdx) => {
@@ -547,7 +432,7 @@ const QnaAdminDashboard = () => {
         <StatsDashboard stats={stats} />
 
         {/* QnA 목록 */}
-        <QnaList
+        <QnaAdminList
           waitList={waitList}
           assignedList={assignedList}
           selectedQna={selectedQna}

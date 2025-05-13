@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import axiosInstance from "@/api/axiosInstance";
 
 // UI 컴포넌트
 import {
@@ -30,8 +30,7 @@ import "@toast-ui/editor/dist/toastui-editor.css";
 const QnACreate = () => {
   // 상태 관리
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("");
-  const [isPrivate, setIsPrivate] = useState(true);
+  const [category, setCategory] = useState("1"); // 문자열로 초기화
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -73,14 +72,13 @@ const QnACreate = () => {
       const requestData = {
         title,
         content: editorContent, // 에디터 내용
-        category,
-        isPrivate,
+        category: parseInt(category, 10), // 문자열을 정수로 변환
       };
 
       console.log("전송 데이터:", requestData);
 
       // API 호출
-      const response = await axios.post("/api/qna", requestData, {
+      const response = await axiosInstance.post("/qna/auth/create", requestData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
@@ -105,7 +103,7 @@ const QnACreate = () => {
   // 폼 초기화
   const handleReset = () => {
     setTitle("");
-    setCategory("");
+    setCategory("1"); // 기본값 문자열로 설정
     setError("");
     // 에디터 초기화
     editorRef.current?.getInstance().reset();
@@ -143,12 +141,12 @@ const QnACreate = () => {
                   <SelectValue placeholder="문의 유형을 선택해주세요" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="account">계정 관련</SelectItem>
-                  <SelectItem value="payment">결제 관련</SelectItem>
-                  <SelectItem value="service">서비스 이용</SelectItem>
-                  <SelectItem value="suggestion">기능 제안</SelectItem>
-                  <SelectItem value="bug">오류 신고</SelectItem>
-                  <SelectItem value="other">기타</SelectItem>
+                  <SelectItem value="1">계정 관련</SelectItem>
+                  <SelectItem value="2">결제 관련</SelectItem>
+                  <SelectItem value="3">서비스 이용</SelectItem>
+                  <SelectItem value="4">기능 제안</SelectItem>
+                  <SelectItem value="5">오류 신고</SelectItem>
+                  <SelectItem value="6">기타</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -191,20 +189,6 @@ const QnACreate = () => {
                   language="ko-KR"
                 />
               </div>
-            </div>
-
-            {/* 공개 여부 */}
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="isPrivate"
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                checked={isPrivate}
-                onChange={(e) => setIsPrivate(e.target.checked)}
-              />
-              <label htmlFor="isPrivate" className="text-sm">
-                비공개 문의로 등록
-              </label>
             </div>
           </CardContent>
 
