@@ -17,11 +17,7 @@
     "@radix-ui/react-navigation-menu": "^1.2.5",
     "@radix-ui/react-popover": "^1.1.6",
     "@radix-ui/react-radio-group": "^1.2.3",
-<<<<<<< HEAD
     "@radix-ui/react-scroll-area": "^1.2.3",
-=======
-    "@radix-ui/react-scroll-area": "^1.2.4",
->>>>>>> chaerim
     "@radix-ui/react-select": "^2.1.6",
     "@radix-ui/react-separator": "^1.1.2",
     "@radix-ui/react-slot": "^1.1.2",
@@ -31,6 +27,7 @@
     "@radix-ui/react-toggle": "^1.1.2",
     "@radix-ui/react-toggle-group": "^1.1.2",
     "@toast-ui/react-editor": "^3.2.3",
+    "ajv": "^8.17.1",
     "axios": "^1.7.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

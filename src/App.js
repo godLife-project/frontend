@@ -13,9 +13,9 @@ import TimedPopup from "./components/common/Popup/TimedPopup";
 import Home from "./pages/Home/Home";
 import Signup from "./pages/Auth/SignUp";
 import Login from "./pages/Auth/Login";
-import RoutineCreator from "./pages/Routine/Create";
-import RoutineDetailPage from "./pages/Routine/Detail";
 import MyRoutineList from "./pages/Routine/MyRoutineList";
+import RoutineDetailPage from "./pages/Routine/Detail";
+import RoutineCreatePage from "./pages/Routine/Create";
 import RoutineListPage from "./pages/Routine/List";
 import SimpleChat from "./components/SimpleChat";
 import SocketChat from "./components/SoketChat";
@@ -23,18 +23,16 @@ import NoticeListPage from "./pages/Notice/NoticeList";
 import NoticeDetail from "./pages/Notice/NoticeDetail";
 import NoticeCreateEdit from "./pages/Notice/NoticeCreateEdit";
 import PopupManager from "./components/common/Popup/PopupManager";
-import ChallengDetailPage from "./pages/Challenge/Detail";
-import ChallengeWritePage from "./pages/Challenge/Write";
-import ChallengeForm from "./components/challenge";
-import ProtectedRoute from "./components/ProtectedRoute";
-import ChallengModifyPage from "./pages/Challenge/Modify";
-import ChallengeListPage from "./pages/Challenge/List";
+import AdminDashboard from "./pages/ServiceAdmin/List";
+import MyPage from "./pages/MyPage/MyPage";
 import FAQListPage from "./pages/FAQ/FAQList";
 import FAQWritePage from "./pages/FAQ/Write";
 import FAQEditPage from "./pages/FAQ/Modify";
-import MyPage from "./pages/MyPage/MyPage";
-import AdminDashboard from "./pages/ServiceAdmin/List";
-
+import ChallengDetailPage from "./pages/Challenge/Detail";
+import ChallengeWritePage from "./pages/Challenge/Write";
+import ChallengeForm from "./components/challenge";
+import ChallengModifyPage from "./pages/Challenge/Modify";
+import ChallengeListPage from "./pages/Challenge/List";
 // 인증이 필요한 라우트를 위한 컴포넌트
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth();
@@ -60,6 +58,25 @@ function AppContent() {
     <Layout>
       <PopupManager />
       <Routes>
+        <Route path="/challenge" element={<ChallengeListPage />} />
+        <Route path="/challenge/write" element={<ChallengeWritePage />} />
+        <Route
+          path="/challenge/modify/:challIdx"
+          element={<ChallengModifyPage />}
+        />
+        <Route
+          path="/challenge/list/:challIdx"
+          element={<ChallengDetailPage />}
+        />
+        <Route
+          path="/challenge/detail/:challIdx"
+          element={<ChallengDetailPage />}
+        />
+        <Route path="/FAQ" element={<FAQListPage />} />
+        <Route path="/FAQ/write" element={<FAQWritePage />} />
+        <Route path="/FAQ/modify/:faqIdx" element={<FAQEditPage />} />
+        <Route path="/user/MyPage" element={<MyPage />} />
+        <Route path="adminBoard" element={<AdminDashboard />} />
         <Route path="/notice/detail/:noticeIdx" element={<NoticeDetail />} />
         <Route path="/notice/edit/:noticeIdx" element={<NoticeCreateEdit />} />
         <Route path="/notice/create" element={<NoticeCreateEdit />} />
@@ -76,7 +93,7 @@ function AppContent() {
           path="/routine/create"
           element={
             isAuthenticated ? (
-              <RoutineCreator />
+              <RoutineCreatePage />
             ) : (
               <Navigate to="/user/login" replace />
             )
@@ -101,50 +118,6 @@ function App() {
             v7_relativeSplatPath: true,
           }}
         >
-          <Layout>
-            <Routes>
-              <Route path="/user/login" element={<Login />} />
-              <Route path="/user/signup" element={<Signup />} />
-              <Route
-                path="/challenge/write"
-                element={
-                  <ProtectedRoute>
-                    <ChallengeWritePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/challenge/detail/:challIdx"
-                element={
-                  <ProtectedRoute>
-                    <ChallengDetailPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/challenge/modify/:challIdx"
-                element={<ChallengModifyPage />}
-              />
-              <Route path="/challenge" element={<ChallengeListPage />} />
-              <Route
-                path="/challenge/list/:challIdx"
-                element={<ChallengDetailPage />}
-              />
-              <Route path="/FAQ" element={<FAQListPage />} />
-              <Route
-                path="/FAQ/modify/:faqIdx"
-                element={
-                  <ProtectedRoute>
-                    <FAQEditPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/FAQ/write" element={<FAQWritePage />} />
-              <Route path="/" element={<Home />} />
-              <Route path="/user/MyPage" element={<MyPage />} />
-              <Route path="adminBoard" element={<AdminDashboard />} />
-            </Routes>
-          </Layout>
           <AppContent />
           <Toaster />
         </Router>

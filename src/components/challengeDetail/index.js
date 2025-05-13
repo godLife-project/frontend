@@ -154,7 +154,7 @@ const ChallengeDetailForm = () => {
 
       // PATCH 요청으로 챌린지 삭제
       await axiosInstance.patch(
-        "/challenges/admin/delete",
+        "/admin/challenges/delete",
         { challIdx: challIdx }, // 요청 본문에 challIdx 포함
         {
           headers: {

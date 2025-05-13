@@ -1,13 +1,6 @@
 "use client";
-<<<<<<< HEAD
 import * as React from "react";
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
-=======
-
-import * as React from "react";
-import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
-
->>>>>>> chaerim
 import { cn } from "@/lib/utils";
 
 const ScrollArea = React.forwardRef(function ScrollArea(
@@ -28,10 +21,7 @@ const ScrollArea = React.forwardRef(function ScrollArea(
     </ScrollAreaPrimitive.Root>
   );
 });
-<<<<<<< HEAD
 ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName;
-=======
->>>>>>> chaerim
 
 const ScrollBar = React.forwardRef(function ScrollBar(
   { className, orientation = "vertical", ...props },
@@ -55,9 +45,6 @@ const ScrollBar = React.forwardRef(function ScrollBar(
     </ScrollAreaPrimitive.ScrollAreaScrollbar>
   );
 });
-<<<<<<< HEAD
 ScrollBar.displayName = ScrollAreaPrimitive.ScrollAreaScrollbar.displayName;
-=======
->>>>>>> chaerim
 
 export { ScrollArea, ScrollBar };
