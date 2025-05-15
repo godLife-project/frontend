@@ -128,7 +128,7 @@ const ChatRoom = () => {
       {
         Authorization: `Bearer ${accessToken}`,
       },
-      (frame) => {
+      () => {
         console.log('✅ STOMP 연결 성공');
         setConnectionStatus('연결됨');
 
@@ -241,9 +241,6 @@ const ChatRoom = () => {
           }
         });
 
-
-
-
         // 3. 채팅 수신
         stompClient.subscribe(`/sub/roomChat/${roomNo}`, (message) => {
           const received = JSON.parse(message.body);
@@ -265,6 +262,16 @@ const ChatRoom = () => {
         // 5. 수동 할당 응답
         stompClient.subscribe('/user/queue/isMatched/waitQna', (message) => {
           if (message?.body) alert(`📩 응답 메시지: ${message.body}`);
+        });
+
+        // 6. 완료된 문의 리스트 조회
+        stompClient.subscribe('/user/queue/completed/qna/list', (message) => {
+          const received = JSON.parse(message.body);
+          console.log("채팅 메세지 수신 : ", received)
+        });
+
+        stompClient.send('/pub/get/complete/qnaList', {
+          Authorization: `Bearer ${accessToken}`,
         });
 
         // 초기 데이터 요청
