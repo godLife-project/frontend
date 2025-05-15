@@ -7,7 +7,7 @@ import EditItemModal from "./edit";
 import AddItemModal from "./add";
 
 const CompSystem = () => {
-  const [activeTab, setActiveTab] = useState("");
+  const [activeTab, setActiveTab] = useState("목표");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemData, setItemData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,9 +24,9 @@ const CompSystem = () => {
   const getApiPath = () => {
     switch (activeTab) {
       case "목표":
-        return "/admin/component/targetCategory";
+        return "/admin/compContent/targetCategory";
       case "직업":
-        return "/admin/component/jobCategory";
+        return "/admin/compContent/jobCategory";
       case "아이콘":
         return "/admin/compSystem/icon"; //주소 확인 필요
       default:
@@ -56,22 +56,33 @@ const CompSystem = () => {
 
       // 응답 데이터 확인 및 처리
       if (response?.data) {
-        if (
-          response.data.categories &&
-          Array.isArray(response.data.categories)
-        ) {
-          // API 응답에서 categories 배열 사용
-          setItemData(response.data.categories);
-        } else if (Array.isArray(response.data)) {
-          // 응답 데이터가 직접 배열인 경우
-          setItemData(response.data);
-        } else if (response.data.data && Array.isArray(response.data.data)) {
-          // 응답이 { data: [...] } 형태인 경우
-          setItemData(response.data.data);
-        } else {
-          console.error("예상치 못한 응답 형식:", response.data);
-          setItemData([]);
-          setError("데이터 형식이 올바르지 않습니다");
+        // 아이콘 탭인 경우
+        if (activeTab === "아이콘") {
+          // 아이콘 API의 응답 구조 확인
+          console.log("아이콘 API 응답 구조:", response.data);
+
+          // ICON 속성에 배열이 있는 경우 (확인된 실제 구조)
+          if (response.data.ICON && Array.isArray(response.data.ICON)) {
+            console.log("ICON 데이터 배열 확인:", response.data.ICON);
+            setItemData(response.data.ICON);
+          } else {
+            console.error("예상치 못한 아이콘 데이터 형식:", response.data);
+            setItemData([]);
+            setError("아이콘 데이터 형식이 올바르지 않습니다");
+          }
+        }
+        // 목표/직업 탭인 경우
+        else {
+          if (
+            response.data.categories &&
+            Array.isArray(response.data.categories)
+          ) {
+            setItemData(response.data.categories);
+          } else {
+            console.error("예상치 못한 응답 형식:", response.data);
+            setItemData([]);
+            setError("데이터 형식이 올바르지 않습니다");
+          }
         }
       } else {
         console.error("응답 데이터가 없습니다:", response);
@@ -179,12 +190,19 @@ const CompSystem = () => {
   };
 
   // 검색어로 필터링된 데이터
-  const filteredData = itemData.filter(
-    (item) =>
-      item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.iconKey &&
-        item.iconKey.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredData = itemData.filter((item) => {
+    // 아이콘 탭인 경우
+    if (activeTab === "아이콘") {
+      return (
+        item.iconKey?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.icon?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    // 목표/직업 탭인 경우
+    else {
+      return item.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    }
+  });
 
   return (
     <>
@@ -200,7 +218,7 @@ const CompSystem = () => {
         </button>
         <button
           className={`px-6 py-3 rounded-md ${
-            activeTab === "직직업" ? "bg-blue-500 text-white" : "bg-gray-200"
+            activeTab === "직업" ? "bg-blue-500 text-white" : "bg-gray-200"
           }`}
           onClick={() => handleTabChange("직업")}
         >
