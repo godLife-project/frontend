@@ -235,15 +235,15 @@ const QnADetail = () => {
   // 상태에 따른 배지 스타일 변환
   const getStatusBadge = (status) => {
     switch (status) {
-      case "WAITING":
+      case "wait":
         return <Badge variant="outline" className="bg-yellow-100">답변 대기중</Badge>;
-      case "ANSWERED":
+      case "answered":
         return <Badge variant="outline" className="bg-green-100">답변 완료</Badge>;
-      case "RESPONDING":
+      case "responding":
         return <Badge variant="outline" className="bg-blue-100">답변 진행중</Badge>;
-      case "RELOAD":
+      case "reload":
         return <Badge variant="outline" className="bg-purple-100">재확인 중</Badge>;
-      case "CLOSED":
+      case "closed":
         return <Badge variant="outline" className="bg-gray-100">종료됨</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
@@ -253,31 +253,31 @@ const QnADetail = () => {
   // 상태에 따른 안내 메시지
   const getStatusMessage = (status) => {
     switch (status) {
-      case "WAIT":
+      case "wait":
         return {
           text: "문의가 접수되었습니다. 상담원 할당을 기다리고 있습니다.",
           icon: <Clock className="h-5 w-5 text-yellow-500" />,
           color: "bg-yellow-50 text-yellow-700 border-yellow-200"
         };
-      case "ANSWERED":
+      case "answeres":
         return {
           text: "문의에 대한 답변이 완료되었습니다.",
           icon: <CheckCircle className="h-5 w-5 text-green-500" />,
           color: "bg-green-50 text-green-700 border-green-200"
         };
-      case "RESPONDING":
+      case "responding":
         return {
           text: "상담원이 문의를 확인 중입니다. 곧 답변이 등록될 예정입니다.",
           icon: <MessageSquare className="h-5 w-5 text-blue-500" />,
           color: "bg-blue-50 text-blue-700 border-blue-200"
         };
-      case "RELOAD":
+      case "reload":
         return {
           text: "추가 확인이 필요한 문의입니다. 상담원의 답변을 기다려주세요.",
           icon: <RefreshCw className="h-5 w-5 text-purple-500" />,
           color: "bg-purple-50 text-purple-700 border-purple-200"
         };
-      case "CLOSED":
+      case "closed":
         return {
           text: "문의가 종료되었습니다.",
           icon: <CheckCircle className="h-5 w-5 text-gray-500" />,
@@ -314,7 +314,7 @@ const QnADetail = () => {
   // 댓글 입력이 가능한지 확인
   const canAddComment = (status) => {
     // WAITING 상태일 때만 댓글 입력 가능
-    return status === "WAITING";
+    return status === "wait";
   };
 
   return (
@@ -431,7 +431,7 @@ const QnADetail = () => {
                     <p className="font-medium">{getStatusMessage(qnaDetail.qnaStatus).text}</p>
                     {!canAddComment(qnaDetail.qnaStatus) && (
                       <p className="text-sm mt-1">
-                        {qnaDetail.qnaStatus === "WAITING" 
+                        {qnaDetail.qnaStatus === "wait" 
                           ? "문의가 접수되었습니다. 상담원이 배정되기를 기다려주세요." 
                           : "현재 상담원이 배정되어 답변 중입니다. 댓글은 상담원이 배정된 후에 작성할 수 있습니다."}
                       </p>
@@ -500,7 +500,7 @@ const QnADetail = () => {
                   </Alert>
                 )}
 
-                {/* 새 댓글 작성 폼 - WAITING 상태일 때만 표시 */}
+                {/* 새 댓글 작성 폼 - WAIT 상태일 때만 표시 */}
                 {canAddComment(qnaDetail.qnaStatus) ? (
                   <form onSubmit={handleSubmitComment} className="space-y-3">
                     <Textarea

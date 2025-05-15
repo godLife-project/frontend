@@ -105,7 +105,6 @@ function AppContent() {
         <Route path="/qna/detail/:qnaIdx" element={<QnADetail />} />
         <Route path="/qna/list" element={<QnAList />} />
         <Route path="/qna/create" element={<QnACreate />} />
-        <Route path="/qna/create" element={<QnACreate />} />
         <Route path="/qna" element={<QnaAdminDashboard />} />
         <Route path="/qna2" element={<ChatRoom />} />
         <Route path="/user/find_id" element={<FindId />} />

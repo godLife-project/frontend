@@ -172,9 +172,26 @@ const QnAList = () => {
       }
     } catch (error) {
       console.error("QnA 목록 불러오기 오류:", error);
-      setError(
-        error.response?.data?.message || "문의 목록을 불러오는 중 오류가 발생했습니다."
-      );
+      console.error("오류 응답:", error.response);
+      console.error("오류 상태:", error.response?.status);
+      console.error("오류 메시지:", error.response?.data?.message);
+      
+      // 404 에러이거나 서버에서 특정 메시지를 보낼 때 빈 목록으로 처리
+      if (error.response && (error.response.status === 404 || 
+          (error.response.data && (
+            error.response.data.message === "문의 목록을 불러오는 중 오류가 발생했습니다." ||
+            error.response.data.message === "조건에 맞는 문의가 없습니다."
+          )))) {
+        setQnaList([]);  // 빈 배열로 설정
+        setTotalPages(0);
+        setTotalPosts(0);
+        // 오류 메시지를 설정하지 않음
+      } else {
+        // 다른 종류의 오류만 에러 메시지 표시
+        setError(
+          error.response?.data?.message || "문의 목록을 불러오는 중 오류가 발생했습니다."
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -258,16 +275,16 @@ const QnAList = () => {
   // 상태에 따른 배지 스타일 변환
   const getStatusBadge = (status) => {
     switch (status) {
-      case "WAITING":
-        return <Badge variant="outline" className="bg-yellow-100">답변 대기중</Badge>;
-      case "ANSWERED":
-        return <Badge variant="outline" className="bg-green-100">답변 완료</Badge>;
+      case "WAIT":
+        return <Badge variant="outline" className="bg-yellow-100">대기중</Badge>;
+      case "CONNECT":
+        return <Badge variant="outline" className="bg-blue-100">연결됨</Badge>;
       case "RESPONDING":
-        return <Badge variant="outline" className="bg-blue-100">답변 진행중</Badge>;
-      case "RELOAD":
-        return <Badge variant="outline" className="bg-purple-100">재확인 중</Badge>;
-      case "CLOSED":
-        return <Badge variant="outline" className="bg-gray-100">종료됨</Badge>;
+        return <Badge variant="outline" className="bg-purple-100">응대중</Badge>;
+      case "COMPLETE":
+        return <Badge variant="outline" className="bg-green-100">완료됨</Badge>;
+      case "SLEEP":
+        return <Badge variant="outline" className="bg-gray-100">휴면중</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -461,11 +478,11 @@ const QnAList = () => {
                       </SelectTrigger>
                       <SelectContent className="bg-white">
                         <SelectItem value="all">모든 상태</SelectItem>
-                        <SelectItem value="WAITING">답변 대기중</SelectItem>
-                        <SelectItem value="RESPONDING">답변 진행중</SelectItem>
-                        <SelectItem value="ANSWERED">답변 완료</SelectItem>
-                        <SelectItem value="RELOAD">재확인 중</SelectItem>
-                        <SelectItem value="CLOSED">종료됨</SelectItem>
+                        <SelectItem value="WAIT">대기중</SelectItem>
+                        <SelectItem value="CONNECT">연결됨</SelectItem>
+                        <SelectItem value="RESPONDING">응대중</SelectItem>
+                        <SelectItem value="COMPLETE">완료됨</SelectItem>
+                        <SelectItem value="SLEEP">휴면중</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -544,11 +561,11 @@ const QnAList = () => {
             <div className="flex flex-wrap gap-2 py-2">
               {status !== "all" && (
                 <Badge variant="outline" className="flex items-center gap-1 bg-blue-50">
-                  상태: {status === "WAITING" ? "답변 대기중" : 
-                         status === "RESPONDING" ? "답변 진행중" :
-                         status === "ANSWERED" ? "답변 완료" :
-                         status === "RELOAD" ? "재확인 중" :
-                         status === "CLOSED" ? "종료됨" : status}
+                  상태: {status === "WAIT" ? "대기중" : 
+                         status === "CONNECT" ? "연결됨" :
+                         status === "RESPONDING" ? "응대중" :
+                         status === "COMPLETE" ? "완료됨" :
+                         status === "SLEEP" ? "휴면중" : status}
                   <X 
                     className="h-3 w-3 ml-1 cursor-pointer" 
                     onClick={() => handleStatusChange("all")}
@@ -626,7 +643,9 @@ const QnAList = () => {
           ) : qnaList.length === 0 ? (
             <div className="text-center py-12 border rounded-md">
               <p className="text-muted-foreground">
-                {searchKeyword || status !== "all" ? "조건에 맞는 문의가 없습니다." : "등록된 문의가 없습니다."}
+                {searchKeyword || status !== "all" 
+                  ? "검색 조건에 맞는 문의가 없습니다." 
+                  : "등록된 문의가 없습니다."}
               </p>
               <Button 
                 onClick={() => navigate("/qna/create")} 
