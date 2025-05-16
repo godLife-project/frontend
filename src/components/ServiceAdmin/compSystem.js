@@ -7,20 +7,20 @@ import EditItemModal from "./edit";
 import AddItemModal from "./add";
 
 const CompSystem = () => {
+  // 기존 상태들
   const [activeTab, setActiveTab] = useState("목표");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemData, setItemData] = useState([]);
+  const [iconData, setIconData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-
-  // 모달 상태 관리
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
-  // API 경로 설정 (탭에 따라 다르게 설정)
+  // API 경로 설정 (기존과 동일)
   const getApiPath = () => {
     switch (activeTab) {
       case "목표":
@@ -28,64 +28,70 @@ const CompSystem = () => {
       case "직업":
         return "/admin/compContent/jobCategory";
       case "아이콘":
-        return "/admin/compSystem/icon"; //주소 확인 필요
+        return "/admin/compSystem/icon";
       default:
         return "/admin/component/targetCategory";
     }
   };
 
-  // API에서 데이터 가져오기
+  // 중요: 아이콘 데이터 가져오기 함수
+  const fetchIconData = async () => {
+    try {
+      // 이미 데이터가 있으면 다시 불러오지 않음
+      if (iconData && iconData.length > 0) return;
+
+      console.log("아이콘 데이터 가져오기 요청...");
+      const accessToken = localStorage.getItem("accessToken");
+      const response = await axiosInstance.get("/admin/compSystem/icon", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (response?.data?.ICON && Array.isArray(response.data.ICON)) {
+        console.log("아이콘 데이터 로드 완료:", response.data.ICON.length);
+        setIconData(response.data.ICON);
+      } else {
+        console.error("예상치 못한 아이콘 데이터 형식:", response.data);
+      }
+    } catch (err) {
+      console.error("아이콘 데이터 로드 실패:", err);
+    }
+  };
+
+  // 핵심: API에서 데이터 가져오기
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // localStorage에서 accessToken 가져오기
       const accessToken = localStorage.getItem("accessToken");
       const apiPath = getApiPath();
 
-      // API 요청
       const response = await axiosInstance.get(apiPath, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
-      // 응답 데이터 구조 디버깅
-      console.log("API 응답:", response);
-
-      // 응답 데이터 확인 및 처리
       if (response?.data) {
         // 아이콘 탭인 경우
         if (activeTab === "아이콘") {
-          // 아이콘 API의 응답 구조 확인
-          console.log("아이콘 API 응답 구조:", response.data);
-
-          // ICON 속성에 배열이 있는 경우 (확인된 실제 구조)
           if (response.data.ICON && Array.isArray(response.data.ICON)) {
-            console.log("ICON 데이터 배열 확인:", response.data.ICON);
             setItemData(response.data.ICON);
+            setIconData(response.data.ICON); // 아이콘 데이터도 업데이트
           } else {
-            console.error("예상치 못한 아이콘 데이터 형식:", response.data);
             setItemData([]);
             setError("아이콘 데이터 형식이 올바르지 않습니다");
           }
         }
         // 목표/직업 탭인 경우
-        else {
-          if (
-            response.data.categories &&
-            Array.isArray(response.data.categories)
-          ) {
-            setItemData(response.data.categories);
-          } else {
-            console.error("예상치 못한 응답 형식:", response.data);
-            setItemData([]);
-            setError("데이터 형식이 올바르지 않습니다");
-          }
+        else if (
+          response.data.categories &&
+          Array.isArray(response.data.categories)
+        ) {
+          setItemData(response.data.categories);
+        } else {
+          setItemData([]);
+          setError("데이터 형식이 올바르지 않습니다");
         }
       } else {
-        console.error("응답 데이터가 없습니다:", response);
         setItemData([]);
         setError("응답 데이터가 없습니다");
       }
@@ -98,110 +104,198 @@ const CompSystem = () => {
     }
   };
 
-  // 탭이 변경될 때마다 데이터 다시 가져오기
+  // 핵심: 컴포넌트 마운트 시 우선 아이콘 데이터 로드 후 탭 데이터 로드
+  useEffect(() => {
+    const loadData = async () => {
+      await fetchIconData(); // 먼저 아이콘 데이터 로드
+      fetchData(); // 그 다음 현재 탭 데이터 로드
+    };
+
+    loadData();
+  }, []);
+
+  // 핵심: 탭이 변경될 때마다 데이터 다시 가져오기
   useEffect(() => {
     fetchData();
   }, [activeTab]);
 
+  // 핵심: 아이콘 데이터가 변경될 때마다 로그
+  useEffect(() => {
+    console.log("iconData 상태 업데이트:", iconData?.length || 0);
+  }, [iconData]);
+
+  // 기존 핸들러들
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    setSearchTerm(""); // 탭 변경 시 검색어 초기화
+    setSearchTerm("");
   };
-
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
   };
 
-  // 항목 추가 처리
-  const handleAddItem = async (newItem) => {
-    try {
-      const accessToken = localStorage.getItem("accessToken");
-      const apiPath = getApiPath();
-
-      await axiosInstance.post(apiPath, newItem, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      // 성공 후 데이터 다시 불러오기
-      fetchData();
-      setIsAddModalOpen(false);
-    } catch (err) {
-      console.error(`${activeTab} 추가 실패:`, err);
-      alert(`항목 추가에 실패했습니다: ${err.message}`);
-    }
+  // 핵심: 모달 열기 전에 아이콘 데이터 확인
+  const handleOpenAddModal = async () => {
+    await fetchIconData(); // 아이콘 데이터 확인 및 필요시 로드
+    setIsAddModalOpen(true);
   };
 
-  // 항목 수정 처리
-  const handleEditItem = async (updatedItem) => {
-    try {
-      const accessToken = localStorage.getItem("accessToken");
-      const apiPath = `${getApiPath()}/${selectedItem.idx}`;
-
-      await axiosInstance.patch(apiPath, updatedItem, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      // 성공 후 데이터 다시 불러오기
-      fetchData();
-      setIsEditModalOpen(false);
-      setSelectedItem(null);
-    } catch (err) {
-      console.error(`${activeTab} 수정 실패:`, err);
-      alert(`항목 수정에 실패했습니다: ${err.message}`);
-    }
-  };
-
-  // 항목 삭제 처리
-  const handleDeleteItem = async () => {
-    try {
-      const accessToken = localStorage.getItem("accessToken");
-      const apiPath = `${getApiPath()}/${selectedItem.idx}`;
-
-      await axiosInstance.delete(apiPath, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      // 성공 후 데이터 다시 불러오기
-      fetchData();
-      setIsDeleteModalOpen(false);
-      setSelectedItem(null);
-    } catch (err) {
-      console.error(`${activeTab} 삭제 실패:`, err);
-      alert(`항목 삭제에 실패했습니다: ${err.message}`);
-    }
-  };
-
-  // 편집 모달 열기
-  const openEditModal = (item) => {
+  // 핵심: 편집 모달 열기 전 아이콘 데이터 확인
+  const openEditModal = async (item) => {
     setSelectedItem(item);
+    await fetchIconData(); // 아이콘 데이터 확인 및 필요시 로드
     setIsEditModalOpen(true);
   };
 
-  // 삭제 모달 열기
+  // 기존 삭제 모달 열기
   const openDeleteModal = (item) => {
     setSelectedItem(item);
     setIsDeleteModalOpen(true);
   };
 
+  // 추가된 함수: 항목 추가 처리
+  const handleAddItem = async (newItem) => {
+    setIsLoading(true);
+
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      const apiPath = getApiPath();
+
+      const response = await axiosInstance.post(apiPath, newItem, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (response?.status === 200 || response?.status === 201) {
+        console.log(`${activeTab} 항목 추가 성공:`, response.data);
+        fetchData(); // 데이터 다시 불러오기
+        setIsAddModalOpen(false);
+      } else {
+        console.error(`${activeTab} 항목 추가 실패:`, response);
+        setError(`${activeTab} 항목 추가에 실패했습니다.`);
+      }
+    } catch (err) {
+      console.error(`${activeTab} 항목 추가 오류:`, err);
+      setError(`${activeTab} 항목 추가 중 오류가 발생했습니다.`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 수정된 함수: 항목 수정 처리
+  const handleEditItem = async (updatedItem) => {
+    setIsLoading(true);
+
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      const apiPath = getApiPath();
+      let endpoint;
+      let itemToUpdate = { ...updatedItem };
+
+      // 아이콘 탭인 경우와 그렇지 않은 경우를 구분
+      if (activeTab === "아이콘") {
+        // 아이콘은 idx가 아닌 iconKey를 식별자로 사용
+        // originalIconKey를 사용하여 원래 아이콘을 식별
+        if (!itemToUpdate.originalIconKey && selectedItem?.iconKey) {
+          itemToUpdate.originalIconKey = selectedItem.iconKey;
+        }
+
+        // 아이콘은 iconKey로 API 엔드포인트 구성
+        endpoint = `${apiPath}/${itemToUpdate.originalIconKey}`;
+      } else {
+        // 목표/직업 탭의 경우 idx를 사용
+        if (selectedItem && selectedItem.idx) {
+          itemToUpdate.idx = selectedItem.idx;
+          endpoint = `${apiPath}/${selectedItem.idx}`;
+        } else {
+          throw new Error(`${activeTab} 항목의 idx가 없습니다.`);
+        }
+      }
+
+      console.log("수정 요청 데이터:", itemToUpdate);
+      console.log("요청 엔드포인트:", endpoint);
+
+      const response = await axiosInstance.patch(endpoint, itemToUpdate, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (response?.status === 200) {
+        console.log(`${activeTab} 항목 수정 성공:`, response.data);
+        fetchData(); // 데이터 다시 불러오기
+        setIsEditModalOpen(false);
+        setSelectedItem(null);
+      } else {
+        console.error(`${activeTab} 항목 수정 실패:`, response);
+        setError(`${activeTab} 항목 수정에 실패했습니다.`);
+      }
+    } catch (err) {
+      console.error(`${activeTab} 항목 수정 오류:`, err);
+      setError(`${activeTab} 항목 수정 중 오류가 발생했습니다. ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 수정된 함수: 항목 삭제 처리
+  const handleDeleteItem = async () => {
+    if (!selectedItem) {
+      setError("삭제할 항목을 선택해주세요.");
+      return;
+    }
+
+    // 아이콘 탭인 경우 iconKey 확인, 목표/직업 탭인 경우 idx 확인
+    if (activeTab === "아이콘" && !selectedItem.iconKey) {
+      setError("삭제할 아이콘의 iconKey가 없습니다.");
+      return;
+    } else if (activeTab !== "아이콘" && !selectedItem.idx) {
+      setError("삭제할 항목의 idx가 없습니다.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      const apiPath = getApiPath();
+      let endpoint;
+
+      // 아이콘 탭인 경우와 그렇지 않은 경우를 구분
+      if (activeTab === "아이콘") {
+        // 아이콘은 iconKey로 API 엔드포인트 구성
+        endpoint = `${apiPath}/${selectedItem.iconKey}`;
+      } else {
+        // 목표/직업 탭의 경우 idx를 사용
+        endpoint = `${apiPath}/${selectedItem.idx}`;
+      }
+
+      console.log("삭제 요청 엔드포인트:", endpoint);
+
+      const response = await axiosInstance.delete(endpoint, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (response?.status === 200) {
+        console.log(`${activeTab} 항목 삭제 성공:`, response.data);
+        fetchData(); // 데이터 다시 불러오기
+        setIsDeleteModalOpen(false);
+        setSelectedItem(null);
+      } else {
+        console.error(`${activeTab} 항목 삭제 실패:`, response);
+        setError(`${activeTab} 항목 삭제에 실패했습니다.`);
+      }
+    } catch (err) {
+      console.error(`${activeTab} 항목 삭제 오류:`, err);
+      setError(`${activeTab} 항목 삭제 중 오류가 발생했습니다. ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // 검색어로 필터링된 데이터
   const filteredData = itemData.filter((item) => {
-    // 아이콘 탭인 경우
-    if (activeTab === "아이콘") {
-      return (
-        item.iconKey?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.icon?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    // 목표/직업 탭인 경우
-    else {
-      return item.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    }
+    return (
+      item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.iconKey?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.icon?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   });
 
   return (
@@ -235,7 +329,7 @@ const CompSystem = () => {
         <div className="flex-grow"></div>
         <button
           className="px-6 py-3 bg-blue-500 text-white rounded-md"
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={handleOpenAddModal}
         >
           새 항목 추가
         </button>
@@ -257,14 +351,12 @@ const CompSystem = () => {
         </div>
       </div>
 
-      {/* 로딩 상태 */}
+      {/* 로딩 및 에러 상태 */}
       {isLoading && (
         <div className="flex justify-center py-8">
           <p className="text-gray-500">데이터를 불러오는 중...</p>
         </div>
       )}
-
-      {/* 에러 메시지 */}
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           <p>{error}</p>
@@ -281,6 +373,7 @@ const CompSystem = () => {
           onEdit={openEditModal}
           onDelete={openDeleteModal}
           itemType={activeTab}
+          iconItems={iconData} // 아이콘 데이터 전달
         />
       )}
 
@@ -289,8 +382,9 @@ const CompSystem = () => {
         <AddItemModal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
-          onAdd={handleAddItem}
+          onAdd={handleAddItem} // 수정된 부분: 추가 핸들러 연결
           itemType={activeTab}
+          iconList={iconData}
         />
       )}
 
@@ -301,9 +395,10 @@ const CompSystem = () => {
             setIsEditModalOpen(false);
             setSelectedItem(null);
           }}
-          onEdit={handleEditItem}
+          onEdit={handleEditItem} // 수정된 부분: 수정 핸들러 연결
           item={selectedItem}
           itemType={activeTab}
+          iconData={iconData}
         />
       )}
 
@@ -314,7 +409,7 @@ const CompSystem = () => {
             setIsDeleteModalOpen(false);
             setSelectedItem(null);
           }}
-          onDelete={handleDeleteItem}
+          onDelete={handleDeleteItem} // 수정된 부분: 삭제 핸들러 연결
           item={selectedItem}
           itemType={activeTab}
         />
