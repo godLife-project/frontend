@@ -44,6 +44,23 @@ const QnADetail = () => {
   const [newComment, setNewComment] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isDeletingQna, setIsDeletingQna] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [categoryLoading, setCategoryLoading] = useState(true);
+
+  // 카테고리 목록 불러오기
+  const fetchCategories = async () => {
+    setCategoryLoading(true);
+    try {
+      const response = await axiosInstance.get('/categories/qna');
+      if (response.status === 200) {
+        setCategories(response.data);
+      }
+    } catch (error) {
+      console.error('카테고리 로딩 오류:', error);
+    } finally {
+      setCategoryLoading(false);
+    }
+  };
 
   // QnA 상세 정보 불러오기
   const fetchQnADetail = async () => {
@@ -95,17 +112,30 @@ const QnADetail = () => {
     }
   };
 
-  // 컴포넌트 마운트 시 상세 정보 불러오기
+  // 컴포넌트 마운트 시 상세 정보와 카테고리 목록 불러오기
   useEffect(() => {
+    fetchCategories();
+    
     if (qnaIdx) {
       fetchQnADetail();
     } else {
       setError("문의 ID가 없습니다.");
       setIsLoading(false);
     }
+
+    // 현재 사용자 정보 로그
+    try {
+      const userInfoString = localStorage.getItem("userInfo");
+      if (userInfoString) {
+        const userInfo = JSON.parse(userInfoString);
+        console.log("현재 로그인한 사용자 정보:", userInfo);
+      }
+    } catch (e) {
+      console.error("사용자 정보 파싱 오류:", e);
+    }
   }, [qnaIdx]);
 
-  // 댓글 작성 처리 - 수정된 API 경로와 요청 형식
+  // 댓글 작성 처리 - 사용자 ID를 포함하도록 수정
   const handleSubmitComment = async (e) => {
     e.preventDefault();
 
@@ -116,15 +146,38 @@ const QnADetail = () => {
     setIsSubmittingComment(true);
     setError("");
 
+    // 현재 로그인한 사용자 정보 가져오기
+    let userIdx = null;
+    try {
+      const userInfoString = localStorage.getItem("userInfo");
+      if (userInfoString) {
+        const userInfo = JSON.parse(userInfoString);
+        userIdx = userInfo.userIdx;
+        console.log("댓글 작성자 userIdx:", userIdx);
+      }
+    } catch (e) {
+      console.error("사용자 정보 파싱 오류:", e);
+    }
+
     try {
       console.log("댓글 작성 요청 시작. qnaIdx:", qnaIdx);
       
-      // 수정된 API 경로와 요청 형식으로 댓글 작성
+      // 요청 데이터에 userIdx 포함
+      const requestData = {
+        qnaIdx: parseInt(qnaIdx, 10),
+        content: newComment,
+      };
+      
+      // userIdx가 있으면 포함
+      if (userIdx) {
+        requestData.userIdx = userIdx;
+      }
+      
+      console.log("댓글 작성 요청 데이터:", requestData);
+      
+      // API 요청
       const response = await axiosInstance.post("/qna/auth/comment/reply", 
-        {
-          qnaIdx: parseInt(qnaIdx, 10),
-          content: newComment
-        },
+        requestData,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
@@ -219,32 +272,35 @@ const QnADetail = () => {
     }
   };
 
-  // 카테고리 이름 변환 함수
-  const getCategoryName = (categoryId) => {
-    const categories = {
-      1: "계정 관련",
-      2: "결제 관련",
-      3: "서비스 이용",
-      4: "기능 제안",
-      5: "오류 신고",
-      6: "기타",
-    };
-    return categories[categoryId] || "기타";
+  // 카테고리 이름 찾기 함수 (새로운 API 응답 구조에 맞게 수정)
+  const getCategoryName = (categoryIdx) => {
+    if (!categories.length) return "로딩 중...";
+    
+    // 모든 하위 카테고리를 탐색
+    for (const parent of categories) {
+      for (const child of parent.childCategory) {
+        if (child.categoryIdx === categoryIdx) {
+          return `${parent.parentName} > ${child.categoryName}`;
+        }
+      }
+    }
+    
+    return "알 수 없음";
   };
 
   // 상태에 따른 배지 스타일 변환
   const getStatusBadge = (status) => {
     switch (status) {
-      case "wait":
-        return <Badge variant="outline" className="bg-yellow-100">답변 대기중</Badge>;
-      case "answered":
-        return <Badge variant="outline" className="bg-green-100">답변 완료</Badge>;
-      case "responding":
-        return <Badge variant="outline" className="bg-blue-100">답변 진행중</Badge>;
-      case "reload":
-        return <Badge variant="outline" className="bg-purple-100">재확인 중</Badge>;
-      case "closed":
-        return <Badge variant="outline" className="bg-gray-100">종료됨</Badge>;
+      case "WAIT":
+        return <Badge variant="outline" className="bg-yellow-100">대기중</Badge>;
+      case "CONNECT":
+        return <Badge variant="outline" className="bg-blue-100">연결됨</Badge>;
+      case "RESPONDING":
+        return <Badge variant="outline" className="bg-purple-100">응대중</Badge>;
+      case "COMPLETE":
+        return <Badge variant="outline" className="bg-green-100">완료됨</Badge>;
+      case "SLEEP":
+        return <Badge variant="outline" className="bg-gray-100">휴면중</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -253,34 +309,34 @@ const QnADetail = () => {
   // 상태에 따른 안내 메시지
   const getStatusMessage = (status) => {
     switch (status) {
-      case "wait":
+      case "WAIT":
         return {
           text: "문의가 접수되었습니다. 상담원 할당을 기다리고 있습니다.",
           icon: <Clock className="h-5 w-5 text-yellow-500" />,
           color: "bg-yellow-50 text-yellow-700 border-yellow-200"
         };
-      case "answeres":
+      case "CONNECT":
         return {
-          text: "문의에 대한 답변이 완료되었습니다.",
-          icon: <CheckCircle className="h-5 w-5 text-green-500" />,
-          color: "bg-green-50 text-green-700 border-green-200"
+          text: "상담원이 배정되었습니다. 곧 답변이 등록될 예정입니다.",
+          icon: <MessageSquare className="h-5 w-5 text-blue-500" />,
+          color: "bg-blue-50 text-blue-700 border-blue-200"
         };
-      case "responding":
+      case "RESPONDING":
         return {
           text: "상담원이 문의를 확인 중입니다. 곧 답변이 등록될 예정입니다.",
           icon: <MessageSquare className="h-5 w-5 text-blue-500" />,
           color: "bg-blue-50 text-blue-700 border-blue-200"
         };
-      case "reload":
+      case "COMPLETE":
         return {
-          text: "추가 확인이 필요한 문의입니다. 상담원의 답변을 기다려주세요.",
-          icon: <RefreshCw className="h-5 w-5 text-purple-500" />,
-          color: "bg-purple-50 text-purple-700 border-purple-200"
+          text: "문의에 대한 답변이 완료되었습니다.",
+          icon: <CheckCircle className="h-5 w-5 text-green-500" />,
+          color: "bg-green-50 text-green-700 border-green-200"
         };
-      case "closed":
+      case "SLEEP":
         return {
-          text: "문의가 종료되었습니다.",
-          icon: <CheckCircle className="h-5 w-5 text-gray-500" />,
+          text: "문의가 일정 기간 동안 활동이 없어 휴면 상태로 전환되었습니다.",
+          icon: <Clock className="h-5 w-5 text-gray-500" />,
           color: "bg-gray-50 text-gray-700 border-gray-200"
         };
       default:
@@ -311,10 +367,10 @@ const QnADetail = () => {
     navigate(`/qna/edit/${qnaIdx}`);
   };
 
-  // 댓글 입력이 가능한지 확인
+  // 댓글 입력이 가능한지 확인 - 수정된 부분
   const canAddComment = (status) => {
-    // WAITING 상태일 때만 댓글 입력 가능
-    return status === "wait";
+    // WAIT 상태가 아닌 경우에만 댓글 입력 가능
+    return status !== "WAIT";
   };
 
   return (
@@ -404,7 +460,7 @@ const QnADetail = () => {
                   <h2 className="text-xl font-semibold">{qnaDetail.title}</h2>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">
-                      {getCategoryName(qnaDetail.category)}
+                      {categoryLoading ? "카테고리 로딩 중..." : getCategoryName(qnaDetail.category)}
                     </Badge>
                     {getStatusBadge(qnaDetail.qnaStatus)}
                   </div>
@@ -431,9 +487,7 @@ const QnADetail = () => {
                     <p className="font-medium">{getStatusMessage(qnaDetail.qnaStatus).text}</p>
                     {!canAddComment(qnaDetail.qnaStatus) && (
                       <p className="text-sm mt-1">
-                        {qnaDetail.qnaStatus === "wait" 
-                          ? "문의가 접수되었습니다. 상담원이 배정되기를 기다려주세요." 
-                          : "현재 상담원이 배정되어 답변 중입니다. 댓글은 상담원이 배정된 후에 작성할 수 있습니다."}
+                        문의가 접수되었습니다. 상담원이 배정되면 댓글을 작성할 수 있습니다.
                       </p>
                     )}
                   </div>
@@ -463,7 +517,10 @@ const QnADetail = () => {
 
                 {qnaDetail.comments && qnaDetail.comments.length > 0 ? (
                   <div className="space-y-4">
-                    {qnaDetail.comments.map((comment) => (
+                    {qnaDetail.comments.map((comment) => {
+                      // 콘솔에 댓글 데이터 출력하여 확인
+                      console.log('댓글 데이터:', comment);
+                      return (
                       <div
                         key={comment.qnaReplyIdx}
                         className="p-4 rounded-md bg-muted/50"
@@ -471,9 +528,7 @@ const QnADetail = () => {
                         <div className="flex flex-wrap items-center justify-between mb-2">
                           <div className="font-medium">
                             {comment.userName}
-                            {comment.userIdx === 0 && (
-                              <Badge variant="secondary" className="ml-2">관리자</Badge>
-                            )}
+                            {/* 관리자 배지 제거 */}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {formatDate(comment.createdAt)}
@@ -483,7 +538,7 @@ const QnADetail = () => {
                           {comment.content}
                         </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 ) : (
                   <div className="text-center py-6 text-muted-foreground">
@@ -500,7 +555,7 @@ const QnADetail = () => {
                   </Alert>
                 )}
 
-                {/* 새 댓글 작성 폼 - WAIT 상태일 때만 표시 */}
+                {/* 새 댓글 작성 폼 - WAIT 상태가 아닐 때만 표시 */}
                 {canAddComment(qnaDetail.qnaStatus) ? (
                   <form onSubmit={handleSubmitComment} className="space-y-3">
                     <Textarea
@@ -526,7 +581,7 @@ const QnADetail = () => {
                     <div className="flex items-center gap-2">
                       <Clock className="h-5 w-5 text-gray-500" />
                       <p className="text-gray-600">
-                        현재 상담원이 배정되어 있지 않아 댓글 작성이 제한됩니다.
+                        상담원이 배정되지 않아 댓글 작성이 제한됩니다. 상담원 배정을 기다려주세요.
                       </p>
                     </div>
                   </div>

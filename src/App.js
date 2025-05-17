@@ -71,7 +71,7 @@ import FindPassword from "./pages/Auth/FindPassword";
 import FindId from "./pages/Auth/FindId";
 import QnaAdminDashboard from "./pages/QnA/QnADashboard";
 import QnACreate from "./pages/QnA/QnACreate";
-import QnAList from "./components/QnA/QnAList";
+import QnAList from "./components/QnA/QnaList";
 import QnADetail from "./components/QnA/QnaDetail";
 import QnAEdit from "./components/QnA/QnAEdit";
 import ChatRoom from "./pages/QnA/QnaSubscriber";

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "@/api/axiosInstance";
 
@@ -30,7 +30,10 @@ import "@toast-ui/editor/dist/toastui-editor.css";
 const QnACreate = () => {
   // 상태 관리
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("1"); // 문자열로 초기화
+  const [category, setCategory] = useState("");
+  const [parentCategory, setParentCategory] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -39,6 +42,53 @@ const QnACreate = () => {
 
   // 에디터 참조
   const editorRef = useRef(null);
+
+  // 카테고리 데이터 가져오기
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setIsLoading(true);
+      try {
+        const response = await axiosInstance.get('/categories/qna');
+        if (response.status === 200) {
+          setCategories(response.data);
+          // 기본값 설정
+          if (response.data && response.data.length > 0) {
+            setParentCategory(response.data[0].parentIdx.toString());
+            if (response.data[0].childCategory && response.data[0].childCategory.length > 0) {
+              setCategory(response.data[0].childCategory[0].categoryIdx.toString());
+            }
+          }
+        }
+      } catch (error) {
+        console.error('카테고리 로딩 오류:', error);
+        setError('카테고리를 불러오는 중 오류가 발생했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // 부모 카테고리 변경 핸들러
+  const handleParentCategoryChange = (value) => {
+    setParentCategory(value);
+    
+    // 선택된 부모 카테고리의 첫 번째 자식 카테고리로 기본값 설정
+    const parent = categories.find(p => p.parentIdx.toString() === value);
+    if (parent && parent.childCategory && parent.childCategory.length > 0) {
+      setCategory(parent.childCategory[0].categoryIdx.toString());
+    } else {
+      setCategory("");
+    }
+  };
+
+  // 현재 선택된 부모 카테고리의 자식 카테고리 목록 가져오기
+  const getChildCategories = () => {
+    if (!parentCategory) return [];
+    const parent = categories.find(p => p.parentIdx.toString() === parentCategory);
+    return parent ? parent.childCategory : [];
+  };
 
   // 폼 제출 처리
   const handleSubmit = async (e) => {
@@ -103,7 +153,13 @@ const QnACreate = () => {
   // 폼 초기화
   const handleReset = () => {
     setTitle("");
-    setCategory("1"); // 기본값 문자열로 설정
+    // 기본 카테고리 설정
+    if (categories && categories.length > 0) {
+      setParentCategory(categories[0].parentIdx.toString());
+      if (categories[0].childCategory && categories[0].childCategory.length > 0) {
+        setCategory(categories[0].childCategory[0].categoryIdx.toString());
+      }
+    }
     setError("");
     // 에디터 초기화
     editorRef.current?.getInstance().reset();
@@ -131,22 +187,54 @@ const QnACreate = () => {
               </Alert>
             )}
 
-            {/* 카테고리 선택 */}
+            {/* 카테고리 선택 - 부모 카테고리 먼저 선택 */}
+            <div className="space-y-2">
+              <label htmlFor="parentCategory" className="text-sm font-medium">
+                대분류
+              </label>
+              <Select 
+                value={parentCategory} 
+                onValueChange={handleParentCategoryChange}
+                disabled={isLoading}
+              >
+                <SelectTrigger id="parentCategory">
+                  <SelectValue placeholder="대분류를 선택해주세요" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border shadow-md">
+                  {categories.map((parent) => (
+                    <SelectItem 
+                      key={parent.parentIdx} 
+                      value={parent.parentIdx.toString()}
+                    >
+                      {parent.parentName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 하위 카테고리 선택 */}
             <div className="space-y-2">
               <label htmlFor="category" className="text-sm font-medium">
-                카테고리
+                세부 카테고리
               </label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select 
+                value={category} 
+                onValueChange={setCategory}
+                disabled={isLoading || !parentCategory}
+              >
                 <SelectTrigger id="category">
-                  <SelectValue placeholder="문의 유형을 선택해주세요" />
+                  <SelectValue placeholder="세부 카테고리를 선택해주세요" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">계정 관련</SelectItem>
-                  <SelectItem value="2">결제 관련</SelectItem>
-                  <SelectItem value="3">서비스 이용</SelectItem>
-                  <SelectItem value="4">기능 제안</SelectItem>
-                  <SelectItem value="5">오류 신고</SelectItem>
-                  <SelectItem value="6">기타</SelectItem>
+                <SelectContent className="bg-white border shadow-md">
+                  {getChildCategories().map((child) => (
+                    <SelectItem 
+                      key={child.categoryIdx} 
+                      value={child.categoryIdx.toString()}
+                    >
+                      {child.categoryName}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -197,7 +285,7 @@ const QnACreate = () => {
               type="button"
               variant="outline"
               onClick={handleReset}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isLoading}
               className="flex items-center gap-1"
             >
               <RotateCcw className="h-4 w-4" /> 초기화
@@ -215,7 +303,7 @@ const QnACreate = () => {
 
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isLoading}
                 className="flex items-center gap-1"
               >
                 <Send className="h-4 w-4" />

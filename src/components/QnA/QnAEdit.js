@@ -35,6 +35,9 @@ const QnAEdit = () => {
   // 상태 관리
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
+  const [parentCategory, setParentCategory] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [categoryLoading, setCategoryLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -42,6 +45,22 @@ const QnAEdit = () => {
 
   // 에디터 참조
   const editorRef = useRef(null);
+
+  // 카테고리 데이터 가져오기
+  const fetchCategories = async () => {
+    setCategoryLoading(true);
+    try {
+      const response = await axiosInstance.get('/categories/qna');
+      if (response.status === 200) {
+        setCategories(response.data);
+      }
+    } catch (error) {
+      console.error('카테고리 로딩 오류:', error);
+      setError('카테고리를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setCategoryLoading(false);
+    }
+  };
 
   // QnA 상세 정보 불러오기
   const fetchQnADetail = async () => {
@@ -66,8 +85,25 @@ const QnAEdit = () => {
         
         // 상태 설정
         setTitle(data.title || "");
-        setCategory(String(data.category) || "");
         setOriginalData(data);
+        
+        // 카테고리 설정 (부모와 자식)
+        const childCategoryId = data.category;
+        setCategory(String(childCategoryId) || "");
+        
+        // 부모 카테고리 찾기
+        if (categories.length > 0 && childCategoryId) {
+          for (const parent of categories) {
+            const childCategory = parent.childCategory.find(
+              child => child.categoryIdx === childCategoryId
+            );
+            
+            if (childCategory) {
+              setParentCategory(String(parent.parentIdx));
+              break;
+            }
+          }
+        }
         
         // 에디터 내용 설정 - 로딩 후 약간의 지연을 두고 설정
         setTimeout(() => {
@@ -103,6 +139,26 @@ const QnAEdit = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 부모 카테고리 변경 핸들러
+  const handleParentCategoryChange = (value) => {
+    setParentCategory(value);
+    
+    // 선택된 부모 카테고리의 첫 번째 자식 카테고리로 기본값 설정
+    const parent = categories.find(p => p.parentIdx.toString() === value);
+    if (parent && parent.childCategory && parent.childCategory.length > 0) {
+      setCategory(parent.childCategory[0].categoryIdx.toString());
+    } else {
+      setCategory("");
+    }
+  };
+
+  // 현재 선택된 부모 카테고리의 자식 카테고리 목록 가져오기
+  const getChildCategories = () => {
+    if (!parentCategory) return [];
+    const parent = categories.find(p => p.parentIdx.toString() === parentCategory);
+    return parent ? parent.childCategory : [];
   };
 
   // 폼 제출 처리
@@ -185,7 +241,24 @@ const QnAEdit = () => {
   const handleReset = () => {
     if (originalData) {
       setTitle(originalData.title || "");
-      setCategory(String(originalData.category) || "");
+      
+      // 카테고리 초기화
+      const childCategoryId = originalData.category;
+      setCategory(String(childCategoryId) || "");
+      
+      // 부모 카테고리 찾기
+      if (categories.length > 0 && childCategoryId) {
+        for (const parent of categories) {
+          const childCategory = parent.childCategory.find(
+            child => child.categoryIdx === childCategoryId
+          );
+          
+          if (childCategory) {
+            setParentCategory(String(parent.parentIdx));
+            break;
+          }
+        }
+      }
       
       // 에디터 내용 초기화
       setTimeout(() => {
@@ -201,6 +274,8 @@ const QnAEdit = () => {
 
   // 컴포넌트 마운트 시 상세 정보 불러오기
   useEffect(() => {
+    fetchCategories();
+    
     if (qnaIdx) {
       fetchQnADetail();
     } else {
@@ -208,6 +283,28 @@ const QnAEdit = () => {
       setIsLoading(false);
     }
   }, [qnaIdx]);
+
+  // 카테고리 로드 후 QnA 정보 다시 가져오기
+  useEffect(() => {
+    if (!categoryLoading && categories.length > 0 && originalData) {
+      // 부모 카테고리 찾기
+      const childCategoryId = originalData.category;
+      
+      if (childCategoryId) {
+        for (const parent of categories) {
+          const childCategory = parent.childCategory.find(
+            child => child.categoryIdx === childCategoryId
+          );
+          
+          if (childCategory) {
+            setParentCategory(String(parent.parentIdx));
+            setCategory(String(childCategoryId));
+            break;
+          }
+        }
+      }
+    }
+  }, [categoryLoading, categories, originalData]);
 
   // 로그 출력용 - 에디터 내용 확인
   const logEditorContent = () => {
@@ -237,7 +334,7 @@ const QnAEdit = () => {
           </CardDescription>
         </CardHeader>
 
-        {isLoading ? (
+        {isLoading || categoryLoading ? (
           <CardContent className="flex justify-center items-center py-12">
             <RotateCcw className="h-8 w-8 animate-spin opacity-70" />
             <span className="ml-2">데이터를 불러오는 중...</span>
@@ -254,22 +351,53 @@ const QnAEdit = () => {
                 </Alert>
               )}
 
-              {/* 카테고리 선택 */}
+              {/* 카테고리 선택 - 부모 카테고리 먼저 선택 */}
+              <div className="space-y-2">
+                <label htmlFor="parentCategory" className="text-sm font-medium">
+                  대분류
+                </label>
+                <Select 
+                  value={parentCategory} 
+                  onValueChange={handleParentCategoryChange}
+                >
+                  <SelectTrigger id="parentCategory">
+                    <SelectValue placeholder="대분류를 선택해주세요" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border shadow-md">
+                    {categories.map((parent) => (
+                      <SelectItem 
+                        key={parent.parentIdx} 
+                        value={parent.parentIdx.toString()}
+                      >
+                        {parent.parentName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 하위 카테고리 선택 */}
               <div className="space-y-2">
                 <label htmlFor="category" className="text-sm font-medium">
-                  카테고리
+                  세부 카테고리
                 </label>
-                <Select value={category} onValueChange={setCategory}>
+                <Select 
+                  value={category} 
+                  onValueChange={setCategory}
+                  disabled={!parentCategory}
+                >
                   <SelectTrigger id="category">
-                    <SelectValue placeholder="문의 유형을 선택해주세요" />
+                    <SelectValue placeholder="세부 카테고리를 선택해주세요" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">계정 관련</SelectItem>
-                    <SelectItem value="2">결제 관련</SelectItem>
-                    <SelectItem value="3">서비스 이용</SelectItem>
-                    <SelectItem value="4">기능 제안</SelectItem>
-                    <SelectItem value="5">오류 신고</SelectItem>
-                    <SelectItem value="6">기타</SelectItem>
+                  <SelectContent className="bg-white border shadow-md">
+                    {getChildCategories().map((child) => (
+                      <SelectItem 
+                        key={child.categoryIdx} 
+                        value={child.categoryIdx.toString()}
+                      >
+                        {child.categoryName}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
