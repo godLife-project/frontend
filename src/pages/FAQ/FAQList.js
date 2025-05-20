@@ -6,15 +6,6 @@ import { Button } from "@/components/ui/button";
 import { MdOutlineMode } from "react-icons/md";
 import { MdOutlineDelete } from "react-icons/md";
 import { useToast } from "@/components/ui/use-toast";
-// 카테고리 목록 정의
-const categories = [
-  { key: "all", label: "전체" },
-  { key: "루틴", label: "루틴" },
-  { key: "챌린지", label: "챌린지" },
-  { key: "계정", label: "계정" },
-];
-
-const PER_PAGE = 4;
 
 export default function FAQPage() {
   const { toast } = useToast();
@@ -22,6 +13,7 @@ export default function FAQPage() {
   const [faqData, setFaqData] = useState([]);
   const [faqDetails, setFaqDetails] = useState({});
   const [loading, setLoading] = useState(true);
+  const [categoryLoading, setCategoryLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
@@ -32,12 +24,98 @@ export default function FAQPage() {
   const [deleting, setDeleting] = useState(false);
   const [writing, setWriting] = useState(false);
   const [modify, setModify] = useState(false);
+  // API에서 카테고리 목록 가져오기
+  const [categories, setCategories] = useState([{ key: "all", label: "전체" }]);
+
   // localStorage에서 accessToken과 userIdx 가져오기
   const accessToken = localStorage.getItem("accessToken");
   const userInfoString = localStorage.getItem("userInfo");
   const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
   const userIdx = userInfo?.userIdx || "21";
   const roleStatus = userInfo?.roleStatus || false; // 기본값은 false
+
+  // API에서 카테고리 목록 가져오기
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setCategoryLoading(true);
+
+        // "전체" 카테고리만 초기값으로 설정
+        setCategories([{ key: "all", label: "전체" }]);
+
+        // API 호출
+        const response = await axiosInstance.get(
+          "/admin/compSystem/faqCategory",
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        console.log("API 응답 전체 데이터:", response.data);
+
+        // API 응답에서 카테고리 데이터 추출
+        let categoryData = [];
+
+        if (response.data && Array.isArray(response.data.faqCategory)) {
+          categoryData = response.data.faqCategory;
+          console.log(
+            "faqCategory 배열에서 카테고리 데이터 추출:",
+            categoryData
+          );
+        }
+
+        // 카테고리 데이터 변환 및 적용
+        if (categoryData && categoryData.length > 0) {
+          const apiCategories = categoryData.map((cat) => ({
+            key:
+              cat.faqCategoryIdx?.toString() ||
+              cat.categoryIdx?.toString() ||
+              "unknown",
+            label: cat.faqCategoryName || cat.categoryName || "알 수 없음",
+            originalValue:
+              cat.faqCategoryName || cat.categoryName || "알 수 없음",
+          }));
+
+          const formattedCategories = [
+            { key: "all", label: "전체" },
+            ...apiCategories,
+          ];
+
+          setCategories(formattedCategories);
+          console.log("적용된 카테고리 데이터:", formattedCategories);
+        } else {
+          console.log(
+            "카테고리 데이터가 비어있거나 API 응답 구조가 예상과 다릅니다."
+          );
+        }
+      } catch (err) {
+        console.error("카테고리 데이터를 가져오는 중 오류 발생:", err);
+
+        // 인증 오류(401, 403)이거나 토큰이 없는 경우 토스트 메시지를 표시하지 않음
+        if (
+          accessToken &&
+          !(
+            err.response &&
+            (err.response.status === 401 || err.response.status === 403)
+          )
+        ) {
+          toast({
+            variant: "destructive",
+            title: "카테고리 로딩 실패",
+            description: "카테고리 정보를 불러오는 중 오류가 발생했습니다.",
+          });
+        }
+      } finally {
+        setCategoryLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, [toast, accessToken]);
+
   // API에서 FAQ 목록 데이터 가져오기
   useEffect(() => {
     const fetchFAQs = async () => {
@@ -104,13 +182,41 @@ export default function FAQPage() {
 
   // 필터링 전에 faqData가 배열인지 확인
   const filtered = Array.isArray(faqData)
-    ? faqData.filter(
-        (item) =>
-          (category === "all" || item.faqCategory === category) &&
-          item.faqTitle?.toLowerCase().includes(search.toLowerCase())
-      )
+    ? faqData.filter((item) => {
+        // 카테고리 필터링 로직을 수정
+        let matchesCategory = false;
+
+        if (category === "all") {
+          matchesCategory = true;
+        } else {
+          // 카테고리 키 비교
+          if (item.faqCategoryIdx?.toString() === category) {
+            matchesCategory = true;
+          } else {
+            // 카테고리 이름 비교
+            const selectedCategory = categories.find(
+              (cat) => cat.key === category
+            );
+            if (
+              selectedCategory &&
+              (item.faqCategory === selectedCategory.originalValue ||
+                item.faqCategoryName === selectedCategory.originalValue)
+            ) {
+              matchesCategory = true;
+            }
+          }
+        }
+
+        // 검색어 필터링
+        const matchesSearch = item.faqTitle
+          ?.toLowerCase()
+          .includes(search.toLowerCase());
+
+        return matchesCategory && matchesSearch;
+      })
     : [];
 
+  const PER_PAGE = 4;
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
@@ -152,13 +258,20 @@ export default function FAQPage() {
         },
       });
 
+      // 상태 업데이트: 삭제된 항목을 화면에서 제거
+      setFaqData((prevData) =>
+        prevData.filter((item) => item.faqIdx !== faqIdx)
+      );
+
+      // 열려있는 FAQ가 삭제된 것이라면 닫기
+      if (openId === faqIdx) {
+        setOpenId(null);
+      }
+
       toast({
         title: "성공",
         description: "FAQ가 성공적으로 삭제되었습니다.",
       });
-
-      // 삭제 후 FAQ 목록 페이지로 이동
-      navigate("/faq");
     } catch (err) {
       console.error("FAQ 삭제 실패:", err);
       toast({
@@ -179,11 +292,11 @@ export default function FAQPage() {
           onClick={() => navigate(`/faq/write`)}
           disabled={writing}
         >
-          {writing ? "참여 신청 중..." : "작성하기"}
+          {writing ? "작성 중..." : "작성하기"}
         </Button>
       );
     }
-    return;
+    return null;
   };
 
   //수정 버튼(관리자만)
@@ -193,14 +306,20 @@ export default function FAQPage() {
         <MdOutlineMode onClick={() => navigate(`/faq/modify/${faqIdx}`)} />
       );
     }
-    return;
+    return null;
   };
 
   const DeleteButtons = ({ faqIdx }) => {
     if (roleStatus === true) {
       return <MdOutlineDelete onClick={() => deleteChallenge(faqIdx)} />;
     }
-    return;
+    return null;
+  };
+
+  // 카테고리 이름 가져오기
+  const getCategoryName = (faqItem) => {
+    // 카테고리 표시 방식: faqCategoryName이 있다면 그것을 사용, 아니면 faqCategory 사용
+    return faqItem.faqCategoryName || faqItem.faqCategory || "미분류";
   };
 
   return (
@@ -221,20 +340,27 @@ export default function FAQPage() {
       />
 
       <div className="flex items-center justify-between mb-6">
-        <div className="flex gap-2">
-          {categories.map((cat) => (
-            <button
-              key={cat.key}
-              onClick={() => handleCategoryChange(cat.key)}
-              className={`px-4 py-2 rounded text-sm border ${
-                category === cat.key
-                  ? "bg-black text-white border-black"
-                  : "bg-transparent text-gray-700 border-gray-300"
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-2">
+          {categoryLoading ? (
+            <p className="text-sm text-gray-400">카테고리 로딩 중...</p>
+          ) : (
+            <>
+              {/* 카테고리 버튼들을 명확하게 표시 */}
+              {categories.map((cat) => (
+                <button
+                  key={cat.key}
+                  onClick={() => handleCategoryChange(cat.key)}
+                  className={`px-4 py-2 rounded text-sm border ${
+                    category === cat.key
+                      ? "bg-black text-white border-black"
+                      : "bg-transparent text-gray-700 border-gray-300"
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </>
+          )}
         </div>
 
         <WriteButtons />
@@ -255,7 +381,7 @@ export default function FAQPage() {
             >
               <div className="flex justify-between items-center text-sm mb-1">
                 <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                  {faq.faqCategory}
+                  {getCategoryName(faq)}
                 </span>
                 <div className="flex gap-2">
                   <ModifyButtons faqIdx={faq.faqIdx} />
