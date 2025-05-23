@@ -5,7 +5,7 @@ module.exports = function (app) {
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'https://0a88-182-229-89-82.ngrok-free.app/api',
+      target: 'https://0998-182-229-89-82.ngrok-free.app/api',
       changeOrigin: true,
       secure: true,
       onProxyReq: (proxyReq, req) => {
@@ -25,7 +25,7 @@ module.exports = function (app) {
   app.use(
     '/ws-stomp',
     createProxyMiddleware({
-      target: 'https://0a88-182-229-89-82.ngrok-free.app/', // Spring 서버 주소
+      target: 'https://0998-182-229-89-82.ngrok-free.app/', // Spring 서버 주소
       changeOrigin: true,
       ws: true, // 웹소켓 지원 활성화
       secure: false, // HTTPS를 사용하지 않을 경우 false
