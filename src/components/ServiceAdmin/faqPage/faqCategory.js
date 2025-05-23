@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { MdOutlineMode } from "react-icons/md";
 import { MdOutlineDelete } from "react-icons/md";
+import { IoSearchOutline } from "react-icons/io5";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function FAQPage() {
@@ -287,13 +288,17 @@ export default function FAQPage() {
   const WriteButtons = () => {
     if (roleStatus === true) {
       return (
-        <Button
-          className="px-6 py-3 bg-blue-500 text-white rounded-md"
+        <button
+          className={`px-6 py-3 rounded-md ${
+            writing
+              ? "bg-gray-400 text-white cursor-not-allowed"
+              : "bg-blue-500 text-white hover:bg-blue-600"
+          }`}
           onClick={() => navigate(`/faq/write`)}
           disabled={writing}
         >
           {writing ? "작성 중..." : "FAQ 추가"}
-        </Button>
+        </button>
       );
     }
     return null;
@@ -349,6 +354,23 @@ export default function FAQPage() {
         <WriteButtons />
       </div>
 
+      {/* 검색 바 */}
+      <div className="relative mb-6">
+        <div className="relative">
+          <IoSearchOutline className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="검색"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1); // 검색 시 페이지 초기화
+            }}
+            className="w-full pl-10 pr-4 py-3 bg-gray-50 border-0 rounded-lg text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+          />
+        </div>
+      </div>
+
       {/* 로딩 및 에러 상태 */}
       {loading && (
         <div className="flex justify-center py-8">
@@ -375,12 +397,16 @@ export default function FAQPage() {
                 <div
                   key={faq.faqIdx}
                   className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => handleFaqClick(faq.faqIdx)}
                 >
                   <div className="flex justify-between items-center text-sm mb-2">
                     <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
                       {getCategoryName(faq)}
                     </span>
-                    <div className="flex gap-2">
+                    <div
+                      className="flex gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <ModifyButtons faqIdx={faq.faqIdx} />
                       <DeleteButtons faqIdx={faq.faqIdx} />
                     </div>
