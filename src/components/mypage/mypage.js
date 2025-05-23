@@ -15,7 +15,7 @@ export default function MyPageForm() {
   const errorNotifiedRef = useRef(false);
   // 재시도 횟수를 추적하는 ref 추가
   const retryCountRef = useRef(0);
-  const MAX_RETRY_COUNT = 5;
+  const MAX_RETRY_COUNT = 3; // 3번으로 변경
 
   // 로컬스토리지 - 사용자 기본 정보
   const userInfoString = localStorage.getItem("userInfo");
@@ -74,28 +74,8 @@ export default function MyPageForm() {
   }, []); // 의존성 배열 비움 - 컴포넌트 마운트 시 한 번만 실행
 
   const fetchUserData = async () => {
-    if (retryCountRef.current >= MAX_RETRY_COUNT) {
-      setLoading(false);
-      setError(
-        `데이터 로딩 실패: 최대 시도 횟수(${MAX_RETRY_COUNT}회)에 도달했습니다.`
-      );
-
-      if (!errorNotifiedRef.current) {
-        toast({
-          variant: "destructive",
-          title: "데이터 로딩 오류",
-          description: `최대 시도 횟수(${MAX_RETRY_COUNT}회)에 도달했습니다. 나중에 다시 시도해주세요.`,
-        });
-        errorNotifiedRef.current = true;
-      }
-      return;
-    }
-
-    // 시도 횟수 증가
-    retryCountRef.current += 1;
-    console.log(`API 요청 시도 ${retryCountRef.current}/${MAX_RETRY_COUNT}`);
-
     setLoading(true);
+
     try {
       const response = await axiosInstance.get("/myPage/auth/myAccount", {
         headers: {
@@ -132,33 +112,53 @@ export default function MyPageForm() {
 
       setLoading(false);
     } catch (err) {
-      console.error(
-        `사용자 정보를 불러오는 중 오류 발생 (시도 ${retryCountRef.current}/${MAX_RETRY_COUNT}):`,
-        err
-      );
+      console.error("사용자 정보를 불러오는 중 오류 발생:", err);
 
-      // 마지막 시도였으면 에러 메시지 표시
-      if (retryCountRef.current >= MAX_RETRY_COUNT) {
-        setError(
-          `최대 시도 횟수(${MAX_RETRY_COUNT}회) 도달: 사용자 정보를 불러오는 데 실패했습니다.`
+      // 500 에러인지 확인
+      const is500Error = err.response?.status === 500;
+
+      if (is500Error && retryCountRef.current < MAX_RETRY_COUNT) {
+        // 시도 횟수 증가
+        retryCountRef.current += 1;
+        console.log(
+          `500 에러 재시도 ${retryCountRef.current}/${MAX_RETRY_COUNT}`
         );
 
-        if (!errorNotifiedRef.current) {
-          toast({
-            variant: "destructive",
-            title: "데이터 로딩 오류",
-            description: `최대 시도 횟수(${MAX_RETRY_COUNT}회)에 도달했습니다. 나중에 다시 시도해주세요.`,
-          });
-          errorNotifiedRef.current = true;
-        }
-
-        setLoading(false);
-      } else {
-        // 아직 시도 횟수가 남았으면 재시도 (1초 후)
+        // 1초 후 재시도
         setTimeout(() => {
           fetchUserData();
         }, 1000);
+
+        return; // 여기서 return하여 아래 에러 처리 로직을 실행하지 않음
       }
+
+      // 500 에러가 아니거나 최대 재시도 횟수에 도달한 경우
+      let errorMessage = "사용자 정보를 불러오는 데 실패했습니다.";
+
+      if (is500Error) {
+        errorMessage = `서버 오류: 최대 시도 횟수(${MAX_RETRY_COUNT}회)에 도달했습니다.`;
+      } else if (err.response?.status === 401) {
+        errorMessage = "인증이 만료되었습니다. 다시 로그인해주세요.";
+      } else if (err.response?.status === 403) {
+        errorMessage = "접근 권한이 없습니다.";
+      } else if (err.response?.status === 404) {
+        errorMessage = "사용자 정보를 찾을 수 없습니다.";
+      } else if (err.code === "ECONNABORTED") {
+        errorMessage = "요청 시간이 초과되었습니다.";
+      }
+
+      setError(errorMessage);
+
+      if (!errorNotifiedRef.current) {
+        toast({
+          variant: "destructive",
+          title: "데이터 로딩 오류",
+          description: errorMessage,
+        });
+        errorNotifiedRef.current = true;
+      }
+
+      setLoading(false);
     }
   };
 
@@ -253,9 +253,9 @@ export default function MyPageForm() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
           <p className="mt-4 text-gray-600">사용자 정보를 불러오는 중...</p>
-          {retryCountRef.current > 1 && (
+          {retryCountRef.current > 0 && (
             <p className="text-sm text-gray-500">
-              시도 {retryCountRef.current}/{MAX_RETRY_COUNT}
+              재시도 중... ({retryCountRef.current}/{MAX_RETRY_COUNT})
             </p>
           )}
         </div>
