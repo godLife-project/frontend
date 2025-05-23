@@ -76,7 +76,7 @@ const ChallengeForm = () => {
     const fetchChallengeCategories = async () => {
       try {
         const response = await axiosInstance.get(`/categories/challenge`);
-        // console.log("챌린지 카테고리 데이터:", response.data);
+        console.log("챌린지 카테고리 데이터:", response.data);
         setChallengeCategories(response.data);
       } catch (error) {
         console.error("챌린지 카테고리 데이터 가져오기 실패:", error);
@@ -223,32 +223,32 @@ const ChallengeForm = () => {
                 control={form.control}
                 name="challCategoryIdx"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="w-full">
+                    <FormLabel>카테고리</FormLabel>
                     <FormControl>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="선택" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          {challengeCategories.length > 0 ? (
-                            challengeCategories.map((category) => (
-                              <SelectItem
-                                key={category.challCategoryIdx}
-                                value={String(category.challCategoryIdx)}
-                              >
-                                {category.challName}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectGroup>
-                              <SelectLabel>카테고리 없음</SelectLabel>
-                            </SelectGroup>
-                          )}
-                        </SelectContent>
-                      </Select>
+                      <div className="relative">
+                        <select
+                          id="categorySelect"
+                          className="w-full rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-left shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          value={field.value}
+                          onChange={(e) => {
+                            field.onChange(e.target.value);
+                            console.log("선택된 카테고리 ID:", e.target.value);
+                          }}
+                        >
+                          {challengeCategories.map((category) => (
+                            <option
+                              key={
+                                category.challCategoryIdx ||
+                                `category-${category.challName}`
+                              }
+                              value={String(category.challCategoryIdx)}
+                            >
+                              {category.challName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

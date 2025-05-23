@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { User, FileText, MessageSquare, CheckCircle, Menu } from "lucide-react";
-import CompSystem from "@/components/ServiceAdmin/compSystem";
-
+import CompSystem from "@/components/ServiceAdmin/compSystem/compSystem";
+import FaqCategory from "@/components/ServiceAdmin/faqPage/faqCategory";
 const AdminDashboard = () => {
   const [menuCollapsed, setMenuCollapsed] = useState(false);
   const [activePage, setActivePage] = useState("컴포넌트 관리");
@@ -132,15 +132,7 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {activePage === "FAQ 관리" && (
-            <div className="bg-white p-6 rounded-md shadow">
-              <h2 className="text-xl font-semibold mb-4">FAQ 관리</h2>
-              <p className="mb-4">여기에 FAQ 관리 관련 컨텐츠가 표시됩니다.</p>
-              <button className="px-4 py-2 bg-blue-500 text-white rounded-md">
-                새 FAQ 추가
-              </button>
-            </div>
-          )}
+          {activePage === "FAQ 관리" && <FaqCategory />}
 
           {activePage === "1:1 문의" && (
             <div className="bg-white p-6 rounded-md shadow">
