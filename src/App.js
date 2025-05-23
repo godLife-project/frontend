@@ -28,7 +28,7 @@ import MyPage from "./pages/MyPage/MyPage";
 import AdminDashboard from "./pages/ServiceAdmin/List";
 
 // 인증이 필요한 라우트를 위한 컴포넌트
-function AppRoutes() {
+function AppContent() {
   const { isAuthenticated, loading } = useAuth();
 
   // 로딩 중인 경우 로딩 표시
@@ -40,6 +40,44 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/FAQ/write" element={<FAQWritePage />} />
+      <Route path="/" element={<Home />} />
+      <Route path="/user/MyPage" element={<MyPage />} />
+      <Route path="adminBoard" element={<AdminDashboard />} />
+      <Route path="/FAQ" element={<FAQListPage />} />
+      <Route
+        path="/FAQ/modify/:faqIdx"
+        element={
+          <ProtectedRoute>
+            <FAQEditPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/challenge" element={<ChallengeListPage />} />
+      <Route
+        path="/challenge/list/:challIdx"
+        element={<ChallengDetailPage />}
+      />
+      <Route
+        path="/challenge/modify/:challIdx"
+        element={<ChallengModifyPage />}
+      />
+      <Route
+        path="/challenge/detail/:challIdx"
+        element={
+          <ProtectedRoute>
+            <ChallengDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/challenge/write"
+        element={
+          <ProtectedRoute>
+            <ChallengeWritePage />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/routine/detail/:planIdx" element={<RoutineDetailPage />} />
       <Route
         path="/routine/create"
@@ -68,50 +106,7 @@ function App() {
             v7_relativeSplatPath: true,
           }}
         >
-          <Layout>
-            <Routes>
-              <Route path="/user/login" element={<Login />} />
-              <Route path="/user/signup" element={<Signup />} />
-              <Route
-                path="/challenge/write"
-                element={
-                  <ProtectedRoute>
-                    <ChallengeWritePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/challenge/detail/:challIdx"
-                element={
-                  <ProtectedRoute>
-                    <ChallengDetailPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/challenge/modify/:challIdx"
-                element={<ChallengModifyPage />}
-              />
-              <Route path="/challenge" element={<ChallengeListPage />} />
-              <Route
-                path="/challenge/list/:challIdx"
-                element={<ChallengDetailPage />}
-              />
-              <Route path="/FAQ" element={<FAQListPage />} />
-              <Route
-                path="/FAQ/modify/:faqIdx"
-                element={
-                  <ProtectedRoute>
-                    <FAQEditPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/FAQ/write" element={<FAQWritePage />} />
-              <Route path="/" element={<Home />} />
-              <Route path="/user/MyPage" element={<MyPage />} />
-              <Route path="adminBoard" element={<AdminDashboard />} />
-            </Routes>
-          </Layout>
+          <AppContent />
           <Toaster />
         </Router>
       </ToastProvider>
