@@ -9,7 +9,7 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  Trash2,
+  Heart,
   Square,
   CheckSquare,
   Lock,
@@ -18,12 +18,11 @@ import {
 import { Link } from "react-router-dom";
 import axiosInstance from "@/api/axiosInstance";
 
-const RoutineTabContent = () => {
+const LikedRoutineTabContent = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [routineData, setRoutineData] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false); // 삭제 로딩 상태
-  const [privacyLoading, setPrivacyLoading] = useState({}); // 개별 공개/비공개 전환 로딩 상태
 
   // 선택된 루틴들의 planIdx 배열
   const [selectedRoutines, setSelectedRoutines] = useState([]);
@@ -32,10 +31,8 @@ const RoutineTabContent = () => {
   const [filters, setFilters] = useState({
     page: 1,
     size: 3,
-    status: 0,
     target: null,
     job: null,
-    sort: "latest",
     order: "desc",
     search: "",
   });
@@ -50,7 +47,7 @@ const RoutineTabContent = () => {
   const accessToken = localStorage.getItem("accessToken");
 
   // API 호출 함수
-  const fetchMyRoutines = async (params = filters) => {
+  const fetchLikedRoutines = async (params = filters) => {
     try {
       setLoading(true);
 
@@ -58,8 +55,6 @@ const RoutineTabContent = () => {
       const queryParams = new URLSearchParams();
       queryParams.append("page", params.page);
       queryParams.append("size", params.size);
-      queryParams.append("status", params.status);
-      queryParams.append("sort", params.sort);
       queryParams.append("order", params.order);
 
       if (params.target) {
@@ -73,7 +68,7 @@ const RoutineTabContent = () => {
       }
 
       const response = await axiosInstance.get(
-        `/myPage/auth/list/myPlan?${queryParams.toString()}`,
+        `/myPage/auth/list/myLike?${queryParams.toString()}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -85,15 +80,15 @@ const RoutineTabContent = () => {
       setRoutineData(response.data);
       setError(null);
     } catch (err) {
-      console.error("루틴 데이터를 불러오는 중 오류 발생:", err);
-      setError("루틴 데이터를 불러오는 데 실패했습니다.");
+      console.error("좋아요한 루틴 데이터를 불러오는 중 오류 발생:", err);
+      setError("좋아요한 루틴 데이터를 불러오는 데 실패했습니다.");
     } finally {
       setLoading(false);
     }
   };
 
-  // 선택된 루틴 삭제 API 호출
-  const deleteSelectedRoutines = async () => {
+  // 선택된 좋아요 루틴 삭제 API 호출
+  const deleteSelectedLikes = async () => {
     if (selectedRoutines.length === 0) {
       alert("삭제할 루틴을 선택해주세요.");
       return;
@@ -101,7 +96,7 @@ const RoutineTabContent = () => {
 
     if (
       !window.confirm(
-        `선택된 ${selectedRoutines.length}개의 루틴을 삭제하시겠습니까?`
+        `선택된 ${selectedRoutines.length}개의 좋아요를 취소하시겠습니까?`
       )
     ) {
       return;
@@ -110,54 +105,27 @@ const RoutineTabContent = () => {
     try {
       setDeleteLoading(true);
 
-      const response = await axiosInstance.patch(
-        "/myPage/auth/delete/plans",
-        selectedRoutines, // planIdx 배열을 직접 전송
+      // 쿼리 파라미터로 planIndexes 전송
+      const planIndexes = selectedRoutines.join(",");
+      const response = await axiosInstance.delete(
+        `/myPage/auth/delete/likes?planIndexes=${planIndexes}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
           },
           timeout: 10000,
         }
       );
 
       // 삭제 성공 시
-      alert("선택된 루틴이 삭제되었습니다.");
+      alert("선택된 좋아요가 취소되었습니다.");
       setSelectedRoutines([]); // 선택 초기화
-      fetchMyRoutines(); // 리스트 새로고침
+      fetchLikedRoutines(); // 리스트 새로고침
     } catch (err) {
-      console.error("루틴 삭제 중 오류 발생:", err);
-      alert("루틴 삭제에 실패했습니다. 다시 시도해주세요.");
+      console.error("좋아요 삭제 중 오류 발생:", err);
+      alert("좋아요 취소에 실패했습니다. 다시 시도해주세요.");
     } finally {
       setDeleteLoading(false);
-    }
-  };
-
-  // 루틴 공개/비공개 전환 API 호출
-  const toggleRoutinePrivacy = async (planIdx) => {
-    try {
-      setPrivacyLoading((prev) => ({ ...prev, [planIdx]: true }));
-
-      const response = await axiosInstance.patch(
-        "/myPage/auth/switch/isShared?mode=reverse",
-        [planIdx],
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          timeout: 10000,
-        }
-      );
-
-      // 성공 시 리스트 새로고침
-      fetchMyRoutines();
-    } catch (err) {
-      console.error("루틴 공개/비공개 전환 중 오류 발생:", err);
-      alert("공개/비공개 설정 변경에 실패했습니다. 다시 시도해주세요.");
-    } finally {
-      setPrivacyLoading((prev) => ({ ...prev, [planIdx]: false }));
     }
   };
 
@@ -196,11 +164,9 @@ const RoutineTabContent = () => {
       });
     }
   };
-
-  // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
     if (accessToken) {
-      fetchMyRoutines();
+      fetchLikedRoutines();
     } else {
       setError("로그인이 필요합니다.");
       setLoading(false);
@@ -212,14 +178,14 @@ const RoutineTabContent = () => {
     const updatedFilters = { ...filters, ...newFilters, page: 1 }; // 필터 변경시 첫 페이지로
     setFilters(updatedFilters);
     setSelectedRoutines([]); // 필터 변경시 선택 초기화
-    fetchMyRoutines(updatedFilters);
+    fetchLikedRoutines(updatedFilters);
   };
 
   // 페이지 변경
   const handlePageChange = (newPage) => {
     const updatedFilters = { ...filters, page: newPage };
     setFilters(updatedFilters);
-    fetchMyRoutines(updatedFilters);
+    fetchLikedRoutines(updatedFilters);
   };
 
   // 검색 실행
@@ -253,31 +219,12 @@ const RoutineTabContent = () => {
     currentPagePlanIds.length > 0 &&
     currentPagePlanIds.every((id) => selectedRoutines.includes(id));
 
-  // 상태 옵션
-  const statusOptions = [
-    { value: 0, label: "전체" },
-    { value: 1, label: "진행중" },
-    { value: 2, label: "대기중" },
-    { value: 3, label: "완료" },
-    { value: 4, label: "조기종료" },
-    { value: 5, label: "진행+대기" },
-  ];
-
-  // 정렬 옵션
-  const sortOptions = [
-    { value: "latest", label: "등록일" },
-    { value: "view", label: "조회수" },
-    { value: "like", label: "추천수" },
-    { value: "fork", label: "포크수" },
-    { value: "fire", label: "불꽃 경험치" },
-  ];
-
   // 로딩 상태
   if (loading) {
     return (
       <div className="p-5 text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
-        <p className="text-sm text-gray-500">루틴을 불러오는 중...</p>
+        <p className="text-sm text-gray-500">좋아요한 루틴을 불러오는 중...</p>
       </div>
     );
   }
@@ -288,7 +235,7 @@ const RoutineTabContent = () => {
       <div className="p-5 text-center">
         <p className="text-sm text-red-500 mb-3">{error}</p>
         <button
-          onClick={() => fetchMyRoutines()}
+          onClick={() => fetchLikedRoutines()}
           className="text-xs px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           다시 시도
@@ -306,7 +253,7 @@ const RoutineTabContent = () => {
           <div className="flex-1 relative">
             <input
               type="text"
-              placeholder="루틴 제목으로 검색..."
+              placeholder="좋아요한 루틴 제목으로 검색..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -347,76 +294,90 @@ const RoutineTabContent = () => {
         {showFilters && (
           <div className="bg-gray-50 p-4 rounded-lg space-y-3">
             <div className="grid grid-cols-2 gap-4">
-              {/* 상태 필터 */}
+              {/* 목표 필터 (target) */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
-                  상태
+                  목표 분야
                 </label>
                 <select
-                  value={filters.status}
+                  value={filters.target || ""}
                   onChange={(e) =>
-                    handleFilterChange({ status: parseInt(e.target.value) })
+                    handleFilterChange({
+                      target: e.target.value || null,
+                    })
                   }
                   className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
                 >
-                  {statusOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
+                  <option value="">전체</option>
+                  <option value="health">건강</option>
+                  <option value="study">공부</option>
+                  <option value="hobby">취미</option>
+                  <option value="work">업무</option>
+                  <option value="exercise">운동</option>
+                  {/* 실제 목표 옵션은 API 응답에 따라 조정 */}
                 </select>
               </div>
 
-              {/* 정렬 */}
+              {/* 직업 필터 (job) */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
-                  정렬
+                  직업
                 </label>
-                <div className="flex space-x-1">
-                  <select
-                    value={filters.sort}
-                    onChange={(e) =>
-                      handleFilterChange({ sort: e.target.value })
-                    }
-                    className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
-                  >
-                    {sortOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={filters.order}
-                    onChange={(e) =>
-                      handleFilterChange({ order: e.target.value })
-                    }
-                    className="px-2 py-1 text-sm border border-gray-300 rounded"
-                  >
-                    <option value="desc">↓</option>
-                    <option value="asc">↑</option>
-                  </select>
-                </div>
+                <select
+                  value={filters.job || ""}
+                  onChange={(e) =>
+                    handleFilterChange({
+                      job: e.target.value || null,
+                    })
+                  }
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                >
+                  <option value="">전체</option>
+                  <option value="student">학생</option>
+                  <option value="office">직장인</option>
+                  <option value="freelancer">프리랜서</option>
+                  <option value="entrepreneur">사업가</option>
+                  {/* 실제 직업 옵션은 API 응답에 따라 조정 */}
+                </select>
               </div>
             </div>
 
-            {/* 페이지 크기 */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                페이지당 항목 수
-              </label>
-              <select
-                value={filters.size}
-                onChange={(e) =>
-                  handleFilterChange({ size: parseInt(e.target.value) })
-                }
-                className="px-2 py-1 text-sm border border-gray-300 rounded"
-              >
-                <option value={3}>3개</option>
-                <option value={5}>5개</option>
-                <option value={7}>7개</option>
-                <option value={10}>10개</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              {/* 정렬 순서 */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  정렬 순서
+                </label>
+                <select
+                  value={filters.order}
+                  onChange={(e) =>
+                    handleFilterChange({ order: e.target.value })
+                  }
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                >
+                  <option value="desc">최신순</option>
+                  <option value="asc">오래된순</option>
+                </select>
+              </div>
+
+              {/* 페이지 크기 */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  페이지당 항목 수
+                </label>
+                <select
+                  value={filters.size}
+                  onChange={(e) =>
+                    handleFilterChange({ size: parseInt(e.target.value) })
+                  }
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                >
+                  <option value={3}>3개</option>
+                  <option value={5}>5개</option>
+                  <option value={7}>7개</option>
+                  <option value={10}>10개</option>
+                </select>
+              </div>
             </div>
           </div>
         )}
@@ -425,16 +386,19 @@ const RoutineTabContent = () => {
       {/* 빈 상태일 때 */}
       {allRoutines.length === 0 ? (
         <div className="p-5 text-center">
-          <CheckCircle size={32} className="mx-auto text-gray-400 mb-2" />
+          <Heart size={32} className="mx-auto text-gray-400 mb-2" />
           <p className="text-sm text-gray-500">
             {filters.search
               ? "검색 결과가 없습니다."
-              : "아직 등록된 루틴이 없습니다."}
+              : "아직 좋아요한 루틴이 없습니다."}
           </p>
           {!filters.search && (
-            <button className="mt-3 text-xs px-3 py-1 bg-blue-600 text-white rounded-lg">
-              루틴 만들기
-            </button>
+            <Link
+              to="/routines"
+              className="inline-block mt-3 text-xs px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              루틴 둘러보기
+            </Link>
           )}
         </div>
       ) : (
@@ -457,15 +421,14 @@ const RoutineTabContent = () => {
 
             {selectedRoutines.length > 0 && (
               <button
-                onClick={deleteSelectedRoutines}
+                onClick={deleteSelectedLikes}
                 disabled={deleteLoading}
                 className="flex items-center space-x-2 px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Trash2 size={14} />
                 <span>
                   {deleteLoading
-                    ? "삭제 중..."
-                    : `삭제 (${selectedRoutines.length})`}
+                    ? "취소 중..."
+                    : `좋아요 취소 (${selectedRoutines.length})`}
                 </span>
               </button>
             )}
@@ -476,8 +439,6 @@ const RoutineTabContent = () => {
             {allRoutines.map((routine) => {
               const planIdx = routine.planInfos.planIdx;
               const isSelected = selectedRoutines.includes(planIdx);
-              const isShared = routine.planInfos.isShared; // 공개 상태
-              const isPrivacyToggling = privacyLoading[planIdx];
 
               return (
                 <div
@@ -518,54 +479,31 @@ const RoutineTabContent = () => {
                           </span>
                           <Link
                             to={`/routine/detail/${planIdx}`}
-                            className="font-medium text-gray-800 flex-1"
+                            className="font-medium text-gray-800 flex-1 hover:text-blue-600"
                           >
                             {routine.planInfos.planTitle}
                           </Link>
-
-                          {/* 공개/비공개 토글 버튼 */}
-                          <button
-                            onClick={() => toggleRoutinePrivacy(planIdx)}
-                            disabled={isPrivacyToggling}
-                            className={`p-1 rounded hover:bg-gray-100 transition-colors ${
-                              isPrivacyToggling
-                                ? "opacity-50 cursor-not-allowed"
-                                : ""
-                            }`}
-                            title={
-                              isShared
-                                ? "공개 상태 (클릭시 비공개)"
-                                : "비공개 상태 (클릭시 공개)"
-                            }
-                          >
-                            {isPrivacyToggling ? (
-                              <div className="animate-spin w-4 h-4 border border-gray-400 border-t-transparent rounded-full" />
-                            ) : isShared ? (
-                              <Unlock size={16} className="text-green-600" />
-                            ) : (
-                              <Lock size={16} className="text-gray-400" />
-                            )}
-                          </button>
                         </div>
                       </div>
 
                       <div className="mt-3 text-xs text-gray-500">
                         <div className="flex items-center space-x-5">
                           <span>
-                            등록일:{" "}
-                            {new Date(
-                              routine.planInfos.planSubDate
-                            ).toLocaleDateString("ko-KR")}
+                            좋아요 날짜:{" "}
+                            {routine.likedDate
+                              ? new Date(routine.likedDate).toLocaleDateString(
+                                  "ko-KR"
+                                )
+                              : new Date(
+                                  routine.planInfos.planSubDate
+                                ).toLocaleDateString("ko-KR")}
                           </span>
-
-                          <span>조회수 {routine.planInfos.viewCount}</span>
-                          <span
-                            className={`${
-                              isShared ? "text-green-600" : "text-gray-400"
-                            }`}
-                          >
-                            {isShared ? "공개" : "비공개"}
-                          </span>
+                          <div className="flex items-center space-x-1">
+                            <Heart size={18} className="text-pink-500" />
+                            <span>
+                              좋아요 {routine.planInfos.likeCount || 0}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -624,4 +562,4 @@ const RoutineTabContent = () => {
   );
 };
 
-export default RoutineTabContent;
+export default LikedRoutineTabContent;

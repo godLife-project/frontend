@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import axiosInstance from "@/api/axiosInstance";
 import RoutineTabContent from "./myroutine";
+import LikedRoutineTabContent from "./myLike";
+
 export default function MyPageForm() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -418,28 +420,9 @@ export default function MyPageForm() {
           </div>
 
           {/* 루틴/좋아요/챌린지 컨텐츠 */}
-          {activeSideTab === "routines" && (
-            // <div className="p-5 text-center">
-            //   <CheckCircle size={32} className="mx-auto text-gray-400 mb-2" />
-            //   <p className="text-sm text-gray-500">
-            //     아직 등록된 루틴이 없습니다.
-            //   </p>
-            //   <button className="mt-3 text-xs px-3 py-1 bg-blue-600 text-white rounded-lg">
-            //     루틴 만들기
-            //   </button>
-            // </div>
-            <RoutineTabContent />
-          )}
+          {activeSideTab === "routines" && <RoutineTabContent />}
 
-          {activeSideTab === "likes" && (
-            <div className="p-5 text-center">
-              <Heart size={32} className="mx-auto text-gray-400 mb-2" />
-              <p className="text-sm text-gray-500">좋아요한 루틴이 없습니다.</p>
-              <button className="mt-3 text-xs px-3 py-1 bg-blue-600 text-white rounded-lg">
-                루틴 찾아보기
-              </button>
-            </div>
-          )}
+          {activeSideTab === "likes" && <LikedRoutineTabContent />}
 
           {activeSideTab === "challenges" && (
             <div className="p-5 text-center">
