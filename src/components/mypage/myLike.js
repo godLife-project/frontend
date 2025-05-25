@@ -10,8 +10,7 @@ import {
   ChevronDown,
   ChevronUp,
   Heart,
-  Square,
-  CheckSquare,
+  X,
   Lock,
   Unlock,
 } from "lucide-react";
@@ -23,9 +22,7 @@ const LikedRoutineTabContent = () => {
   const [error, setError] = useState(null);
   const [routineData, setRoutineData] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false); // 삭제 로딩 상태
-
-  // 선택된 루틴들의 planIdx 배열
-  const [selectedRoutines, setSelectedRoutines] = useState([]);
+  const [deletingItem, setDeletingItem] = useState(null); // 개별 삭제 중인 아이템
 
   // 필터 상태
   const [filters, setFilters] = useState({
@@ -87,16 +84,48 @@ const LikedRoutineTabContent = () => {
     }
   };
 
-  // 선택된 좋아요 루틴 삭제 API 호출
-  const deleteSelectedLikes = async () => {
-    if (selectedRoutines.length === 0) {
-      alert("삭제할 루틴을 선택해주세요.");
+  // 개별 좋아요 루틴 삭제 API 호출
+  const deleteSingleLike = async (planIdx) => {
+    if (!window.confirm("이 루틴의 좋아요를 취소하시겠습니까?")) {
+      return;
+    }
+
+    try {
+      setDeletingItem(planIdx);
+
+      const response = await axiosInstance.delete(
+        `/myPage/auth/delete/likes?planIndexes=${planIdx}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          timeout: 10000,
+        }
+      );
+
+      // 삭제 성공 시
+      alert("좋아요가 취소되었습니다.");
+      fetchLikedRoutines(); // 리스트 새로고침
+    } catch (err) {
+      console.error("좋아요 삭제 중 오류 발생:", err);
+      alert("좋아요 취소에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setDeletingItem(null);
+    }
+  };
+
+  // 전체 좋아요 취소 API 호출
+  const deleteAllLikes = async () => {
+    const allRoutines = routineData ? routineData.plans : [];
+
+    if (allRoutines.length === 0) {
+      alert("취소할 좋아요 루틴이 없습니다.");
       return;
     }
 
     if (
       !window.confirm(
-        `선택된 ${selectedRoutines.length}개의 좋아요를 취소하시겠습니까?`
+        `현재 페이지의 모든 좋아요(${allRoutines.length}개)를 취소하시겠습니까?`
       )
     ) {
       return;
@@ -105,8 +134,11 @@ const LikedRoutineTabContent = () => {
     try {
       setDeleteLoading(true);
 
-      // 쿼리 파라미터로 planIndexes 전송
-      const planIndexes = selectedRoutines.join(",");
+      // 현재 페이지의 모든 planIdx 수집
+      const planIndexes = allRoutines
+        .map((routine) => routine.planInfos.planIdx)
+        .join(",");
+
       const response = await axiosInstance.delete(
         `/myPage/auth/delete/likes?planIndexes=${planIndexes}`,
         {
@@ -118,52 +150,16 @@ const LikedRoutineTabContent = () => {
       );
 
       // 삭제 성공 시
-      alert("선택된 좋아요가 취소되었습니다.");
-      setSelectedRoutines([]); // 선택 초기화
+      alert("모든 좋아요가 취소되었습니다.");
       fetchLikedRoutines(); // 리스트 새로고침
     } catch (err) {
-      console.error("좋아요 삭제 중 오류 발생:", err);
+      console.error("전체 좋아요 삭제 중 오류 발생:", err);
       alert("좋아요 취소에 실패했습니다. 다시 시도해주세요.");
     } finally {
       setDeleteLoading(false);
     }
   };
 
-  // 개별 루틴 선택/해제
-  const toggleRoutineSelection = (planIdx) => {
-    setSelectedRoutines((prev) =>
-      prev.includes(planIdx)
-        ? prev.filter((id) => id !== planIdx)
-        : [...prev, planIdx]
-    );
-  };
-
-  // 전체 선택/해제
-  const toggleAllSelection = () => {
-    const allRoutines = routineData ? routineData.plans : [];
-    const currentPagePlanIds = allRoutines.map(
-      (routine) => routine.planInfos.planIdx
-    );
-
-    const allSelected = currentPagePlanIds.every((id) =>
-      selectedRoutines.includes(id)
-    );
-
-    if (allSelected) {
-      // 현재 페이지의 모든 항목 선택 해제
-      setSelectedRoutines((prev) =>
-        prev.filter((id) => !currentPagePlanIds.includes(id))
-      );
-    } else {
-      // 현재 페이지의 모든 항목 선택 추가
-      setSelectedRoutines((prev) => {
-        const newSelections = currentPagePlanIds.filter(
-          (id) => !prev.includes(id)
-        );
-        return [...prev, ...newSelections];
-      });
-    }
-  };
   useEffect(() => {
     if (accessToken) {
       fetchLikedRoutines();
@@ -177,7 +173,6 @@ const LikedRoutineTabContent = () => {
   const handleFilterChange = (newFilters) => {
     const updatedFilters = { ...filters, ...newFilters, page: 1 }; // 필터 변경시 첫 페이지로
     setFilters(updatedFilters);
-    setSelectedRoutines([]); // 필터 변경시 선택 초기화
     fetchLikedRoutines(updatedFilters);
   };
 
@@ -210,14 +205,6 @@ const LikedRoutineTabContent = () => {
   const allRoutines = routineData ? routineData.plans : [];
   const totalPages = routineData ? routineData.totalPages : 1;
   const currentPage = routineData ? routineData.currentPage : 1;
-
-  // 현재 페이지의 모든 항목이 선택되었는지 확인
-  const currentPagePlanIds = allRoutines.map(
-    (routine) => routine.planInfos.planIdx
-  );
-  const allCurrentPageSelected =
-    currentPagePlanIds.length > 0 &&
-    currentPagePlanIds.every((id) => selectedRoutines.includes(id));
 
   // 로딩 상태
   if (loading) {
@@ -403,70 +390,31 @@ const LikedRoutineTabContent = () => {
         </div>
       ) : (
         <>
-          {/* 선택 컨트롤 바 */}
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={toggleAllSelection}
-                className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-800"
-              >
-                {allCurrentPageSelected ? (
-                  <CheckSquare size={16} className="text-blue-600" />
-                ) : (
-                  <Square size={16} />
-                )}
-                <span>전체 선택</span>
-              </button>
-            </div>
-
-            {selectedRoutines.length > 0 && (
-              <button
-                onClick={deleteSelectedLikes}
-                disabled={deleteLoading}
-                className="flex items-center space-x-2 px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span>
-                  {deleteLoading
-                    ? "취소 중..."
-                    : `좋아요 취소 (${selectedRoutines.length})`}
-                </span>
-              </button>
-            )}
+          {/* 전체 좋아요 취소 버튼 */}
+          <div className="flex justify-end">
+            <button
+              onClick={deleteAllLikes}
+              disabled={deleteLoading}
+              className="flex items-center space-x-2 px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span>{deleteLoading ? "취소 중..." : "모두 삭제"}</span>
+            </button>
           </div>
 
           {/* 루틴 리스트 */}
           <div className="space-y-3">
             {allRoutines.map((routine) => {
               const planIdx = routine.planInfos.planIdx;
-              const isSelected = selectedRoutines.includes(planIdx);
+              const isDeleting = deletingItem === planIdx;
 
               return (
                 <div
                   key={planIdx}
-                  className={`bg-white border rounded-lg p-4 hover:shadow-sm transition-all ${
-                    isSelected
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200"
-                  }`}
+                  className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all"
                 >
-                  <div className="flex items-start space-x-3">
-                    {/* 체크박스 */}
-                    <button
-                      onClick={() => toggleRoutineSelection(planIdx)}
-                      className="mt-1 flex-shrink-0"
-                    >
-                      {isSelected ? (
-                        <CheckSquare size={18} className="text-blue-600" />
-                      ) : (
-                        <Square
-                          size={18}
-                          className="text-gray-400 hover:text-gray-600"
-                        />
-                      )}
-                    </button>
-
+                  <div className="flex items-center justify-between">
                     {/* 루틴 내용 */}
-                    <div className="flex-1">
+                    <div className="flex-1 pr-3">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-2 flex-1">
                           <span
@@ -507,6 +455,19 @@ const LikedRoutineTabContent = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* X 아이콘 (삭제 버튼) */}
+                    <button
+                      onClick={() => deleteSingleLike(planIdx)}
+                      disabled={isDeleting}
+                      className="flex-shrink-0 p-1   disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isDeleting ? (
+                        <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <X size={25} />
+                      )}
+                    </button>
                   </div>
                 </div>
               );
