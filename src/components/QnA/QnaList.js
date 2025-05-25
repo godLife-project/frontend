@@ -112,7 +112,7 @@ const QnAList = () => {
     fetchCategories();
   }, []);
 
-  // 상태값 매핑 (대문자 -> 소문자)
+  // 상태값 매핑 (대문자 -> 소문자) 필터링 파라미터로 넣을때는 소문자인데 목록 api 응답에서는 대문자야...
   const getApiStatusValue = (uiStatus) => {
     switch(uiStatus) {
       case "WAIT": return "wait";
@@ -351,41 +351,6 @@ const QnAList = () => {
   const handleSizeChange = (newSize) => {
     setSize(parseInt(newSize));
     setCurrentPage(1); // 페이지 크기 변경 시 첫 페이지로 이동
-  };
-
-  // 카테고리 이름 변환 함수 - 새로운 API 응답 구조에 맞게 수정
-  const getCategoryName = (categoryId) => {
-    if (categoryLoading || !categories.length) return "로딩 중...";
-    
-    // 모든 하위 카테고리를 탐색
-    for (const parent of categories) {
-      for (const child of parent.childCategory) {
-        if (child.categoryIdx === categoryId) {
-          return `${parent.parentName} > ${child.categoryName}`;
-        }
-      }
-    }
-    
-    return "알 수 없음";
-  };
-
-  // 카테고리 정보 가져오기 (부모 카테고리와 자식 카테고리 모두)
-  const getCategoryInfo = (categoryId) => {
-    if (categoryLoading || !categories.length) return { parent: "로딩 중...", child: "로딩 중..." };
-    
-    // 모든 하위 카테고리를 탐색
-    for (const parent of categories) {
-      for (const child of parent.childCategory) {
-        if (child.categoryIdx === categoryId) {
-          return { 
-            parent: parent.parentName,
-            child: child.categoryName
-          };
-        }
-      }
-    }
-    
-    return { parent: "분류 없음", child: "분류 없음" };
   };
 
   // 상태에 따른 배지 스타일 변환

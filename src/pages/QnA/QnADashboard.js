@@ -25,11 +25,9 @@ const QnaAdminDashboard = () => {
     const [qnaReplies, setQnaReplies] = useState([]);
     const [replyText, setReplyText] = useState("");
     const [connectionStatus, setConnectionStatus] = useState("연결 중...");
-    // 상태 초기값을 localStorage에서 읽어오거나, 없으면 true(자동할당)로 설정
-    const [autoAssignment, setAutoAssignment] = useState(() => {
-        const savedAutoAssignment = localStorage.getItem("qnaAutoAssignment");
-        return savedAutoAssignment !== null ? savedAutoAssignment === "true" : true;
-    });
+    // 상태 초기값을 null로 설정하여 서버에서 가져올 때까지 대기
+    const [autoAssignment, setAutoAssignment] = useState(null);
+    const [isStatusLoading, setIsStatusLoading] = useState(true); // 상태 로딩 여부
     const [statusMessage, setStatusMessage] = useState({
         text: "",
         type: "info",
@@ -63,6 +61,7 @@ const QnaAdminDashboard = () => {
     // 현재 상담원의 자동 할당 상태 조회
     useEffect(() => {
         const fetchAdminStatus = async () => {
+            setIsStatusLoading(true);
             try {
                 console.log("🔍 서버 상담원 상태 조회 시작...");
                 const response = await axiosInstance.get("/service/admin/get/status", {
@@ -78,12 +77,9 @@ const QnaAdminDashboard = () => {
                 // 응답에서 상태 추출
                 if (response.data && response.data.message) {
                     const isAutoAssignment = response.data.message === "활성화";
-                    const currentLocalState = localStorage.getItem("qnaAutoAssignment");
 
                     console.log(`🎯 서버 상태: ${response.data.message}`);
                     console.log(`🎯 서버에서 파싱된 자동할당 여부: ${isAutoAssignment}`);
-                    console.log(`🎯 현재 로컬 상태: ${currentLocalState}`);
-                    console.log(`🎯 현재 React 상태: ${autoAssignment}`);
 
                     setAutoAssignment(isAutoAssignment);
                     // 상태를 localStorage에 저장하여 새로고침 시에도 유지
@@ -91,19 +87,37 @@ const QnaAdminDashboard = () => {
                     console.log(`✅ 상태 업데이트 완료: ${isAutoAssignment ? '자동 할당(활성화)' : '수동 할당(비활성화)'}`);
                 } else {
                     console.warn("⚠️ 서버 응답에 message 필드가 없습니다:", response.data);
+                    // 기본값으로 수동할당 설정 (관리자가 아닐 수 있음)
+                    setAutoAssignment(false);
+                    localStorage.setItem("qnaAutoAssignment", "false");
                 }
             } catch (error) {
                 console.error("❌ 상담원 상태 조회 오류:", error);
                 console.error("❌ 오류 상세:", error.response?.data || error.message);
 
+                if (error.response?.status === 404) {
+                    console.warn("⚠️ 404 오류: 현재 사용자가 관리자로 등록되지 않았을 수 있습니다.");
+                    showStatusMessage("관리자 권한을 확인해주세요.", "warning");
+                    
+                    // 404인 경우 수동할당으로 설정
+                    setAutoAssignment(false);
+                    localStorage.setItem("qnaAutoAssignment", "false");
+                    return;
+                }
+
                 // API 호출 실패 시 localStorage에 저장된 값으로 폴백
                 const savedAutoAssignment = localStorage.getItem("qnaAutoAssignment");
                 if (savedAutoAssignment !== null) {
-                    setAutoAssignment(savedAutoAssignment === "true");
-                    console.log(`🔄 API 오류로 localStorage 값 사용: ${savedAutoAssignment === "true" ? '자동 할당' : '수동 할당'}`);
+                    const fallbackValue = savedAutoAssignment === "true";
+                    setAutoAssignment(fallbackValue);
+                    console.log(`🔄 API 오류로 localStorage 값 사용: ${fallbackValue ? '자동 할당' : '수동 할당'}`);
                 } else {
                     console.log("⚠️ localStorage에도 저장된 상태가 없습니다. 기본값(자동할당) 사용");
+                    setAutoAssignment(true);
+                    localStorage.setItem("qnaAutoAssignment", "true");
                 }
+            } finally {
+                setIsStatusLoading(false);
             }
         };
 
@@ -165,8 +179,38 @@ const QnaAdminDashboard = () => {
                     "heart-beat": "30000,30000"
                 },
                 (frame) => {
-                    console.log("✅ STOMP 연결 성공:", frame);
-                    setConnectionStatus("연결됨");
+                    // 🔍 연결 후 상담원 할당 상태 다시 확인
+                    console.log("🎯 WebSocket 연결 후 현재 할당 모드:", autoAssignment ? '자동' : '수동');
+                    
+                    // 자동할당 모드인 경우 서버에 상태 확인 및 알림
+                    if (autoAssignment) {
+                        console.log("📡 자동할당 모드이므로 서버에 상태 확인 요청");
+                        
+                        // 현재 상담원 상태를 서버에 다시 확인
+                        setTimeout(async () => {
+                            try {
+                                const statusResponse = await axiosInstance.get("/service/admin/get/status", {
+                                    headers: { Authorization: `Bearer ${accessToken}` }
+                                });
+                                console.log("🔍 WebSocket 연결 후 서버 상태 재확인:", statusResponse.data);
+                                
+                                const serverAutoStatus = statusResponse.data?.message === "활성화";
+                                console.log(`🎯 서버 자동할당 상태: ${serverAutoStatus ? '활성화' : '비활성화'}`);
+                                console.log(`🎯 클라이언트 자동할당 상태: ${autoAssignment ? '활성화' : '비활성화'}`);
+                                
+                                if (serverAutoStatus !== autoAssignment) {
+                                    console.warn("⚠️ 클라이언트-서버 상태 불일치 감지!");
+                                    showStatusMessage("서버와 상태 동기화 중...", "info");
+                                    
+                                    // 서버 상태로 동기화
+                                    setAutoAssignment(serverAutoStatus);
+                                    localStorage.setItem("qnaAutoAssignment", serverAutoStatus.toString());
+                                }
+                            } catch (error) {
+                                console.error("WebSocket 연결 후 상태 확인 오류:", error);
+                            }
+                        }, 2000);
+                    }
 
                     // 1. 대기중 문의 리스트 구독 추가
                     stompClient.subscribe('/sub/waitList', (message) => {
@@ -187,7 +231,21 @@ const QnaAdminDashboard = () => {
                                             newItem => !prevList.some(existing => existing.qnaIdx === newItem.qnaIdx)
                                         );
                                         if (newItems.length > 0) {
-                                            showStatusMessage(`${newItems.length}개의 대기중 문의가 추가되었습니다.`, 'info');
+                                            // 🚨 자동할당 모드인데 대기목록에 추가되는 경우 경고
+                                            if (autoAssignment) {
+                                                console.warn("🚨 자동할당 모드인데 대기목록에 문의가 추가되었습니다!");
+                                                console.warn("🚨 추가된 문의:", newItems);
+                                                console.warn("🚨 현재 할당된 문의 수:", assignedList.length);
+                                                console.warn("🚨 자동할당이 작동하지 않는 이유를 확인하세요:");
+                                                console.warn("   - 상담원 온라인 상태");
+                                                console.warn("   - 할당 가능한 문의 수 한도");
+                                                console.warn("   - 문의 카테고리와 상담원 전문분야 매칭");
+                                                console.warn("   - WebSocket 연결 상태");
+                                                
+                                                showStatusMessage(`⚠️ 자동할당 모드이지만 ${newItems.length}개 문의가 대기목록에 추가되었습니다. 설정을 확인해주세요.`, 'warning');
+                                            } else {
+                                                showStatusMessage(`${newItems.length}개의 대기중 문의가 추가되었습니다.`, 'info');
+                                            }
                                         }
                                         return [...prevList, ...newItems];
                                     }
@@ -233,6 +291,7 @@ const QnaAdminDashboard = () => {
                                             newItem => !prevList.some(existing => existing.qnaIdx === newItem.qnaIdx)
                                         );
                                         if (newItems.length > 0) {
+                                            console.log("✅ 자동할당 성공! 새로운 문의가 할당되었습니다:", newItems);
                                             showStatusMessage(`${newItems.length}개의 문의가 할당되었습니다.`, 'success');
                                         }
                                         return [...prevList, ...newItems];
@@ -368,7 +427,14 @@ const QnaAdminDashboard = () => {
 
     // 자동/수동 할당 모드 전환
     const handleToggleAutoAssignment = async () => {
+        // 상태가 아직 로딩 중이면 실행하지 않음
+        if (isStatusLoading || autoAssignment === null) {
+            showStatusMessage("상태를 불러오는 중입니다. 잠시 후 다시 시도해주세요.", "info");
+            return;
+        }
+
         console.log(`🔄 할당 모드 전환 시작 - 현재 상태: ${autoAssignment ? '자동' : '수동'}`);
+        console.log(`🎯 예상 전환 결과: ${autoAssignment ? '수동' : '자동'}`);
 
         try {
             const response = await axiosInstance.patch(
@@ -389,30 +455,58 @@ const QnaAdminDashboard = () => {
                 console.log(`🎯 전환 후 파싱된 자동할당 여부: ${newStatus}`);
                 console.log(`🎯 이전 상태와 비교: ${autoAssignment} → ${newStatus}`);
 
-                // 현재 autoAssignment와 다른 경우에만 상태 업데이트
-                if (newStatus !== autoAssignment) {
-                    setAutoAssignment(newStatus);
-                    // 로컬스토리지에 저장
-                    localStorage.setItem("qnaAutoAssignment", newStatus.toString());
-                }
+                // 🔧 강제 동기화: 서버 응답과 관계없이 현재 상태의 반대로 설정
+                const expectedNewStatus = !autoAssignment;
+                console.log(`🔧 강제 동기화: 서버 응답(${newStatus}) 무시, 예상값(${expectedNewStatus}) 사용`);
+
+                // 상태 업데이트
+                setAutoAssignment(expectedNewStatus);
+                localStorage.setItem("qnaAutoAssignment", expectedNewStatus.toString());
 
                 // 메시지 표시
-                const statusText = newStatus ? "자동 할당" : "수동 할당";
+                const statusText = expectedNewStatus ? "자동 할당" : "수동 할당";
                 showStatusMessage(`${statusText} 모드로 전환되었습니다.`, "success");
 
-                console.log(`✅ 할당 모드 변경 완료: ${newStatus ? '자동 할당(활성화)' : '수동 할당(비활성화)'}`);
+                console.log(`✅ 할당 모드 변경 완료: ${expectedNewStatus ? '자동 할당(활성화)' : '수동 할당(비활성화)'}`);
 
                 // 🎯 자동할당으로 전환된 경우 추가 확인
-                if (newStatus === true) {
+                if (expectedNewStatus === true) {
                     console.log("🚀 자동할당 모드로 전환됨 - 대기중인 문의 자동 할당 대기 중...");
                     console.log("📊 현재 대기중인 문의 수:", waitList.length);
                     console.log("📊 현재 할당된 문의 수:", assignedList.length);
                 }
 
+                // 🔄 서버 상태 재확인 (3초 후)
+                setTimeout(async () => {
+                    try {
+                        const statusResponse = await axiosInstance.get("/service/admin/get/status", {
+                            headers: { Authorization: `Bearer ${accessToken}` }
+                        });
+                        const serverStatus = statusResponse.data?.message === "활성화";
+                        console.log(`🔄 3초 후 서버 상태 재확인: ${serverStatus ? '자동' : '수동'}`);
+                        
+                        if (serverStatus !== expectedNewStatus) {
+                            console.warn(`⚠️ 서버 상태 불일치 감지! 클라이언트: ${expectedNewStatus}, 서버: ${serverStatus}`);
+                            // 필요시 서버 상태로 강제 동기화
+                            // setAutoAssignment(serverStatus);
+                            // localStorage.setItem("qnaAutoAssignment", serverStatus.toString());
+                        }
+                    } catch (error) {
+                        console.error("서버 상태 재확인 오류:", error);
+                    }
+                }, 3000);
+
             } else {
-                // 응답에 메시지가 없는 경우, 로그를 남기고 상태는 변경하지 않음
+                // 응답에 메시지가 없는 경우
                 console.warn("⚠️ 서버 응답에 상태 메시지가 없습니다:", response.data);
-                showStatusMessage("상태가 변경되었습니다.", "success");
+                
+                // 그래도 클라이언트에서 토글 처리
+                const expectedNewStatus = !autoAssignment;
+                setAutoAssignment(expectedNewStatus);
+                localStorage.setItem("qnaAutoAssignment", expectedNewStatus.toString());
+                
+                const statusText = expectedNewStatus ? "자동 할당" : "수동 할당";
+                showStatusMessage(`${statusText} 모드로 전환되었습니다.`, "success");
             }
         } catch (error) {
             console.error("❌ 상태 전환 오류:", error);
@@ -655,7 +749,7 @@ const QnaAdminDashboard = () => {
         // 완료 처리 API 호출
         const qnaIdx = selectedQna.qnaIdx;
 
-        axiosInstance.patch(`/qna/auth/complete/${qnaIdx}`, {}, {
+        axiosInstance.post(`/qna/auth/complete/${qnaIdx}`, {}, {
             headers: {
                 Authorization: `Bearer ${accessToken}`
             }
@@ -680,7 +774,29 @@ const QnaAdminDashboard = () => {
             })
             .catch(error => {
                 console.error("문의 완료 처리 오류:", error);
-                showStatusMessage("문의 완료 처리에 실패했습니다.", "error");
+                
+                if (error.response) {
+                    console.error("오류 응답:", error.response.status, error.response.data);
+                    
+                    if (error.response.status === 401) {
+                        showStatusMessage("인증이 만료되었습니다. 다시 로그인해주세요.", "error");
+                    } else if (error.response.status === 404) {
+                        showStatusMessage("해당 문의를 찾을 수 없습니다.", "error");
+                    } else if (error.response.status === 403) {
+                        showStatusMessage("완료 처리 권한이 없습니다.", "error");
+                    } else {
+                        showStatusMessage(
+                            error.response.data?.message || "문의 완료 처리에 실패했습니다.",
+                            "error"
+                        );
+                    }
+                } else if (error.request) {
+                    console.error("응답 없음:", error.request);
+                    showStatusMessage("서버에서 응답이 없습니다. 네트워크 연결을 확인해주세요.", "error");
+                } else {
+                    console.error("요청 오류:", error.message);
+                    showStatusMessage("요청 생성 중 오류가 발생했습니다.", "error");
+                }
             });
     };
 
@@ -768,15 +884,41 @@ const QnaAdminDashboard = () => {
                 </div>
 
                 <div className="flex items-center space-x-4">
-
-                    <div className="flex items-center space-x-2">
-                        <span className={`text-sm ${autoAssignment ? 'font-semibold' : ''}`}>자동 할당</span>
-                        <Switch
-                            checked={!autoAssignment} // 자동 할당이 true일 때 Switch는 OFF(false)
-                            onCheckedChange={handleToggleAutoAssignment}
-                            className="data-[state=checked]:bg-green-500"
-                        />
-                        <span className={`text-sm ${!autoAssignment ? 'font-semibold' : ''}`}>수동 할당</span>
+                    {/* 개선된 스위치 스타일 */}
+                    <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-2">
+                            {autoAssignment === null ? (
+                                // 로딩 중일 때
+                                <div className="px-3 py-1 rounded-md text-sm font-medium bg-gray-100 text-gray-500 animate-pulse">
+                                    상태 확인 중...
+                                </div>
+                            ) : (
+                                <>
+                                    <div className={`px-3 py-1 rounded-md text-sm font-medium ${
+                                        autoAssignment 
+                                            ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                                            : 'bg-gray-100 text-gray-500'
+                                    }`}>
+                                        자동 할당 {autoAssignment ? '🟢' : '⚪'}
+                                    </div>
+                                    
+                                    <Switch
+                                        checked={autoAssignment}
+                                        onCheckedChange={handleToggleAutoAssignment}
+                                        disabled={isStatusLoading || autoAssignment === null}
+                                        className="data-[state=checked]:bg-blue-500"
+                                    />
+                                    
+                                    <div className={`px-3 py-1 rounded-md text-sm font-medium ${
+                                        !autoAssignment 
+                                            ? 'bg-green-100 text-green-800 border border-green-300' 
+                                            : 'bg-gray-100 text-gray-500'
+                                    }`}>
+                                        수동 할당 {!autoAssignment ? '🟢' : '⚪'}
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
 
                     <Button

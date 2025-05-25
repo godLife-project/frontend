@@ -204,33 +204,70 @@ export const QnAAdminDetail = ({
                         </h3>
                     </div>
 
-                    // QnAAdminDetail 컴포넌트의 댓글 렌더링 부분 수정
                     {qnaReplies && qnaReplies.length > 0 ? (
                         <div className="space-y-4">
                             {qnaReplies.map((comment) => {
+                                // 콘솔에 댓글 데이터 출력하여 확인
+                                console.log('관리자 패널 댓글 데이터:', comment);
+                                console.log('👤 userNick:', comment.userNick);
+                                console.log('🏷️ nickTag:', comment.nickTag);
+                                
                                 // userNick + nickTag 조합으로 사용자명 생성
                                 const displayName = comment.userNick && comment.nickTag
                                     ? `${comment.userNick}${comment.nickTag}`
-                                    : comment.userNick || comment.nickTag || '상담원';
+                                    : comment.userNick || comment.nickTag || comment.userName || '상담원';
+
+                                console.log('✨ 최종 표시명:', displayName);
+
+                                // 관리자인지 사용자인지 구분 (필요시 백엔드에서 userType 필드 추가 가능)
+                                const isAdmin = comment.userType === 'ADMIN' || displayName.includes('상담원');
+                                const isCurrentUser = displayName === currentUser;
 
                                 return (
                                     <div
                                         key={comment.qnaReplyIdx}
-                                        className={`p-4 rounded-md ${displayName === currentUser
-                                                ? "bg-blue-50 border border-blue-200"
-                                                : "bg-muted/50"
-                                            }`}
+                                        className={`p-4 rounded-lg border ${
+                                            isCurrentUser
+                                                ? "bg-blue-50 border-blue-200"
+                                                : isAdmin 
+                                                    ? "bg-green-50 border-green-200" 
+                                                    : "bg-gray-50 border-gray-200"
+                                        }`}
                                     >
-                                        <div className="flex flex-wrap items-center justify-between mb-2">
-                                            <div className="font-medium">
-                                                {displayName}
+                                        <div className="flex flex-wrap items-center justify-between mb-3">
+                                            <div className="flex items-center space-x-2">
+                                                <Badge 
+                                                    variant={isAdmin ? "default" : "secondary"}
+                                                    className={`${
+                                                        isCurrentUser
+                                                            ? "bg-blue-100 text-blue-800 border-blue-300"
+                                                            : isAdmin 
+                                                                ? "bg-green-100 text-green-800 border-green-300" 
+                                                                : "bg-gray-100 text-gray-800 border-gray-300"
+                                                    }`}
+                                                >
+                                                    {isAdmin ? "🛡️ " : "👤 "}{displayName}
+                                                </Badge>
+                                                {isAdmin && (
+                                                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                                                        관리자
+                                                    </Badge>
+                                                )}
+                                                {isCurrentUser && (
+                                                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                                                        본인
+                                                    </Badge>
+                                                )}
                                             </div>
-                                            <div className="text-xs text-muted-foreground">
+                                            <div className="text-xs text-muted-foreground flex items-center">
+                                                <Clock className="h-3 w-3 mr-1" />
                                                 {formatDate(comment.createdAt)}
                                             </div>
                                         </div>
-                                        <div className="whitespace-pre-wrap text-sm">
-                                            {comment.content}
+                                        <div className="pl-1">
+                                            <div className="text-sm leading-relaxed whitespace-pre-wrap bg-white p-3 rounded border">
+                                                {comment.content}
+                                            </div>
                                         </div>
                                     </div>
                                 );
