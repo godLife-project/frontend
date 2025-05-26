@@ -21,15 +21,20 @@ const LikedRoutineTabContent = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [routineData, setRoutineData] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false); // 삭제 로딩 상태
-  const [deletingItem, setDeletingItem] = useState(null); // 개별 삭제 중인 아이템
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deletingItem, setDeletingItem] = useState(null);
 
-  // 필터 상태
+  // 카테고리 데이터 상태
+  const [targetCategories, setTargetCategories] = useState([]);
+  const [jobCategories, setJobCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+  // 필터 상태 - target과 job을 숫자로 관리
   const [filters, setFilters] = useState({
     page: 1,
     size: 3,
-    target: null,
-    job: null,
+    target: null, // 숫자 값
+    job: null, // 숫자 값
     order: "desc",
     search: "",
   });
@@ -43,6 +48,52 @@ const LikedRoutineTabContent = () => {
   // 토큰 가져오기
   const accessToken = localStorage.getItem("accessToken");
 
+  // 카테고리 데이터 가져오기
+  const fetchCategories = async () => {
+    try {
+      setCategoriesLoading(true);
+
+      const [targetResponse, jobResponse] = await Promise.all([
+        axiosInstance.get("/categories/target", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          timeout: 10000,
+        }),
+        axiosInstance.get("/categories/job", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          timeout: 10000,
+        }),
+      ]);
+
+      setTargetCategories(targetResponse.data || []);
+      setJobCategories(jobResponse.data || []);
+    } catch (err) {
+      console.error("카테고리 데이터를 불러오는 중 오류 발생:", err);
+      // 카테고리 로딩 실패해도 기본 동작은 유지
+      setTargetCategories([]);
+      setJobCategories([]);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
+  // 목표 카테고리 옵션 (API에서 가져온 데이터 사용)
+  const targetOptions = [
+    { value: "", label: "전체" },
+    ...targetCategories.map((category) => ({
+      value: category.idx,
+      label: category.name,
+    })),
+  ];
+
+  // 직업 카테고리 옵션 (API에서 가져온 데이터 사용)
+  const jobOptions = [
+    { value: "", label: "전체" },
+    ...jobCategories.map((category) => ({
+      value: category.idx,
+      label: category.name,
+    })),
+  ];
+
   // API 호출 함수
   const fetchLikedRoutines = async (params = filters) => {
     try {
@@ -54,11 +105,12 @@ const LikedRoutineTabContent = () => {
       queryParams.append("size", params.size);
       queryParams.append("order", params.order);
 
-      if (params.target) {
-        queryParams.append("target", params.target);
+      // target과 job은 숫자 값으로 전달
+      if (params.target !== null && params.target !== "") {
+        queryParams.append("target", params.target.toString());
       }
-      if (params.job) {
-        queryParams.append("job", params.job);
+      if (params.job !== null && params.job !== "") {
+        queryParams.append("job", params.job.toString());
       }
       if (params.search) {
         queryParams.append("search", params.search);
@@ -103,9 +155,8 @@ const LikedRoutineTabContent = () => {
         }
       );
 
-      // 삭제 성공 시
       alert("좋아요가 취소되었습니다.");
-      fetchLikedRoutines(); // 리스트 새로고침
+      fetchLikedRoutines();
     } catch (err) {
       console.error("좋아요 삭제 중 오류 발생:", err);
       alert("좋아요 취소에 실패했습니다. 다시 시도해주세요.");
@@ -134,7 +185,6 @@ const LikedRoutineTabContent = () => {
     try {
       setDeleteLoading(true);
 
-      // 현재 페이지의 모든 planIdx 수집
       const planIndexes = allRoutines
         .map((routine) => routine.planInfos.planIdx)
         .join(",");
@@ -149,9 +199,8 @@ const LikedRoutineTabContent = () => {
         }
       );
 
-      // 삭제 성공 시
       alert("모든 좋아요가 취소되었습니다.");
-      fetchLikedRoutines(); // 리스트 새로고침
+      fetchLikedRoutines();
     } catch (err) {
       console.error("전체 좋아요 삭제 중 오류 발생:", err);
       alert("좋아요 취소에 실패했습니다. 다시 시도해주세요.");
@@ -162,7 +211,8 @@ const LikedRoutineTabContent = () => {
 
   useEffect(() => {
     if (accessToken) {
-      fetchLikedRoutines();
+      // 카테고리 데이터와 루틴 데이터를 병렬로 가져오기
+      Promise.all([fetchCategories(), fetchLikedRoutines()]);
     } else {
       setError("로그인이 필요합니다.");
       setLoading(false);
@@ -171,7 +221,7 @@ const LikedRoutineTabContent = () => {
 
   // 필터 변경시 데이터 다시 로드
   const handleFilterChange = (newFilters) => {
-    const updatedFilters = { ...filters, ...newFilters, page: 1 }; // 필터 변경시 첫 페이지로
+    const updatedFilters = { ...filters, ...newFilters, page: 1 };
     setFilters(updatedFilters);
     fetchLikedRoutines(updatedFilters);
   };
@@ -194,6 +244,21 @@ const LikedRoutineTabContent = () => {
     handleFilterChange({ search: "" });
   };
 
+  // 필터 전체 초기화
+  const handleFiltersReset = () => {
+    setSearchInput("");
+    const resetFilters = {
+      page: 1,
+      size: 3,
+      target: null,
+      job: null,
+      order: "desc",
+      search: "",
+    };
+    setFilters(resetFilters);
+    fetchLikedRoutines(resetFilters);
+  };
+
   // Enter 키로 검색
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
@@ -201,12 +266,10 @@ const LikedRoutineTabContent = () => {
     }
   };
 
-  // API 데이터가 있으면 사용, 없으면 빈 배열
   const allRoutines = routineData ? routineData.plans : [];
   const totalPages = routineData ? routineData.totalPages : 1;
   const currentPage = routineData ? routineData.currentPage : 1;
 
-  // 로딩 상태
   if (loading) {
     return (
       <div className="p-5 text-center">
@@ -216,7 +279,6 @@ const LikedRoutineTabContent = () => {
     );
   }
 
-  // 에러 상태
   if (error) {
     return (
       <div className="p-5 text-center">
@@ -281,7 +343,7 @@ const LikedRoutineTabContent = () => {
         {showFilters && (
           <div className="bg-gray-50 p-4 rounded-lg space-y-3">
             <div className="grid grid-cols-2 gap-4">
-              {/* 목표 필터 (target) */}
+              {/* 목표 필터 (target) - API에서 가져온 데이터 사용 */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   목표 분야
@@ -290,22 +352,27 @@ const LikedRoutineTabContent = () => {
                   value={filters.target || ""}
                   onChange={(e) =>
                     handleFilterChange({
-                      target: e.target.value || null,
+                      target:
+                        e.target.value === "" ? null : parseInt(e.target.value),
                     })
                   }
                   className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                  disabled={categoriesLoading}
                 >
-                  <option value="">전체</option>
-                  <option value="health">건강</option>
-                  <option value="study">공부</option>
-                  <option value="hobby">취미</option>
-                  <option value="work">업무</option>
-                  <option value="exercise">운동</option>
-                  {/* 실제 목표 옵션은 API 응답에 따라 조정 */}
+                  {targetOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
+                {categoriesLoading && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    카테고리 로딩 중...
+                  </p>
+                )}
               </div>
 
-              {/* 직업 필터 (job) */}
+              {/* 직업 필터 (job) - API에서 가져온 데이터 사용 */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">
                   직업
@@ -314,18 +381,24 @@ const LikedRoutineTabContent = () => {
                   value={filters.job || ""}
                   onChange={(e) =>
                     handleFilterChange({
-                      job: e.target.value || null,
+                      job:
+                        e.target.value === "" ? null : parseInt(e.target.value),
                     })
                   }
                   className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                  disabled={categoriesLoading}
                 >
-                  <option value="">전체</option>
-                  <option value="student">학생</option>
-                  <option value="office">직장인</option>
-                  <option value="freelancer">프리랜서</option>
-                  <option value="entrepreneur">사업가</option>
-                  {/* 실제 직업 옵션은 API 응답에 따라 조정 */}
+                  {jobOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
+                {categoriesLoading && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    카테고리 로딩 중...
+                  </p>
+                )}
               </div>
             </div>
 
@@ -365,6 +438,16 @@ const LikedRoutineTabContent = () => {
                   <option value={10}>10개</option>
                 </select>
               </div>
+            </div>
+
+            {/* 필터 초기화 버튼 - 왼쪽 하단 */}
+            <div className="flex justify-start">
+              <button
+                onClick={handleFiltersReset}
+                className="px-3 py-1 text-xs bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                필터 초기화
+              </button>
             </div>
           </div>
         )}
@@ -413,6 +496,27 @@ const LikedRoutineTabContent = () => {
                   className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all"
                 >
                   <div className="flex items-center justify-between">
+                    {/* 활성/비활성 상태 표시 */}
+                    <div className="flex items-center pr-3">
+                      {routine.planInfos.isActive ? (
+                        <div className="flex items-center space-x-1">
+                          <span className="text-xs font-bold text-blue-500 pr-2 ">
+                            진행 중
+                          </span>
+                          <div className="border-l border-gray-300 h-12 pr-1" />
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-1">
+                          <div className="bg-gray-100 rounded-full w-12 h-12 flex items-center justify-center">
+                            <span className="text-xs text-gray-500 font-medium">
+                              준비 상태
+                            </span>
+                            <div className="border-l border-gray-300 h-12 pr-1" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     {/* 루틴 내용 */}
                     <div className="flex-1 pr-3">
                       <div className="flex items-center justify-between mb-3">
@@ -437,7 +541,7 @@ const LikedRoutineTabContent = () => {
                       <div className="mt-3 text-xs text-gray-500">
                         <div className="flex items-center space-x-5">
                           <span>
-                            좋아요 날짜:{" "}
+                            등록일:{" "}
                             {routine.likedDate
                               ? new Date(routine.likedDate).toLocaleDateString(
                                   "ko-KR"
@@ -460,7 +564,7 @@ const LikedRoutineTabContent = () => {
                     <button
                       onClick={() => deleteSingleLike(planIdx)}
                       disabled={isDeleting}
-                      className="flex-shrink-0 p-1   disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-shrink-0 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isDeleting ? (
                         <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
