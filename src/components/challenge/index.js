@@ -150,26 +150,21 @@ const ChallengeForm = () => {
 
       // 데이터 형식 변환
       const submitData = {
-        ...data,
-        challState: "PUBLISHED", // "0" 또는 "1" 대신 항상 "PUBLISHED" 사용
+        challTitle: data.challTitle,
+        challDescription: data.challDescription,
+        challCategoryIdx: parseInt(data.challCategoryIdx, 10),
         minParticipationTime: parseInt(data.minParticipationTime, 10),
         totalClearTime: parseInt(data.totalClearTime, 10),
         maxParticipants: parseInt(data.maxParticipants, 10),
-        duration: parseInt(data.duration, 10),
-        challCategoryIdx: parseInt(data.challCategoryIdx, 10),
-        // 날짜 형식 올바르게 지정
-        challStartTime:
-          challengeType === "0" && data.challStartTime
-            ? `${data.challStartTime}T10:00:00`
-            : null,
         userJoin: challengeType === "0" ? 0 : 1,
+        duration: parseInt(data.duration, 10),
       };
 
       console.log("제출할 챌린지 데이터:", submitData);
 
       // axiosInstance는 인터셉터를 통해 토큰이 자동으로 포함되어야 함
       const response = await axiosInstance.post(
-        "/challenges/admin/create",
+        "admin/challenges/create",
         submitData,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -236,13 +231,14 @@ const ChallengeForm = () => {
                             console.log("선택된 카테고리 ID:", e.target.value);
                           }}
                         >
+                          <option value="">카테고리를 선택해주세요</option>
                           {challengeCategories.map((category) => (
                             <option
                               key={
-                                category.challCategoryIdx ||
+                                category.challCateIdx ||
                                 `category-${category.challName}`
                               }
-                              value={String(category.challCategoryIdx)}
+                              value={String(category.challCateIdx)}
                             >
                               {category.challName}
                             </option>
