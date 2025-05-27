@@ -632,9 +632,6 @@ const ChallengeDetailForm = () => {
               </div>
 
               <div className="flex space-x-2 mt-4">
-                <Button type="submit" className="flex-1" disabled={verifying}>
-                  {verifying ? "인증 중..." : "인증 완료"}
-                </Button>
                 <Button
                   type="button"
                   variant="outline"
@@ -648,6 +645,13 @@ const ChallengeDetailForm = () => {
                   }}
                 >
                   초기화
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 bg-blue-600 text-white border-indigo-600 hover:bg-blue-700 active:bg-blue-800"
+                  disabled={verifying}
+                >
+                  {verifying ? "인증 중..." : "인증하기"}
                 </Button>
               </div>
             </form>
