@@ -24,11 +24,14 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Clock, Users, ArrowUpDown, Loader2 } from "lucide-react";
+import { MdOutlineMode, MdOutlineDelete } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
 import axiosInstance from "@/api/axiosInstance";
 
 const ChallengeListForm = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // localStorage에서 accessToken과 userIdx 가져오기
   const accessToken = localStorage.getItem("accessToken");
@@ -43,6 +46,7 @@ const ChallengeListForm = () => {
   const [error, setError] = useState(null);
   const [sortOrder, setSortOrder] = useState("earliest");
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleting, setDeleting] = useState(false);
   const itemsPerPage = 5; // 페이지당 보여줄 아이템 수
 
   // 챌린지 데이터 fetching
@@ -104,6 +108,57 @@ const ChallengeListForm = () => {
   const handleChallengeClick = (challIdx) => {
     // 상세 페이지로 이동
     navigate(`/challenge/detail/${challIdx}`);
+  };
+
+  // 챌린지 삭제 함수
+  const deleteChallenge = async (challIdx, event) => {
+    // 이벤트 전파 중지 (카드 클릭 이벤트와 충돌 방지)
+    event.stopPropagation();
+
+    if (!window.confirm("정말 이 챌린지를 삭제하시겠습니까?")) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+
+      await axiosInstance.patch(
+        "/admin/challenges/delete",
+        { challIdx: challIdx },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // 상태 업데이트: 삭제된 항목을 화면에서 제거
+      setChallenges((prevData) =>
+        prevData.filter((item) => item.challIdx !== challIdx)
+      );
+
+      toast({
+        title: "성공",
+        description: "챌린지가 성공적으로 삭제되었습니다.",
+      });
+    } catch (err) {
+      console.error("챌린지 삭제 실패:", err);
+      toast({
+        title: "오류",
+        description: "챌린지 삭제에 실패했습니다. 다시 시도해주세요.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // 수정 버튼 핸들러
+  const handleEditClick = (challIdx, event) => {
+    // 이벤트 전파 중지 (카드 클릭 이벤트와 충돌 방지)
+    event.stopPropagation();
+    navigate(`/challenge/modify/${challIdx}`);
   };
 
   // 날짜 포맷팅 함수
@@ -207,6 +262,34 @@ const ChallengeListForm = () => {
     }
   };
 
+  // 수정 버튼 컴포넌트 (관리자만)
+  const ModifyButton = ({ challIdx }) => {
+    if (roleStatus === true) {
+      return (
+        <MdOutlineMode
+          className="w-5 h-5 text-gray-600 hover:text-blue-600 cursor-pointer transition-colors"
+          onClick={(e) => handleEditClick(challIdx, e)}
+          title="수정하기"
+        />
+      );
+    }
+    return null;
+  };
+
+  // 삭제 버튼 컴포넌트 (관리자만)
+  const DeleteButton = ({ challIdx }) => {
+    if (roleStatus === true) {
+      return (
+        <MdOutlineDelete
+          className="w-5 h-5 text-gray-600 hover:text-red-600 cursor-pointer transition-colors"
+          onClick={(e) => deleteChallenge(challIdx, e)}
+          title="삭제하기"
+        />
+      );
+    }
+    return null;
+  };
+
   // 로딩 상태 렌더링
   if (loading) {
     return (
@@ -279,10 +362,14 @@ const ChallengeListForm = () => {
               >
                 <CardHeader>
                   <CardTitle className="flex justify-between items-center">
-                    {challenge.challTitle || "제목 없음"}
-                    {/* <Badge variant="secondary">
-                      {getCategoryName(challenge.challCategoryIdx)}
-                    </Badge> */}
+                    <span>{challenge.challTitle || "제목 없음"}</span>
+                    {/* 관리자 권한이 있을 때만 수정/삭제 버튼 표시 */}
+                    {roleStatus === true && (
+                      <div className="flex gap-2">
+                        <ModifyButton challIdx={challenge.challIdx} />
+                        <DeleteButton challIdx={challenge.challIdx} />
+                      </div>
+                    )}
                   </CardTitle>
                   <CardDescription>
                     {challenge.challDescription || "설명 없음"}
