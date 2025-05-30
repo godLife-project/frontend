@@ -280,9 +280,9 @@ const ChallengeListForm = () => {
                 <CardHeader>
                   <CardTitle className="flex justify-between items-center">
                     {challenge.challTitle || "제목 없음"}
-                    <Badge variant="secondary">
+                    {/* <Badge variant="secondary">
                       {getCategoryName(challenge.challCategoryIdx)}
-                    </Badge>
+                    </Badge> */}
                   </CardTitle>
                   <CardDescription>
                     {challenge.challDescription || "설명 없음"}

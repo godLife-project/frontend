@@ -203,7 +203,7 @@ const ChallengeModifyPage = () => {
 
       // 챌린지 수정 API 요청
       const response = await axiosInstance.patch(
-        `/challenges/admin/modify`,
+        `/admin/challenges/modify`,
         submitData,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -263,26 +263,33 @@ const ChallengeModifyPage = () => {
                 control={form.control}
                 name="challCategoryIdx"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="w-full">
+                    <FormLabel>카테고리</FormLabel>
                     <FormControl>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="선택" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white">
+                      <div className="relative">
+                        <select
+                          id="categorySelect"
+                          className="w-full rounded-md border border-gray-300 bg-white py-2 pl-3 pr-10 text-left shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          value={field.value}
+                          onChange={(e) => {
+                            field.onChange(e.target.value);
+                            console.log("선택된 카테고리 ID:", e.target.value);
+                          }}
+                        >
+                          <option value="">카테고리를 선택해주세요</option>
                           {challengeCategories.map((category) => (
-                            <SelectItem
-                              key={category.challCategoryIdx}
-                              value={String(category.challCategoryIdx)}
+                            <option
+                              key={
+                                category.challCateIdx ||
+                                `category-${category.challName}`
+                              }
+                              value={String(category.challCateIdx)}
                             >
                               {category.challName}
-                            </SelectItem>
+                            </option>
                           ))}
-                        </SelectContent>
-                      </Select>
+                        </select>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
