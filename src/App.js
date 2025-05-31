@@ -187,6 +187,8 @@ import MyPage from "./pages/MyPage/MyPage";
 import MyRoutineList from "./pages/Routine/MyRoutineList";
 import RoutineDetailPage from "./pages/Routine/Detail";
 import RoutineCreatePage from "./pages/Routine/Create";
+import RoutineDetailPage from "./pages/Routine/Detail";
+import RoutineCreatePage from "./pages/Routine/Create";
 import RoutineListPage from "./pages/Routine/List";
 
 // 채팅
@@ -290,6 +292,7 @@ function AppContent() {
           path="/routine/create"
           element={
             isAuthenticated ? (
+              <RoutineCreatePage />
               <RoutineCreatePage />
             ) : (
               <Navigate to="/user/login" replace />

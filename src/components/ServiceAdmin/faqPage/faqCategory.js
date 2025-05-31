@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { MdOutlineMode } from "react-icons/md";
 import { MdOutlineDelete } from "react-icons/md";
+import { IoSearchOutline } from "react-icons/io5";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function FAQPage() {
@@ -287,13 +288,17 @@ export default function FAQPage() {
   const WriteButtons = () => {
     if (roleStatus === true) {
       return (
-        <Button
-          className="ml-auto px-4 py-2 rounded text-sm"
+        <button
+          className={`px-6 py-3 rounded-md ${
+            writing
+              ? "bg-gray-400 text-white cursor-not-allowed"
+              : "bg-blue-500 text-white hover:bg-blue-600"
+          }`}
           onClick={() => navigate(`/faq/write`)}
           disabled={writing}
         >
-          {writing ? "작성 중..." : "작성하기"}
-        </Button>
+          {writing ? "작성 중..." : "FAQ 추가"}
+        </button>
       );
     }
     return null;
@@ -323,124 +328,134 @@ export default function FAQPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-extrabold tracking-tight mb-2">FAQ</h1>
-      <p className="text-muted-foreground mb-4">
-        자주 묻는 질문들을 확인하세요
-      </p>
-
-      <Input
-        placeholder="궁금한 내용을 검색해보세요"
-        className="mb-6"
-        value={search}
-        onChange={(e) => {
-          setSearch(e.target.value);
-          setPage(1);
-        }}
-      />
-
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex flex-wrap gap-2">
-          {categoryLoading ? (
-            <p className="text-sm text-gray-400">카테고리 로딩 중...</p>
-          ) : (
-            <>
-              {/* 카테고리 버튼들을 명확하게 표시 */}
-              {categories.map((cat) => (
-                <button
-                  key={cat.key}
-                  onClick={() => handleCategoryChange(cat.key)}
-                  className={`px-4 py-2 rounded text-sm border ${
-                    category === cat.key
-                      ? "bg-black text-white border-black"
-                      : "bg-transparent text-gray-700 border-gray-300"
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </>
-          )}
-        </div>
-
+    <div className="container mx-auto">
+      {/* 카테고리 탭 네비게이션 */}
+      <div className="flex mb-6 space-x-2">
+        {categoryLoading ? (
+          <p className="text-sm text-gray-400">카테고리 로딩 중...</p>
+        ) : (
+          <>
+            {categories.map((cat) => (
+              <button
+                key={cat.key}
+                onClick={() => handleCategoryChange(cat.key)}
+                className={`px-6 py-3 rounded-md ${
+                  category === cat.key
+                    ? "bg-blue-500 text-white"
+                    : "bg-gray-200"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </>
+        )}
+        <div className="flex-grow"></div>
         <WriteButtons />
       </div>
-      {loading ? (
-        <p className="text-center text-gray-400 py-12">로딩 중...</p>
-      ) : error ? (
-        <p className="text-center text-red-500 py-12">{error}</p>
-      ) : paginated.length === 0 ? (
-        <p className="text-center text-gray-400 py-12">검색 결과가 없습니다.</p>
-      ) : (
-        <div className="divide-y divide-gray-200">
-          {paginated.map((faq) => (
-            <div
-              key={faq.faqIdx}
-              className="py-4 cursor-pointer"
-              onClick={() => handleFaqClick(faq.faqIdx)}
-            >
-              <div className="flex justify-between items-center text-sm mb-1">
-                <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                  {getCategoryName(faq)}
-                </span>
-                <div className="flex gap-2">
-                  <ModifyButtons faqIdx={faq.faqIdx} />
-                  <DeleteButtons faqIdx={faq.faqIdx} />
-                </div>
-              </div>
-              <div className="font-semibold text-base flex justify-between items-center">
-                {faq.faqTitle}
-                <span className="text-gray-400 text-xl">
-                  {openId === faq.faqIdx ? "−" : "+"}
-                </span>
-              </div>
-              {openId === faq.faqIdx && (
-                <div className="text-sm text-gray-600 mt-3 pl-1">
-                  {detailLoading && !faqDetails[faq.faqIdx] ? (
-                    <p className="text-gray-400">답변을 불러오는 중...</p>
-                  ) : (
-                    <p>{getFaqAnswer(faq.faqIdx)}</p>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+
+      {/* 검색 바 */}
+      <div className="relative mb-6">
+        <div className="relative">
+          <IoSearchOutline className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="검색"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1); // 검색 시 페이지 초기화
+            }}
+            className="w-full pl-10 pr-4 py-3 bg-gray-50 border-0 rounded-lg text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+          />
+        </div>
+      </div>
+
+      {/* 로딩 및 에러 상태 */}
+      {loading && (
+        <div className="flex justify-center py-8">
+          <p className="text-gray-500">데이터를 불러오는 중...</p>
+        </div>
+      )}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <p>{error}</p>
         </div>
       )}
 
-      <div className="flex justify-end mt-6 mb-4">
-        <button
-          onClick={() => navigate("/inquiry")}
-          className="text-black text-sm font-medium"
-        >
-          더 궁금한 것이 있으신가요?{" "}
-          <span className="font-bold hover:text-black hover:underline">
-            1:1 문의
-          </span>
-        </button>
-      </div>
+      {/* FAQ 목록 */}
+      {!loading && !error && (
+        <>
+          {paginated.length === 0 ? (
+            <div className="flex justify-center py-8">
+              <p className="text-gray-500">검색 결과가 없습니다.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {" "}
+              {paginated.map((faq) => (
+                <div
+                  key={faq.faqIdx}
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => handleFaqClick(faq.faqIdx)}
+                >
+                  <div className="flex justify-between items-center text-sm mb-2">
+                    <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                      {getCategoryName(faq)}
+                    </span>
+                    <div
+                      className="flex gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ModifyButtons faqIdx={faq.faqIdx} />
+                      <DeleteButtons faqIdx={faq.faqIdx} />
+                    </div>
+                  </div>
+                  <div className="font-semibold text-base flex justify-between items-center">
+                    {faq.faqTitle}
+                    <span className="text-gray-400 text-xl">
+                      {openId === faq.faqIdx ? "−" : "+"}
+                    </span>
+                  </div>
+                  {openId === faq.faqIdx && (
+                    <div className="text-sm text-gray-600 mt-3 pl-1 pt-3 border-t border-gray-100">
+                      {" "}
+                      {/* 상단 구분선 추가 */}
+                      {detailLoading && !faqDetails[faq.faqIdx] ? (
+                        <p className="text-gray-400">답변을 불러오는 중...</p>
+                      ) : (
+                        <p>{getFaqAnswer(faq.faqIdx)}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
-      {/* 페이지네이션 */}
-      {!loading && !error && totalPages > 1 && (
-        <div className="flex justify-center items-center gap-4 mt-8 text-sm">
-          <button
-            onClick={() => setPage((p) => Math.max(p - 1, 1))}
-            disabled={page === 1}
-            className="px-3 py-1 border rounded disabled:opacity-30"
-          >
-            이전
-          </button>
-          <span>
-            {page} / {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-            disabled={page === totalPages}
-            className="px-3 py-1 border rounded disabled:opacity-30"
-          >
-            다음
-          </button>
-        </div>
+          {/* 페이지네이션은 그대로 유지 */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-4 mt-8 text-sm">
+              <button
+                onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                disabled={page === 1}
+                className="px-3 py-1 border rounded disabled:opacity-30"
+              >
+                이전
+              </button>
+              <span>
+                {page} / {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+                disabled={page === totalPages}
+                className="px-3 py-1 border rounded disabled:opacity-30"
+              >
+                다음
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

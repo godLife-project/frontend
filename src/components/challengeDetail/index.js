@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useForm } from "react-hook-form";
 import axiosInstance from "@/api/axiosInstance";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { GoPeople, GoClock, GoTrophy } from "react-icons/go";
-import { MdOutlineDateRange } from "react-icons/md";
+import { MdOutlineDateRange, MdVerified, MdCheck } from "react-icons/md";
 import { useToast } from "@/components/ui/use-toast";
 
 const ChallengeDetailForm = () => {
@@ -24,13 +27,83 @@ const ChallengeDetailForm = () => {
   const [error, setError] = useState(null);
   const [joining, setJoining] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [isParticipant, setIsParticipant] = useState(false);
+
+  // 인증 관련 상태
+  const [verificationRecords, setVerificationRecords] = useState([]);
+
+  // 인증 폼을 위한 React Hook Form
+  const verificationForm = useForm({
+    defaultValues: {
+      startTime: "",
+      endTime: "",
+      activity: "",
+    },
+  });
 
   // localStorage에서 accessToken과 userIdx 가져오기
   const accessToken = localStorage.getItem("accessToken");
   const userInfoString = localStorage.getItem("userInfo");
   const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
   const userIdx = userInfo?.userIdx || "21";
-  const roleStatus = userInfo?.roleStatus || false; // 기본값은 false
+  const roleStatus = userInfo?.roleStatus || false;
+
+  // 현재 사용자가 참여자인지 확인하는 함수
+  const checkUserParticipation = useCallback(
+    (challengeData) => {
+      if (!challengeData?.participants || !userIdx) {
+        setIsParticipant(false);
+        return;
+      }
+
+      const isUserParticipant = challengeData.participants.some(
+        (participant) => participant.userIdx === parseInt(userIdx)
+      );
+      setIsParticipant(isUserParticipant);
+    },
+    [userIdx]
+  );
+
+  // 챌린지 기간 내 날짜들 생성
+  const generateChallengeDates = useCallback(() => {
+    if (!challengeData) return [];
+
+    const startDate = new Date(challengeData.challStartTime);
+    const endDate = new Date(challengeData.challEndTime);
+    const dates = [];
+
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      dates.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return dates;
+  }, [challengeData]);
+
+  // 날짜가 인증 완료된 날인지 확인
+  const isDateVerified = useCallback(
+    (date) => {
+      const dateString = date.toISOString().split("T")[0];
+      return verificationRecords.some((record) => record.date === dateString);
+    },
+    [verificationRecords]
+  );
+
+  // 오늘 날짜인지 확인
+  const isToday = useCallback((date) => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  }, []);
+
+  // 인증 가능한 날짜인지 확인 (오늘 날짜만)
+  const canVerifyDate = useCallback(
+    (date) => {
+      return isToday(date) && !isDateVerified(date);
+    },
+    [isToday, isDateVerified]
+  );
 
   // 챌린지 상세정보
   useEffect(() => {
@@ -50,6 +123,7 @@ const ChallengeDetailForm = () => {
           }
         );
         setChallengeData(response.data);
+        checkUserParticipation(response.data);
       } catch (err) {
         console.error("API 호출 에러:", err);
         setError(err.message);
@@ -61,7 +135,33 @@ const ChallengeDetailForm = () => {
     if (challIdx) {
       fetchChallengeDetail();
     }
-  }, [challIdx, userJoin, duration]);
+  }, [challIdx, userJoin, duration, checkUserParticipation]);
+
+  // 인증 기록 불러오기
+  useEffect(() => {
+    const fetchVerificationRecords = async () => {
+      if (!isParticipant || !challIdx) return;
+
+      try {
+        // 실제 API 엔드포인트로 교체 필요
+        const response = await axiosInstance.get(
+          `/challenges/auth/records/${challIdx}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+        setVerificationRecords(response.data || []);
+      } catch (err) {
+        console.error("인증 기록 불러오기 실패:", err);
+        // API가 없는 경우 임시 데이터 (실제 구현시 제거)
+        setVerificationRecords([]);
+      }
+    };
+
+    fetchVerificationRecords();
+  }, [isParticipant, challIdx, accessToken]);
 
   // 카테고리명 불러오기
   useEffect(() => {
@@ -84,19 +184,40 @@ const ChallengeDetailForm = () => {
     }
   }, [challengeData]);
 
+  // 날짜 선택 핸들러 (달력에서 날짜 클릭 시 - 정보 표시용)
+  const handleDateSelect = (date) => {
+    const dateString = date.toLocaleDateString();
+    const isVerified = isDateVerified(date);
+    const isTodayDate = isToday(date);
+
+    if (isVerified) {
+      toast({
+        title: "인증 완료",
+        description: `${dateString}에 이미 인증을 완료했습니다.`,
+      });
+    } else if (!isTodayDate) {
+      toast({
+        title: "인증 불가",
+        description: "오늘 날짜만 인증할 수 있습니다.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "인증 가능",
+        description: `${dateString} 인증이 가능합니다. 아래 폼을 작성해주세요.`,
+      });
+    }
+  };
+
   // 챌린지 참여 함수
   const joinChallenge = async () => {
     try {
       setJoining(true);
 
-      // 현재 시간 가져오기
       const now = new Date();
-
-      // 챌린지 참가 시간 설정 (예: 현재로부터 30분 후)
       const startTime = now.toISOString();
       const endTime = new Date(now.getTime() + 30 * 60000).toISOString();
 
-      // API 요청 파라미터
       const params = {
         challIdx: challIdx,
         userIdx: userIdx,
@@ -124,7 +245,6 @@ const ChallengeDetailForm = () => {
         description: "챌린지 참여 신청이 완료되었습니다.",
       });
 
-      // 참여 후 상세 정보 다시 불러오기
       const updatedResponse = await axiosInstance.get(
         `/challenges/detail/${challIdx}`,
         {
@@ -135,6 +255,7 @@ const ChallengeDetailForm = () => {
         }
       );
       setChallengeData(updatedResponse.data);
+      checkUserParticipation(updatedResponse.data);
     } catch (err) {
       console.error("챌린지 참여 실패:", err);
       toast({
@@ -147,15 +268,114 @@ const ChallengeDetailForm = () => {
     }
   };
 
+  // 챌린지 인증 함수
+  const verifyChallenge = async (data) => {
+    try {
+      setVerifying(true);
+
+      // 오늘 날짜인지 확인
+      const today = new Date();
+      const todayString = today.toISOString().split("T")[0];
+
+      // 오늘 이미 인증했는지 확인
+      const isAlreadyVerified = verificationRecords.some(
+        (record) => record.date === todayString
+      );
+
+      if (isAlreadyVerified) {
+        toast({
+          title: "이미 인증 완료",
+          description: "오늘은 이미 인증을 완료했습니다.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!data.startTime || !data.endTime || !data.activity) {
+        toast({
+          title: "입력 오류",
+          description: "모든 필드를 입력해주세요.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // 시간 비교 (시:분 형식)
+      const [startHour, startMinute] = data.startTime.split(":").map(Number);
+      const [endHour, endMinute] = data.endTime.split(":").map(Number);
+
+      const startTotalMinutes = startHour * 60 + startMinute;
+      const endTotalMinutes = endHour * 60 + endMinute;
+
+      if (startTotalMinutes >= endTotalMinutes) {
+        toast({
+          title: "시간 오류",
+          description: "종료 시간이 시작 시간보다 늦어야 합니다.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // 오늘 날짜와 시간을 결합하여 ISO 문자열 생성
+      const startDateTime = `${todayString}T${data.startTime}:00`;
+      const endDateTime = `${todayString}T${data.endTime}:00`;
+
+      await axiosInstance.post(
+        `/challenges/auth/verify/${challIdx}`,
+        {
+          startTime: startDateTime,
+          endTime: endDateTime,
+          activity: data.activity,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // 인증 기록에 추가
+      const newRecord = {
+        date: todayString,
+        startTime: startDateTime,
+        endTime: endDateTime,
+        activity: data.activity,
+        verifiedAt: new Date().toISOString(),
+      };
+
+      setVerificationRecords((prev) => [...prev, newRecord]);
+
+      toast({
+        title: "성공",
+        description: "챌린지 인증이 완료되었습니다.",
+      });
+
+      verificationForm.reset({
+        startTime: "",
+        endTime: "",
+        activity: "",
+      });
+    } catch (err) {
+      console.error("챌린지 인증 실패:", err);
+      toast({
+        title: "오류",
+        description: "챌린지 인증에 실패했습니다. 다시 시도해주세요.",
+        variant: "destructive",
+      });
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   // 챌린지 삭제 함수
   const deleteChallenge = async () => {
     try {
       setDeleting(true);
 
-      // PATCH 요청으로 챌린지 삭제
       await axiosInstance.patch(
-        "/challenges/admin/delete",
-        { challIdx: challIdx }, // 요청 본문에 challIdx 포함
+        "/admin/challenges/delete",
+        { challIdx: challIdx },
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -169,7 +389,6 @@ const ChallengeDetailForm = () => {
         description: "챌린지가 성공적으로 삭제되었습니다.",
       });
 
-      // 삭제 후 챌린지 목록 페이지로 이동
       navigate("/challenge");
     } catch (err) {
       console.error("챌린지 삭제 실패:", err);
@@ -183,8 +402,110 @@ const ChallengeDetailForm = () => {
     }
   };
 
+  // 인증 폼 입력 핸들러들 제거 (React Hook Form 사용으로 불필요)
+
   if (loading) return <div>챌린지 정보를 불러오는 중입니다...</div>;
   if (error) return <div>에러 발생: {error}</div>;
+
+  // 달력 컴포넌트
+  const ChallengeCalendar = () => {
+    const challengeDates = generateChallengeDates();
+
+    if (!challengeDates.length) return null;
+
+    return (
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-4">챌린지 달력</h3>
+        <Card className="p-4">
+          <div className="grid grid-cols-7 gap-2 text-center">
+            {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
+              <div key={day} className="font-semibold text-gray-600 p-2">
+                {day}
+              </div>
+            ))}
+
+            {challengeDates.map((date, index) => {
+              const isVerified = isDateVerified(date);
+              const isTodayDate = isToday(date);
+              const canVerify = canVerifyDate(date);
+
+              return (
+                <div
+                  key={index}
+                  onClick={() => handleDateSelect(date)}
+                  className={`
+                    relative p-3 border rounded-lg cursor-pointer transition-all
+                    ${
+                      isTodayDate
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200"
+                    }
+                    ${isVerified ? "bg-green-100 border-green-500" : ""}
+                    ${
+                      canVerify
+                        ? "hover:bg-blue-100"
+                        : "cursor-not-allowed opacity-50"
+                    }
+                  `}
+                >
+                  <span className="text-sm">{date.getDate()}</span>
+                  {isVerified && (
+                    <div className="absolute top-1 right-1">
+                      <MdCheck className="text-green-600 text-lg" />
+                    </div>
+                  )}
+                  {isTodayDate && !isVerified && (
+                    <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-500 rounded-full"></div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-4 mt-4 text-sm text-gray-600">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <span>오늘</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <MdCheck className="text-green-600" />
+              <span>인증 완료</span>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  };
+
+  // 인증 기록 컴포넌트
+  const VerificationHistory = () => {
+    if (!verificationRecords.length) return null;
+
+    return (
+      <div className="mt-6">
+        <h3 className="text-lg font-semibold mb-4">인증 기록</h3>
+        <div className="space-y-3">
+          {verificationRecords.map((record, index) => (
+            <Card key={index} className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MdCheck className="text-green-600" />
+                  <span className="font-medium">
+                    {new Date(record.date).toLocaleDateString()}
+                  </span>
+                </div>
+                <span className="text-sm text-gray-500">
+                  {new Date(record.startTime).toLocaleTimeString()} -{" "}
+                  {new Date(record.endTime).toLocaleTimeString()}
+                </span>
+              </div>
+              <div className="mt-2 text-gray-700">{record.activity}</div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   // 수정/삭제 버튼 (관리자만)
   const ModifyDeleteButtons = () => {
@@ -213,12 +534,12 @@ const ChallengeDetailForm = () => {
         </div>
       );
     }
-    return;
+    return null;
   };
 
-  // 참여 버튼 (일반유저만)
+  // 참여 버튼 (일반유저만, 참여하지 않은 경우)
   const JoinButtons = () => {
-    if (roleStatus === false) {
+    if (roleStatus === false && !isParticipant) {
       return (
         <Button
           className="w-full mt-4"
@@ -229,7 +550,115 @@ const ChallengeDetailForm = () => {
         </Button>
       );
     }
-    return;
+    return null;
+  };
+
+  // 인증 폼
+  const VerificationForm = () => {
+    // 오늘 이미 인증했는지 확인
+    const today = new Date();
+    const todayString = today.toISOString().split("T")[0];
+    const isAlreadyVerified = verificationRecords.some(
+      (record) => record.date === todayString
+    );
+
+    if (isAlreadyVerified) {
+      return (
+        <Card className="mt-4">
+          <CardHeader>
+            <div className="text-center py-4">
+              <MdCheck className="mx-auto text-green-600 text-4xl mb-2" />
+              <h3 className="text-lg font-semibold text-green-600">
+                오늘 인증 완료!
+              </h3>
+              <p className="text-gray-600 mt-1">
+                {today.toLocaleDateString("ko-KR", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+                에 인증을 완료했습니다.
+              </p>
+            </div>
+          </CardHeader>
+        </Card>
+      );
+    }
+
+    return (
+      <Card className="mt-4">
+        <CardHeader>
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold flex items-center">
+              <MdVerified className="mr-2" />
+              {today.toLocaleDateString("ko-KR", {
+                month: "long",
+                day: "numeric",
+              })}{" "}
+              기록
+            </h3>
+
+            <form onSubmit={verificationForm.handleSubmit(verifyChallenge)}>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="startTime">시작 시간</Label>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    className="w-full"
+                    {...verificationForm.register("startTime")}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="endTime">종료 시간</Label>
+                  <Input
+                    id="endTime"
+                    type="time"
+                    className="w-full "
+                    {...verificationForm.register("endTime")}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="activity">활동 내용</Label>
+                  <Input
+                    id="activity"
+                    type="text"
+                    placeholder="예: 러닝 5km, 독서 2시간 등"
+                    {...verificationForm.register("activity")}
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-2 mt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    verificationForm.reset({
+                      startTime: "",
+                      endTime: "",
+                      activity: "",
+                    });
+                  }}
+                >
+                  초기화
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 bg-blue-600 text-white border-indigo-600 hover:bg-blue-700 active:bg-blue-800"
+                  disabled={verifying}
+                >
+                  {verifying ? "인증 중..." : "인증하기"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </CardHeader>
+      </Card>
+    );
   };
 
   return (
@@ -313,6 +742,15 @@ const ChallengeDetailForm = () => {
       {/* 버튼 렌더링 */}
       <ModifyDeleteButtons />
       <JoinButtons />
+
+      {/* 참여자만 볼 수 있는 섹션 */}
+      {roleStatus === false && isParticipant && (
+        <>
+          <ChallengeCalendar />
+          <VerificationForm />
+          <VerificationHistory />
+        </>
+      )}
     </div>
   );
 };
