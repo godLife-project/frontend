@@ -82,11 +82,58 @@ const QnAList = () => {
   // 임시 검색어 (Enter 키를 누르거나 검색 버튼을 클릭할 때까지 실제 검색에 반영되지 않음)
   const [tempSearch, setTempSearch] = useState(searchKeyword);
   
+  // 카테고리 관리
+  const [categories, setCategories] = useState([]);
+  const [categoryLoading, setCategoryLoading] = useState(true);
+  
   // 필터가 열려있는지 여부
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // 네비게이션
   const navigate = useNavigate();
+  
+  // 카테고리 데이터 가져오기
+  const fetchCategories = async () => {
+    setCategoryLoading(true);
+    try {
+      const response = await axiosInstance.get('/categories/qna');
+      if (response.status === 200) {
+        setCategories(response.data);
+      }
+    } catch (error) {
+      console.error('카테고리 로딩 오류:', error);
+    } finally {
+      setCategoryLoading(false);
+    }
+  };
+
+  // 컴포넌트 마운트 시 카테고리 데이터 가져오기
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  // 상태값 매핑 (대문자 -> 소문자) 필터링 파라미터로 넣을때는 소문자인데 목록 api 응답에서는 대문자야...
+  const getApiStatusValue = (uiStatus) => {
+    switch(uiStatus) {
+      case "WAIT": return "wait";
+      case "CONNECT": return "connect";
+      case "RESPONDING": return "responding";
+      case "COMPLETE": return "complete";
+      case "SLEEP": return "sleep";
+      default: return uiStatus.toLowerCase();
+    }
+  };
+
+  // 정렬값 매핑
+  const getApiSortValue = (uiSort) => {
+    switch(uiSort) {
+      case "createdAt": return "latest";
+      case "title": return "title";
+      case "category": return "category";
+      case "qnaStatus": return "status";
+      default: return uiSort;
+    }
+  };
 
   // URL 파라미터 업데이트 함수
   const updateURLParams = (params) => {
@@ -134,17 +181,16 @@ const QnAList = () => {
       // API 요청 파라미터 구성
       const params = new URLSearchParams();
       params.append("page", currentPage);
-      
-      if (size !== 10) {
-        params.append("size", size);
-      }
+      params.append("size", size);
       
       if (status !== "all") {
-        params.append("status", status);
+        // 소문자로 변환하여 API 요청에 맞춤
+        params.append("status", getApiStatusValue(status));
       }
       
+      // 정렬 필드 매핑
       if (sort) {
-        params.append("sort", sort);
+        params.append("sort", getApiSortValue(sort));
       }
       
       if (order) {
@@ -155,26 +201,91 @@ const QnAList = () => {
         params.append("search", searchKeyword);
       }
 
-      const response = await axiosInstance.get(`/list/auth/qna?${params.toString()}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-      });
-
-      if (response.status === 200) {
-        const data = response.data;
-        setQnaList(data.QnAs || []);
-        setTotalPages(data.totalPages || 0);
-        setTotalPosts(data.totalPosts || 0);
-        setCurrentPage(data.currentPage || 1);
-      } else {
-        setError("문의 목록을 불러오는 중 오류가 발생했습니다.");
+      console.log("요청 파라미터:", params.toString()); // 디버깅용
+      
+      try {
+        const response = await axiosInstance.get(`/list/auth/qna?${params.toString()}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+          validateStatus: function (status) {
+            // 200과 204 모두 성공으로 처리
+            return status === 200 || status === 204;
+          },
+        });
+        
+        console.log("서버 응답 상태:", response.status);
+        
+        if (response.status === 200) {
+          const data = response.data;
+          
+          // 데이터가 없는 경우 처리
+          if (!data || !data.QnAs || data.QnAs.length === 0) {
+            console.log("데이터 없음: 빈 배열로 설정");
+            setQnaList([]);
+            setTotalPages(0);
+            setTotalPosts(0);
+          } else {
+            console.log("데이터 있음:", data.QnAs.length, "개 항목");
+            setQnaList(data.QnAs);
+            setTotalPages(data.totalPages || 0);
+            setTotalPosts(data.totalPosts || 0);
+            setCurrentPage(data.currentPage || 1);
+          }
+        } else if (response.status === 204) {
+          // 204 No Content - 빈 배열로 처리
+          console.log("204 응답: 콘텐츠 없음");
+          setQnaList([]);
+          setTotalPages(0);
+          setTotalPosts(0);
+        } else {
+          console.error("비정상 응답 상태:", response.status);
+          setError("문의 목록을 불러오는 중 오류가 발생했습니다.");
+        }
+      } catch (requestError) {
+        console.error("요청 실패:", requestError);
+        throw requestError; // 상위 catch 블록으로 에러 전달
       }
     } catch (error) {
       console.error("QnA 목록 불러오기 오류:", error);
-      setError(
-        error.response?.data?.message || "문의 목록을 불러오는 중 오류가 발생했습니다."
-      );
+      console.error("오류 응답:", error.response);
+      console.error("오류 상태:", error.response?.status);
+      console.error("오류 메시지:", error.response?.data?.message);
+      
+      // 응답 에러 종류에 따른 처리
+      if (error.response) {
+        // 서버가 응답을 반환한 경우
+        if (error.response.status === 404) {
+          console.log("404 오류: 데이터 없음");
+          setQnaList([]);
+          setTotalPages(0);
+          setTotalPosts(0);
+        } else if (error.response.status === 500) {
+          // 서버 내부 오류
+          console.error("서버 내부 오류");
+          if (status !== "all") {
+            // 필터 적용한 상태에서 오류 발생 시 빈 결과로 처리
+            console.log("필터링 결과 없음 처리");
+            setQnaList([]);
+            setTotalPages(0);
+            setTotalPosts(0);
+          } else {
+            setError("서버 내부 오류가 발생했습니다. 나중에 다시 시도해주세요.");
+          }
+        } else {
+          setError(
+            error.response?.data?.message || "문의 목록을 불러오는 중 오류가 발생했습니다."
+          );
+        }
+      } else if (error.request) {
+        // 요청은 전송되었지만 응답을 받지 못한 경우
+        console.error("응답 없음");
+        setError("서버로부터 응답을 받지 못했습니다. 네트워크 연결을 확인해주세요.");
+      } else {
+        // 요청 설정 중 오류 발생
+        console.error("요청 설정 오류");
+        setError("요청 설정 중 오류가 발생했습니다.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -242,32 +353,19 @@ const QnAList = () => {
     setCurrentPage(1); // 페이지 크기 변경 시 첫 페이지로 이동
   };
 
-  // 카테고리 이름 변환 함수
-  const getCategoryName = (categoryId) => {
-    const categories = {
-      1: "계정 관련",
-      2: "결제 관련",
-      3: "서비스 이용",
-      4: "기능 제안",
-      5: "오류 신고",
-      6: "기타",
-    };
-    return categories[categoryId] || "기타";
-  };
-
   // 상태에 따른 배지 스타일 변환
   const getStatusBadge = (status) => {
     switch (status) {
-      case "WAITING":
-        return <Badge variant="outline" className="bg-yellow-100">답변 대기중</Badge>;
-      case "ANSWERED":
-        return <Badge variant="outline" className="bg-green-100">답변 완료</Badge>;
+      case "WAIT":
+        return <Badge variant="outline" className="bg-yellow-100">대기중</Badge>;
+      case "CONNECT":
+        return <Badge variant="outline" className="bg-blue-100">연결됨</Badge>;
       case "RESPONDING":
-        return <Badge variant="outline" className="bg-blue-100">답변 진행중</Badge>;
-      case "RELOAD":
-        return <Badge variant="outline" className="bg-purple-100">재확인 중</Badge>;
-      case "CLOSED":
-        return <Badge variant="outline" className="bg-gray-100">종료됨</Badge>;
+        return <Badge variant="outline" className="bg-purple-100">응대중</Badge>;
+      case "COMPLETE":
+        return <Badge variant="outline" className="bg-green-100">완료됨</Badge>;
+      case "SLEEP":
+        return <Badge variant="outline" className="bg-gray-100">휴면중</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -461,11 +559,11 @@ const QnAList = () => {
                       </SelectTrigger>
                       <SelectContent className="bg-white">
                         <SelectItem value="all">모든 상태</SelectItem>
-                        <SelectItem value="WAITING">답변 대기중</SelectItem>
-                        <SelectItem value="RESPONDING">답변 진행중</SelectItem>
-                        <SelectItem value="ANSWERED">답변 완료</SelectItem>
-                        <SelectItem value="RELOAD">재확인 중</SelectItem>
-                        <SelectItem value="CLOSED">종료됨</SelectItem>
+                        <SelectItem value="WAIT">대기중</SelectItem>
+                        <SelectItem value="CONNECT">연결됨</SelectItem>
+                        <SelectItem value="RESPONDING">응대중</SelectItem>
+                        <SelectItem value="COMPLETE">완료됨</SelectItem>
+                        <SelectItem value="SLEEP">휴면중</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -544,11 +642,11 @@ const QnAList = () => {
             <div className="flex flex-wrap gap-2 py-2">
               {status !== "all" && (
                 <Badge variant="outline" className="flex items-center gap-1 bg-blue-50">
-                  상태: {status === "WAITING" ? "답변 대기중" : 
-                         status === "RESPONDING" ? "답변 진행중" :
-                         status === "ANSWERED" ? "답변 완료" :
-                         status === "RELOAD" ? "재확인 중" :
-                         status === "CLOSED" ? "종료됨" : status}
+                  상태: {status === "WAIT" ? "대기중" : 
+                         status === "CONNECT" ? "연결됨" :
+                         status === "RESPONDING" ? "응대중" :
+                         status === "COMPLETE" ? "완료됨" :
+                         status === "SLEEP" ? "휴면중" : status}
                   <X 
                     className="h-3 w-3 ml-1 cursor-pointer" 
                     onClick={() => handleStatusChange("all")}
@@ -619,14 +717,22 @@ const QnAList = () => {
           )}
 
           {/* 로딩 상태 */}
-          {isLoading ? (
+          {isLoading || categoryLoading ? (
             <div className="flex justify-center items-center py-8">
               <RefreshCw className="h-8 w-8 animate-spin opacity-70" />
             </div>
           ) : qnaList.length === 0 ? (
             <div className="text-center py-12 border rounded-md">
               <p className="text-muted-foreground">
-                {searchKeyword || status !== "all" ? "조건에 맞는 문의가 없습니다." : "등록된 문의가 없습니다."}
+                {status !== "all" 
+                  ? `"${status === "WAIT" ? "대기중" : 
+                       status === "CONNECT" ? "연결됨" :
+                       status === "RESPONDING" ? "응대중" :
+                       status === "COMPLETE" ? "완료됨" :
+                       status === "SLEEP" ? "휴면중" : status}" 상태의 문의가 없습니다.` 
+                  : searchKeyword 
+                    ? `"${searchKeyword}" 검색 결과가 없습니다.`
+                    : "등록된 문의가 없습니다."}
               </p>
               <Button 
                 onClick={() => navigate("/qna/create")} 
@@ -654,7 +760,7 @@ const QnAList = () => {
                       제목 {renderSortIcon("title")}
                     </TableHead>
                     <TableHead 
-                      className="w-24 text-center cursor-pointer"
+                      className="w-36 text-center cursor-pointer"
                       onClick={() => handleSortChange("category")}
                     >
                       카테고리 {renderSortIcon("category")}
@@ -690,7 +796,38 @@ const QnAList = () => {
                         )}
                       </TableCell>
                       <TableCell className="text-center text-sm">
-                        {getCategoryName(qna.category)}
+                        {!categoryLoading && categories.length > 0 ? (
+                          <div>
+                            <div className="text-xs text-gray-500">
+                              {(() => {
+                                // 부모 카테고리 찾기
+                                for (const parent of categories) {
+                                  for (const child of parent.childCategory) {
+                                    if (child.categoryIdx === qna.category) {
+                                      return parent.parentName;
+                                    }
+                                  }
+                                }
+                                return "분류 없음";
+                              })()}
+                            </div>
+                            <div className="font-medium mt-1">
+                              {(() => {
+                                // 자식 카테고리 찾기
+                                for (const parent of categories) {
+                                  for (const child of parent.childCategory) {
+                                    if (child.categoryIdx === qna.category) {
+                                      return child.categoryName;
+                                    }
+                                  }
+                                }
+                                return "분류 없음";
+                              })()}
+                            </div>
+                          </div>
+                        ) : (
+                          "로딩 중..."
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         {getStatusBadge(qna.qnaStatus)}

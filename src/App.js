@@ -71,7 +71,7 @@ import FindPassword from "./pages/Auth/FindPassword";
 import FindId from "./pages/Auth/FindId";
 import QnaAdminDashboard from "./pages/QnA/QnADashboard";
 import QnACreate from "./pages/QnA/QnACreate";
-import QnAList from "./components/QnA/QnAList";
+import QnAList from "./components/QnA/QnaList";
 import QnADetail from "./components/QnA/QnaDetail";
 import QnAEdit from "./components/QnA/QnAEdit";
 import ChatRoom from "./pages/QnA/QnaSubscriber";
@@ -115,7 +115,6 @@ function AppContent() {
         <Route path="/qna/edit/:qnaIdx" element={<QnAEdit />} />
         <Route path="/qna/detail/:qnaIdx" element={<QnADetail />} />
         <Route path="/qna/list" element={<QnAList />} />
-        <Route path="/qna/create" element={<QnACreate />} />
         <Route path="/qna/create" element={<QnACreate />} />
         <Route path="/qna" element={<QnaAdminDashboard />} />
         <Route path="/qna2" element={<ChatRoom />} />
