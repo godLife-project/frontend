@@ -1,42 +1,52 @@
-const { createProxyMiddleware } = require('http-proxy-middleware');
+const { createProxyMiddleware } = require("http-proxy-middleware");
+
+// Ngrok 서버 주소를 상수로 관리
+const NGROK_SERVER = "https://6f63-182-229-89-82.ngrok-free.app/";
 
 module.exports = function (app) {
   // 일반 HTTP 요청 프록시
   app.use(
-    '/api',
+    "/axios",
     createProxyMiddleware({
-      target: 'https://0ef8-182-229-89-82.ngrok-free.app/api',
+      target: NGROK_SERVER,
       changeOrigin: true,
       secure: true,
       onProxyReq: (proxyReq, req) => {
-        console.log('Proxying request to:', proxyReq.getHeader('host'));
-        proxyReq.setHeader('X-Special-Proxy-Header', 'my-proxy');
+        console.log("Proxying request to:", req.method, req.path);
+        proxyReq.setHeader("X-Special-Proxy-Header", "my-proxy");
       },
       onProxyRes: (proxyRes, req, res) => {
-        console.log('Proxy response received:', proxyRes.statusCode);
-        proxyRes.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000';
-        proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
+        console.log("Proxy response received:", proxyRes.statusCode, req.path);
+
+        // CORS 헤더
+        res.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+        res.setHeader("Access-Control-Allow-Credentials", "true");
+        res.setHeader(
+          "Access-Control-Allow-Headers",
+          "Content-Type, Authorization"
+        );
       },
-      logLevel: 'debug', // 디버그 로그 활성화
+      logLevel: "debug", // 디버그 로그 활성화
     })
   );
 
-  // 웹소켓 요청 프록시
-  app.use(
-    '/ws-stomp',
-    createProxyMiddleware({
-      target: 'https://0ef8-182-229-89-82.ngrok-free.app/', // Spring 서버 주소
-      changeOrigin: true,
-      ws: true, // 웹소켓 지원 활성화
-      secure: false, // HTTPS를 사용하지 않을 경우 false
-      onProxyReq: (proxyReq, req) => {
-        proxyReq.setHeader('X-Special-Proxy-Header', 'websocket-proxy');
-      },
-      onProxyRes: (proxyRes, req, res) => {
-        proxyRes.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000';
-        proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
-      },
-      logLevel: 'debug', // 디버그 로그를 활성화하여 문제를 파악할 수 있음
-    })
-  );
+  // 웹소켓 요청 프록시 - 두 경로 모두 처리
+  const wsProxyConfig = {
+    target: NGROK_SERVER,
+    changeOrigin: true,
+    ws: true,
+    secure: true,
+    logLevel: "debug",
+    onProxyReq: (proxyReq, req) => {
+      console.log("WebSocket proxy request:", req.path);
+      proxyReq.setHeader("X-Special-Proxy-Header", "websocket-proxy");
+    },
+    onProxyRes: (proxyRes, req, res) => {
+      console.log("WebSocket proxy response:", proxyRes.statusCode);
+      // WebSocket의 경우 여기서 헤더를 수정하지 마세요
+    },
+  };
+
+  // 두 WebSocket 경로 모두 처리
+  app.use("/ws-stomp", createProxyMiddleware(wsProxyConfig));
 };
