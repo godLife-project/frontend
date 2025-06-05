@@ -24,17 +24,17 @@ const CompSystem = () => {
   const getApiPath = () => {
     switch (activeTab) {
       case "목표":
-        return "/admin/compContent/targetCategory";
+        return "/categories/target";
       case "직업":
-        return "/admin/compContent/jobCategory";
+        return "/categories/job";
       case "아이콘":
-        return "/admin/compSystem/icon";
+        return "/categories/admin/icon";
       default:
-        return "/admin/component/targetCategory";
+        return "/categories/target";
     }
   };
 
-  // 중요: 아이콘 데이터 가져오기 함수
+  // 수정된: 아이콘 데이터 가져오기 함수
   const fetchIconData = async () => {
     try {
       // 이미 데이터가 있으면 다시 불러오지 않음
@@ -42,22 +42,46 @@ const CompSystem = () => {
 
       console.log("아이콘 데이터 가져오기 요청...");
       const accessToken = localStorage.getItem("accessToken");
-      const response = await axiosInstance.get("/admin/compSystem/icon", {
+      const response = await axiosInstance.get("/categories/admin/icon", {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
+      // 디버깅을 위해 전체 응답 구조 로깅
+      console.log("아이콘 API 응답 전체:", response.data);
+      console.log("아이콘 API 응답 키들:", Object.keys(response.data || {}));
+
+      // 여러 가능한 경로 확인
+      let iconDataArray = null;
+
       if (response?.data?.ICON && Array.isArray(response.data.ICON)) {
-        console.log("아이콘 데이터 로드 완료:", response.data.ICON.length);
-        setIconData(response.data.ICON);
+        iconDataArray = response.data.ICON;
+      } else if (response?.data?.icons && Array.isArray(response.data.icons)) {
+        iconDataArray = response.data.icons;
+      } else if (response?.data?.data && Array.isArray(response.data.data)) {
+        iconDataArray = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        iconDataArray = response.data;
+      }
+
+      if (iconDataArray) {
+        console.log(
+          "아이콘 데이터 로드 완료:",
+          iconDataArray.length,
+          "개 항목"
+        );
+        setIconData(iconDataArray);
       } else {
-        console.error("예상치 못한 아이콘 데이터 형식:", response.data);
+        console.error(
+          "아이콘 데이터를 찾을 수 없습니다. 응답 구조:",
+          response.data
+        );
       }
     } catch (err) {
       console.error("아이콘 데이터 로드 실패:", err);
     }
   };
 
-  // 핵심: API에서 데이터 가져오기
+  // 수정된: API에서 데이터 가져오기
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
@@ -70,26 +94,85 @@ const CompSystem = () => {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
+      // 디버깅을 위해 전체 응답 구조 로깅
+      console.log(`${activeTab} API 응답 전체:`, response.data);
+      console.log(
+        `${activeTab} API 응답 키들:`,
+        Object.keys(response.data || {})
+      );
+
       if (response?.data) {
         // 아이콘 탭인 경우
         if (activeTab === "아이콘") {
+          // 여러 가능한 경로 확인
+          let iconDataArray = null;
+
           if (response.data.ICON && Array.isArray(response.data.ICON)) {
-            setItemData(response.data.ICON);
-            setIconData(response.data.ICON); // 아이콘 데이터도 업데이트
+            iconDataArray = response.data.ICON;
+          } else if (
+            response.data.icons &&
+            Array.isArray(response.data.icons)
+          ) {
+            iconDataArray = response.data.icons;
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            iconDataArray = response.data.data;
+          } else if (Array.isArray(response.data)) {
+            iconDataArray = response.data;
+          }
+
+          if (iconDataArray) {
+            console.log(
+              `${activeTab} 데이터 로드 성공:`,
+              iconDataArray.length,
+              "개 항목"
+            );
+            setItemData(iconDataArray);
+            setIconData(iconDataArray); // 아이콘 데이터도 업데이트
           } else {
+            console.error(
+              "아이콘 데이터를 찾을 수 없습니다. 응답 구조:",
+              response.data
+            );
             setItemData([]);
             setError("아이콘 데이터 형식이 올바르지 않습니다");
           }
         }
         // 목표/직업 탭인 경우
-        else if (
-          response.data.categories &&
-          Array.isArray(response.data.categories)
-        ) {
-          setItemData(response.data.categories);
-        } else {
-          setItemData([]);
-          setError("데이터 형식이 올바르지 않습니다");
+        else {
+          // 여러 가능한 경로 확인
+          let categoryData = null;
+
+          if (
+            response.data.categories &&
+            Array.isArray(response.data.categories)
+          ) {
+            categoryData = response.data.categories;
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            categoryData = response.data.data;
+          } else if (
+            response.data.items &&
+            Array.isArray(response.data.items)
+          ) {
+            categoryData = response.data.items;
+          } else if (Array.isArray(response.data)) {
+            categoryData = response.data;
+          }
+
+          if (categoryData) {
+            console.log(
+              `${activeTab} 데이터 로드 성공:`,
+              categoryData.length,
+              "개 항목"
+            );
+            setItemData(categoryData);
+          } else {
+            console.error(
+              `${activeTab} 데이터를 찾을 수 없습니다. 응답 구조:`,
+              response.data
+            );
+            setItemData([]);
+            setError("데이터 형식이 올바르지 않습니다");
+          }
         }
       } else {
         setItemData([]);

@@ -1,6 +1,7 @@
 import React from "react";
 import { MdOutlineMode } from "react-icons/md";
 import { MdOutlineDelete } from "react-icons/md";
+import { renderIcon } from "@/components/common/badge-selector/icon-utils";
 
 const ItemTable = ({
   items,
@@ -72,7 +73,14 @@ const ItemTable = ({
         return (
           <tr key={item.idx || index} className="border-b hover:bg-gray-50">
             <td className="px-6 py-4">{item.iconKey}</td>
-            <td className="px-6 py-4">{item.icon || "-"}</td>
+            <td className="px-6 py-4">
+              <div className="flex items-center">
+                {/* 실제 아이콘 표시 */}
+                <div className="mr-3">
+                  {renderIcon(item.iconKey, 20, "", false, item.color)}
+                </div>
+              </div>
+            </td>
             <td className="px-6 py-4">
               <div className="flex items-center">
                 <div
@@ -108,10 +116,14 @@ const ItemTable = ({
         // API 응답에서 가져온 icon 값 또는 iconItems에서 찾은 icon 값 사용
         const iconName = item.icon || (iconInfo ? iconInfo.icon : "-");
 
+        // 아이콘 색상 결정 (iconInfo 우선, 없으면 item.color, 그것도 없으면 기본값)
+        const iconColor = iconInfo ? iconInfo.color : item.color || "#3B82F6";
+
         console.log(`Row ${index} icon data:`, {
           itemIcon: item.icon,
           iconInfoIcon: iconInfo ? iconInfo.icon : null,
           displayedIcon: iconName,
+          iconColor: iconColor,
         });
 
         return (
@@ -119,7 +131,15 @@ const ItemTable = ({
             <td className="px-6 py-4">{item.idx}</td>
             <td className="px-6 py-4">{item.name}</td>
             <td className="px-6 py-4">{item.iconKey}</td>
-            <td className="px-6 py-4">{iconName}</td>
+            <td className="px-6 py-4">
+              <div className="flex items-center">
+                {/* 실제 아이콘 표시 */}
+                <div className="mr-3">
+                  {renderIcon(item.iconKey, 20, "", false, iconColor)}
+                </div>
+                <span>{iconName}</span>
+              </div>
+            </td>
             <td className="px-6 py-4">
               <div className="flex items-center">
                 <div

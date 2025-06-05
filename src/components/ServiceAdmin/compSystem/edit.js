@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { renderIcon } from "@/components/common/badge-selector/icon-utils";
 
 const EditItemModal = ({
   isOpen,
@@ -12,6 +13,7 @@ const EditItemModal = ({
     name: "",
     iconKey: "",
     originalIconKey: "",
+    color: "", // 색상 필드 추가
   });
 
   // 디버깅용: iconData 확인
@@ -27,12 +29,14 @@ const EditItemModal = ({
         setFormData({
           iconKey: item.iconKey || "", // 변경할 새 아이콘키 (사용자 입력용)
           originalIconKey: item.iconKey || "", // 원래 아이콘키 (수정 불가)
+          color: item.color || "#3B82F6", // 현재 색상
         });
       } else {
         // 목표/직업 탭일 경우
         setFormData({
           name: item.name || "",
           iconKey: item.iconKey || "",
+          color: "", // 목표/직업에서는 색상 수정 안함
         });
       }
     }
@@ -63,10 +67,16 @@ const EditItemModal = ({
         return;
       }
 
-      // 아이콘 탭에서는 iconKey와 originalIconKey 모두 API로 전송
+      if (!formData.color.trim()) {
+        alert("색상은 필수 입력사항입니다.");
+        return;
+      }
+
+      // 아이콘 탭에서는 iconKey, originalIconKey, color 모두 API로 전송
       onEdit({
         iconKey: formData.iconKey,
         originalIconKey: formData.originalIconKey,
+        color: formData.color,
       });
     } else {
       // 목표/직업 탭에서는 name과 iconKey만 전송
@@ -75,6 +85,19 @@ const EditItemModal = ({
         iconKey: formData.iconKey,
       });
     }
+  };
+
+  // 현재 선택된 아이콘의 색상 찾기
+  const getCurrentIconColor = (iconKey) => {
+    if (!iconKey) return "#3B82F6"; // 기본 색상
+
+    // 아이콘 탭에서는 사용자가 수정한 색상을 우선으로 사용
+    if (itemType === "아이콘" && formData.color) {
+      return formData.color;
+    }
+
+    const iconInfo = iconData.find((icon) => icon.iconKey === iconKey);
+    return iconInfo ? iconInfo.color : "#3B82F6";
   };
 
   // 모달이 닫혀있으면 렌더링하지 않음
@@ -123,33 +146,108 @@ const EditItemModal = ({
           {/* 아이콘 탭인 경우 */}
           {itemType === "아이콘" && (
             <>
-              {/* 새 아이콘키 (사용자 입력) */}
+              {/* 새 아이콘키 선택 */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  새 아이콘키
+                  아이콘키
                 </label>
-                <input
-                  type="text"
-                  name="iconKey"
-                  value={formData.iconKey}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
+                {hasIconData ? (
+                  <div className="space-y-3">
+                    {/* 드롭다운 선택 */}
+                    <select
+                      name="iconKey"
+                      value={formData.iconKey}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    >
+                      <option value="">아이콘을 선택하세요</option>
+                      {iconData.map((icon) => (
+                        <option key={icon.idx} value={icon.iconKey}>
+                          {icon.iconKey} ({icon.icon || "이름없음"})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="text"
+                      name="iconKey"
+                      value={formData.iconKey}
+                      onChange={handleChange}
+                      className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                    {/* 미리보기 */}
+                    <div className="flex items-center justify-center w-10 h-10 border rounded-md bg-gray-50">
+                      {formData.iconKey ? (
+                        renderIcon(
+                          formData.iconKey,
+                          20,
+                          "",
+                          false,
+                          getCurrentIconColor(formData.iconKey)
+                        )
+                      ) : (
+                        <span className="text-gray-400 text-xs">미리보기</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* 원래 아이콘키 (자동 포함, 표시는 하지만 수정 불가) */}
+              {/* 색상 선택 */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  원래 아이콘키 (자동 포함)
-                </label>
-                <input
-                  type="text"
-                  name="originalIconKey"
-                  value={formData.originalIconKey}
-                  className="w-full px-3 py-2 border rounded-md bg-gray-100"
-                  readOnly
-                />
+                <div className="space-y-3">
+                  {/* 색상 선택 도구들 */}
+                  <div className="flex items-center space-x-3">
+                    {/* 색상 picker */}
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm text-gray-600">
+                        색상 선택:
+                      </label>
+                      <input
+                        type="color"
+                        name="color"
+                        value={formData.color}
+                        onChange={handleChange}
+                        className="w-10 h-10 border rounded cursor-pointer"
+                        title="색상을 클릭해서 선택하세요"
+                      />
+                    </div>
+
+                    {/* 직접 입력 */}
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        name="color"
+                        value={formData.color}
+                        onChange={handleChange}
+                        placeholder="#3B82F6"
+                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                        pattern="^#[0-9A-Fa-f]{6}$"
+                        title="예: #3B82F6"
+                      />
+                    </div>
+                  </div>
+                  {/* 색상 미리보기 */}
+                  <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-md border">
+                    <span className="text-sm text-gray-600">
+                      아이콘 미리보기:
+                    </span>
+                    <div className="flex items-center space-x-2">
+                      {formData.iconKey &&
+                        renderIcon(
+                          formData.iconKey,
+                          28,
+                          "",
+                          false,
+                          formData.color
+                        )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </>
           )}
@@ -161,19 +259,41 @@ const EditItemModal = ({
                 아이콘키
               </label>
               {hasIconData ? (
-                <select
-                  name="iconKey"
-                  value={formData.iconKey}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  {iconData.map((icon) => (
-                    <option key={icon.idx} value={icon.iconKey}>
-                      {icon.iconKey}
-                    </option>
-                  ))}
-                </select>
+                <div className="space-y-3">
+                  {/* 현재 선택된 아이콘 미리보기 */}
+                  {formData.iconKey && (
+                    <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-md border">
+                      <span className="text-sm text-gray-600">
+                        선택된 아이콘:
+                      </span>
+                      <div className="flex items-center space-x-2">
+                        {renderIcon(
+                          formData.iconKey,
+                          24,
+                          "",
+                          false,
+                          getCurrentIconColor(formData.iconKey)
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 드롭다운 선택 */}
+                  <select
+                    name="iconKey"
+                    value={formData.iconKey}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">아이콘을 선택하세요</option>
+                    {iconData.map((icon) => (
+                      <option key={icon.idx} value={icon.iconKey}>
+                        {icon.iconKey} ({icon.icon || "이름없음"})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               ) : (
                 <div className="flex items-center">
                   <input

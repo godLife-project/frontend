@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-
+import { renderIcon } from "@/components/common/badge-selector/icon-utils";
 const AddItemModal = ({ isOpen, onClose, onAdd, itemType, iconList = [] }) => {
   const [formData, setFormData] = useState({
     name: "",
     iconKey: "",
+    color: "#3B82F6", // 색상 필드 추가
   });
 
   // 디버깅용: iconList 확인
@@ -20,6 +21,7 @@ const AddItemModal = ({ isOpen, onClose, onAdd, itemType, iconList = [] }) => {
     setFormData({
       name: "",
       iconKey: initialIconKey,
+      color: "#3B82F6", // 기본 색상
     });
   }, [itemType, iconList]);
 
@@ -37,7 +39,7 @@ const AddItemModal = ({ isOpen, onClose, onAdd, itemType, iconList = [] }) => {
     e.preventDefault();
 
     // 데이터 유효성 검사
-    if (itemType !== "아이콘" && !formData.name.trim()) {
+    if (!formData.name.trim()) {
       alert("이름은 필수 입력사항입니다.");
       return;
     }
@@ -48,10 +50,17 @@ const AddItemModal = ({ isOpen, onClose, onAdd, itemType, iconList = [] }) => {
     }
 
     if (itemType === "아이콘") {
-      // 아이콘 탭에서는 iconKey와 icon 필드를 동일하게 설정
+      if (!formData.color.trim()) {
+        alert("색상은 필수 입력사항입니다.");
+        return;
+      }
+
+      // 아이콘 탭에서는 name, iconKey, icon, color 필드 전송
       onAdd({
+        name: formData.name, // 사용자가 입력한 이름
         iconKey: formData.iconKey,
-        icon: formData.iconKey, // 아이콘 이름을 그대로 사용
+        icon: formData.name, // 아이콘 이름을 사용자 입력값으로 사용
+        color: formData.color,
       });
     } else {
       // 목표/직업 탭에서는 name과 iconKey만 필요
@@ -60,6 +69,19 @@ const AddItemModal = ({ isOpen, onClose, onAdd, itemType, iconList = [] }) => {
         iconKey: formData.iconKey,
       });
     }
+  };
+
+  // 현재 선택된 아이콘의 색상 찾기
+  const getCurrentIconColor = (iconKey) => {
+    if (!iconKey) return "#3B82F6"; // 기본 색상
+
+    // 아이콘 탭에서는 사용자가 선택한 색상을 우선으로 사용
+    if (itemType === "아이콘" && formData.color) {
+      return formData.color;
+    }
+
+    const iconInfo = iconList.find((icon) => icon.iconKey === iconKey);
+    return iconInfo ? iconInfo.color : "#3B82F6";
   };
 
   // 모달이 닫혀있으면 렌더링하지 않음
@@ -88,70 +110,137 @@ const AddItemModal = ({ isOpen, onClose, onAdd, itemType, iconList = [] }) => {
         <h2 className="text-xl font-semibold mb-4">{getModalTitle()}</h2>
 
         <form onSubmit={handleSubmit}>
-          {/* 아이콘 탭이 아닌 경우에만 이름 필드 표시 */}
-          {itemType !== "아이콘" && (
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                이름
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-          )}
+          {/* 이름 필드 - 모든 탭에서 표시 */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {itemType === "아이콘" ? "아이콘 이름" : "이름"}
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder={
+                itemType === "아이콘"
+                  ? "예: 업무용 아이콘"
+                  : `${itemType} 이름을 입력하세요`
+              }
+              required
+            />
+          </div>
 
-          {/* 아이콘 탭인 경우 직접 입력, 목표/직업 탭인 경우 선택 */}
+          {/* 아이콘키 선택 */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               아이콘키
             </label>
-            {itemType === "아이콘" ? (
-              // 아이콘 탭에서는 직접 입력
-              <input
-                type="text"
-                name="iconKey"
-                value={formData.iconKey}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            ) : hasIconList ? (
-              // 목표/직업 탭에서는 드롭다운 선택 (iconList가 있는 경우)
-              <select
-                name="iconKey"
-                value={formData.iconKey}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                {iconList.map((icon) => (
-                  <option key={icon.idx} value={icon.iconKey}>
-                    {icon.iconKey}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              // iconList가 없는 경우 직접 입력으로 대체
-              <div className="flex items-center">
-                <input
-                  type="text"
+            {hasIconList ? (
+              <div className="space-y-3">
+                {/* 드롭다운 선택 */}
+                <select
                   name="iconKey"
                   value={formData.iconKey}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
+                >
+                  <option value="">아이콘을 선택하세요</option>
+                  {iconList.map((icon) => (
+                    <option key={icon.idx} value={icon.iconKey}>
+                      {icon.iconKey} ({icon.icon || "이름없음"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              // iconList가 없는 경우 직접 입력으로 대체
+              <div className="flex items-center space-x-3">
+                <input
+                  type="text"
+                  name="iconKey"
+                  value={formData.iconKey}
+                  onChange={handleChange}
+                  className="flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
                 />
-                <span className="ml-2 text-red-500 text-xs">
-                  아이콘 데이터를 불러오지 못했습니다. 직접 입력해주세요.
-                </span>
+                {/* 미리보기 */}
+                <div className="flex items-center justify-center w-10 h-10 border rounded-md bg-gray-50">
+                  {formData.iconKey ? (
+                    renderIcon(
+                      formData.iconKey,
+                      20,
+                      "",
+                      false,
+                      getCurrentIconColor(formData.iconKey)
+                    )
+                  ) : (
+                    <span className="text-gray-400 text-xs">미리보기</span>
+                  )}
+                </div>
               </div>
             )}
           </div>
+
+          {/* 아이콘 탭인 경우 색상 선택 */}
+          {itemType === "아이콘" && (
+            <div className="mb-4">
+              <div className="space-y-3">
+                {/* 색상 선택 도구들 */}
+                <div className="flex items-center space-x-3">
+                  {/* 색상 picker */}
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm text-gray-600">색상 선택:</label>
+                    <input
+                      type="color"
+                      name="color"
+                      value={formData.color}
+                      onChange={handleChange}
+                      className="w-10 h-10 border rounded cursor-pointer"
+                      title="색상을 클릭해서 선택하세요"
+                    />
+                  </div>
+
+                  {/* 직접 입력 */}
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      name="color"
+                      value={formData.color}
+                      onChange={handleChange}
+                      placeholder="#3B82F6"
+                      className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                      pattern="^#[0-9A-Fa-f]{6}$"
+                      title="예: #3B82F6"
+                    />
+                  </div>
+                </div>
+                {/* 아이콘 미리보기 */}
+                <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-md border">
+                  <span className="text-sm text-gray-600">
+                    아이콘 미리보기:
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    {formData.iconKey &&
+                      renderIcon(
+                        formData.iconKey,
+                        28,
+                        "",
+                        false,
+                        formData.color
+                      )}
+                    <div className="flex flex-col">
+                      {formData.name && (
+                        <span className="text-xs text-gray-500">
+                          {formData.name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-end space-x-2 mt-6">
             <button
