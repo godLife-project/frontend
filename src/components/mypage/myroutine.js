@@ -14,6 +14,7 @@ import {
   CheckSquare,
   Lock,
   Unlock,
+  X, // X 아이콘 추가
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import axiosInstance from "@/api/axiosInstance";
@@ -22,8 +23,8 @@ const RoutineTabContent = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [routineData, setRoutineData] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false); // 삭제 로딩 상태
-  const [privacyLoading, setPrivacyLoading] = useState({}); // 개별 공개/비공개 전환 로딩 상태
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [privacyLoading, setPrivacyLoading] = useState({});
 
   // 선택된 루틴들의 planIdx 배열
   const [selectedRoutines, setSelectedRoutines] = useState([]);
@@ -112,7 +113,7 @@ const RoutineTabContent = () => {
 
       const response = await axiosInstance.patch(
         "/myPage/auth/delete/plans",
-        selectedRoutines, // planIdx 배열을 직접 전송
+        selectedRoutines,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -122,10 +123,9 @@ const RoutineTabContent = () => {
         }
       );
 
-      // 삭제 성공 시
       alert("선택된 루틴이 삭제되었습니다.");
-      setSelectedRoutines([]); // 선택 초기화
-      fetchMyRoutines(); // 리스트 새로고침
+      setSelectedRoutines([]);
+      fetchMyRoutines();
     } catch (err) {
       console.error("루틴 삭제 중 오류 발생:", err);
       alert("루틴 삭제에 실패했습니다. 다시 시도해주세요.");
@@ -151,7 +151,6 @@ const RoutineTabContent = () => {
         }
       );
 
-      // 성공 시 리스트 새로고침
       fetchMyRoutines();
     } catch (err) {
       console.error("루틴 공개/비공개 전환 중 오류 발생:", err);
@@ -182,12 +181,10 @@ const RoutineTabContent = () => {
     );
 
     if (allSelected) {
-      // 현재 페이지의 모든 항목 선택 해제
       setSelectedRoutines((prev) =>
         prev.filter((id) => !currentPagePlanIds.includes(id))
       );
     } else {
-      // 현재 페이지의 모든 항목 선택 추가
       setSelectedRoutines((prev) => {
         const newSelections = currentPagePlanIds.filter(
           (id) => !prev.includes(id)
@@ -209,9 +206,9 @@ const RoutineTabContent = () => {
 
   // 필터 변경시 데이터 다시 로드
   const handleFilterChange = (newFilters) => {
-    const updatedFilters = { ...filters, ...newFilters, page: 1 }; // 필터 변경시 첫 페이지로
+    const updatedFilters = { ...filters, ...newFilters, page: 1 };
     setFilters(updatedFilters);
-    setSelectedRoutines([]); // 필터 변경시 선택 초기화
+    setSelectedRoutines([]);
     fetchMyRoutines(updatedFilters);
   };
 
@@ -227,8 +224,8 @@ const RoutineTabContent = () => {
     handleFilterChange({ search: searchInput });
   };
 
-  // 검색 초기화
-  const handleSearchReset = () => {
+  // 검색 초기화 (X 아이콘 클릭 시)
+  const handleSearchClear = () => {
     setSearchInput("");
     handleFilterChange({ search: "" });
   };
@@ -304,18 +301,27 @@ const RoutineTabContent = () => {
         {/* 검색바 */}
         <div className="flex space-x-2">
           <div className="flex-1 relative">
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            />
             <input
               type="text"
-              placeholder="루틴 제목으로 검색..."
+              placeholder="검색어를 입력하세요."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <Search
-              size={16}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            />
+            {/* X 아이콘 - 검색어가 있을 때만 표시 */}
+            {searchInput && (
+              <button
+                onClick={handleSearchClear}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
           <button
             onClick={handleSearch}
@@ -323,14 +329,6 @@ const RoutineTabContent = () => {
           >
             검색
           </button>
-          {filters.search && (
-            <button
-              onClick={handleSearchReset}
-              className="px-3 py-2 bg-gray-500 text-white text-sm rounded-lg hover:bg-gray-600"
-            >
-              초기화
-            </button>
-          )}
         </div>
 
         {/* 필터 토글 버튼 */}
@@ -476,7 +474,7 @@ const RoutineTabContent = () => {
             {allRoutines.map((routine) => {
               const planIdx = routine.planInfos.planIdx;
               const isSelected = selectedRoutines.includes(planIdx);
-              const isShared = routine.planInfos.isShared; // 공개 상태
+              const isShared = routine.planInfos.isShared;
               const isPrivacyToggling = privacyLoading[planIdx];
 
               return (

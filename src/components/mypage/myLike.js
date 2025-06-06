@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   CheckCircle,
   Target,
@@ -238,6 +238,12 @@ const LikedRoutineTabContent = () => {
     handleFilterChange({ search: searchInput });
   };
 
+  // 검색 초기화 (X 아이콘 클릭 시) - useCallback으로 최적화
+  const handleSearchClear = useCallback(() => {
+    setSearchInput("");
+    handleFilterChange({ search: "" });
+  }, [handleFilterChange]);
+
   // 검색 초기화
   const handleSearchReset = () => {
     setSearchInput("");
@@ -300,18 +306,27 @@ const LikedRoutineTabContent = () => {
         {/* 검색바 */}
         <div className="flex space-x-2">
           <div className="flex-1 relative">
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            />
             <input
               type="text"
-              placeholder="좋아요한 루틴 제목으로 검색..."
+              placeholder="검색어를 입력하세요."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <Search
-              size={16}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            />
+            {/* X 아이콘 - 검색어가 있을 때만 표시 */}
+            {searchInput && (
+              <button
+                onClick={handleSearchClear}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
           <button
             onClick={handleSearch}
@@ -319,14 +334,6 @@ const LikedRoutineTabContent = () => {
           >
             검색
           </button>
-          {filters.search && (
-            <button
-              onClick={handleSearchReset}
-              className="px-3 py-2 bg-gray-500 text-white text-sm rounded-lg hover:bg-gray-600"
-            >
-              초기화
-            </button>
-          )}
         </div>
 
         {/* 필터 토글 버튼 */}
