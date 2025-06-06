@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   CheckCircle,
   Target,
@@ -45,8 +45,82 @@ const LikedRoutineTabContent = () => {
   // 필터 표시 상태
   const [showFilters, setShowFilters] = useState(false);
 
+  // 검색 기록 관련 상태
+  const [searchHistory, setSearchHistory] = useState([]);
+  const [showSearchHistory, setShowSearchHistory] = useState(false);
+  const [searchHistoryLoading, setSearchHistoryLoading] = useState(false);
+
+  // 검색창 ref
+  const searchInputRef = useRef(null);
+  const searchHistoryRef = useRef(null);
+
   // 토큰 가져오기
   const accessToken = localStorage.getItem("accessToken");
+
+  // 검색 기록 조회 API
+  const fetchSearchHistory = async () => {
+    try {
+      setSearchHistoryLoading(true);
+      const response = await axiosInstance.get("/search/log?type=liked", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        timeout: 10000,
+      });
+
+      // API 응답 구조: { code: 200, message: [...], status: "success" }
+      const historyData = response.data;
+      if (historyData && Array.isArray(historyData.message)) {
+        setSearchHistory(historyData.message);
+      } else {
+        setSearchHistory([]);
+      }
+    } catch (err) {
+      console.error("검색 기록 조회 중 오류 발생:", err);
+      setSearchHistory([]);
+    } finally {
+      setSearchHistoryLoading(false);
+    }
+  };
+
+  // 검색 기록 저장 API
+  const saveSearchHistory = async (keyword) => {
+    if (!keyword.trim()) return;
+
+    try {
+      await axiosInstance.get(
+        `/search/log?keyword=${encodeURIComponent(keyword)}&type=liked`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          timeout: 10000,
+        }
+      );
+    } catch (err) {
+      console.error("검색 기록 저장 중 오류 발생:", err);
+    }
+  };
+
+  // 검색 기록 삭제 API
+  const deleteSearchHistory = async (logIdx) => {
+    try {
+      await axiosInstance.patch(
+        `/search/log/${logIdx}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          timeout: 10000,
+        }
+      );
+      // 삭제 후 검색 기록 다시 조회
+      fetchSearchHistory();
+    } catch (err) {
+      console.error("검색 기록 삭제 중 오류 발생:", err);
+    }
+  };
 
   // 카테고리 데이터 가져오기
   const fetchCategories = async () => {
@@ -219,6 +293,25 @@ const LikedRoutineTabContent = () => {
     }
   }, [accessToken]);
 
+  // 검색창 외부 클릭 시 검색 기록 숨기기
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target) &&
+        searchHistoryRef.current &&
+        !searchHistoryRef.current.contains(event.target)
+      ) {
+        setShowSearchHistory(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   // 필터 변경시 데이터 다시 로드
   const handleFilterChange = (newFilters) => {
     const updatedFilters = { ...filters, ...newFilters, page: 1 };
@@ -235,14 +328,20 @@ const LikedRoutineTabContent = () => {
 
   // 검색 실행
   const handleSearch = () => {
+    if (searchInput.trim()) {
+      // 검색 기록 저장
+      saveSearchHistory(searchInput.trim());
+    }
     handleFilterChange({ search: searchInput });
+    setShowSearchHistory(false);
   };
 
   // 검색 초기화 (X 아이콘 클릭 시) - useCallback으로 최적화
   const handleSearchClear = useCallback(() => {
     setSearchInput("");
     handleFilterChange({ search: "" });
-  }, [handleFilterChange]);
+    setShowSearchHistory(false);
+  }, []);
 
   // 검색 초기화
   const handleSearchReset = () => {
@@ -270,6 +369,19 @@ const LikedRoutineTabContent = () => {
     if (e.key === "Enter") {
       handleSearch();
     }
+  };
+
+  // 검색창 포커스 시 검색 기록 표시
+  const handleSearchFocus = () => {
+    setShowSearchHistory(true);
+    fetchSearchHistory();
+  };
+
+  // 검색 기록 항목 클릭
+  const handleHistoryItemClick = (searchKeyword) => {
+    setSearchInput(searchKeyword);
+    handleFilterChange({ search: searchKeyword });
+    setShowSearchHistory(false);
   };
 
   const allRoutines = routineData ? routineData.plans : [];
@@ -311,11 +423,13 @@ const LikedRoutineTabContent = () => {
               className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
             />
             <input
+              ref={searchInputRef}
               type="text"
               placeholder="검색어를 입력하세요."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyPress={handleKeyPress}
+              onFocus={handleSearchFocus}
               className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {/* X 아이콘 - 검색어가 있을 때만 표시 */}
@@ -326,6 +440,56 @@ const LikedRoutineTabContent = () => {
               >
                 <X size={16} />
               </button>
+            )}
+
+            {/* 검색 기록 드롭다운 */}
+            {showSearchHistory && (
+              <div
+                ref={searchHistoryRef}
+                className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"
+              >
+                {searchHistoryLoading ? (
+                  <div className="p-3 text-center text-sm text-gray-500">
+                    검색 기록을 불러오는 중...
+                  </div>
+                ) : Array.isArray(searchHistory) &&
+                  searchHistory.length === 0 ? (
+                  <div className="p-3 text-center text-sm text-gray-500">
+                    최근 검색어가 없습니다.
+                  </div>
+                ) : (
+                  <div className="py-1">
+                    <div className="px-3 py-2 text-xs font-medium text-gray-700 border-b border-gray-100">
+                      최근 검색어
+                    </div>
+                    {Array.isArray(searchHistory) &&
+                      searchHistory.map((item) => (
+                        <div
+                          key={item.logIdx}
+                          className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 group"
+                        >
+                          <button
+                            onClick={() =>
+                              handleHistoryItemClick(item.searchKeyword)
+                            }
+                            className="flex-1 text-left text-sm text-gray-700 hover:text-gray-900"
+                          >
+                            {item.searchKeyword}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteSearchHistory(item.logIdx);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-all"
+                          >
+                            <X size={12} className="text-gray-400" />
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
           <button
