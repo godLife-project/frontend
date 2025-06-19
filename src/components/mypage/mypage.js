@@ -365,7 +365,7 @@ export default function MyPageForm() {
                   }`}
                   onClick={() => setActiveSideTab("routines")}
                 >
-                  내 기록
+                  루틴
                 </button>
               </li>
               <li className="mr-2">

@@ -219,14 +219,14 @@ export default function MyProfileForm({ userData, setUserData }) {
       console.log("초기화할 tempData:", initialTempData);
       setTempData(initialTempData);
     } else if (field === "personalInfo") {
-    // 개인정보 모달 열기
-    setTempPersonalData({
-      userName: userData.userName,
-      userGender: userData.userGender,
-      userPhone: userData.userPhone
-    });
-    setShowPersonalModal(true);
-  } else if (field === "careerInfo") {
+      // 개인정보 모달 열기
+      setTempPersonalData({
+        userName: userData.userName,
+        userGender: userData.userGender,
+        userPhone: userData.userPhone,
+      });
+      setShowPersonalModal(true);
+    } else if (field === "careerInfo") {
       // 커리어 정보 모달 열기
       setTempCareerData({
         userJob: userData.userJob,
@@ -632,18 +632,18 @@ export default function MyProfileForm({ userData, setUserData }) {
 
   return (
     <div className="rounded-2xl shadow-md bg-white overflow-hidden">
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-white">
+      {/* <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-white">
         <h1 className="text-xl font-bold">내프로필</h1>
-      </div>
+      </div> */}
 
-      <div className="p-6">
+      <div className="p-3">
         <div className="space-y-6">
           <div>
             {/* 가입일 필드 (수정 불가) */}
             <div className="flex items-center p-4">
               <Calendar className="text-indigo-500 mr-3" size={20} />
               <div>
-                <div className="text-sm text-gray-500">가입일</div>
+                <div className="text-sm text-left text-gray-500">가입일</div>
                 <div className="font-medium">{userData.userJoin}</div>
               </div>
             </div>
@@ -653,7 +653,7 @@ export default function MyProfileForm({ userData, setUserData }) {
             <div className="flex items-center p-4">
               <User className="text-indigo-500 mr-3" size={20} />
               <div className="flex-1">
-                <div className="text-sm text-gray-500">닉네임</div>
+                <div className="text-sm text-left  text-gray-500">닉네임</div>
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="font-medium">{userData.userNick}</span>
@@ -714,7 +714,7 @@ export default function MyProfileForm({ userData, setUserData }) {
             <div className="border-t border-gray-200 mx-4" />
 
             {/* 개인정보 섹션 (이름, 성별, 전화번호) - 한번에 수정 */}
-            <div className="p-4">
+            <div className="p-4 text-left">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-medium text-gray-700">개인정보</div>
                 <AlertDialog
@@ -741,7 +741,9 @@ export default function MyProfileForm({ userData, setUserData }) {
                     <div className="py-4 space-y-4">
                       {/* 이름 입력 */}
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">이름</label>
+                        <label className="text-sm text-left font-medium">
+                          이름
+                        </label>
                         <Input
                           type="text"
                           value={tempPersonalData.userName}
@@ -840,7 +842,7 @@ export default function MyProfileForm({ userData, setUserData }) {
             <div className="flex items-center p-4">
               <Mail className="text-indigo-500 mr-3" size={20} />
               <div className="flex-1">
-                <div className="text-sm text-gray-500">이메일</div>
+                <div className="text-sm text-left text-gray-500">이메일</div>
                 {editing.userEmail ? (
                   <div className="space-y-2">
                     <div className="flex items-center">
@@ -940,7 +942,7 @@ export default function MyProfileForm({ userData, setUserData }) {
             <div className="border-t border-gray-200 mx-4" />
 
             {/* 커리어 정보 섹션 (직업, 목표) - 한번에 수정 */}
-            <div className="p-4">
+            <div className="p-4 text-left">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-medium text-gray-700">커리어 정보</div>
                 <AlertDialog
@@ -966,7 +968,7 @@ export default function MyProfileForm({ userData, setUserData }) {
 
                     <div className="py-4 space-y-4">
                       {/* 직업 선택 */}
-                      <div className="space-y-2">
+                      <div className="space-y-2 ">
                         <label className="text-sm font-medium">직업</label>
                         <select
                           className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"

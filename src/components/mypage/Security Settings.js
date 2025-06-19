@@ -119,7 +119,7 @@ export default function PasswordSection() {
         <div className="space-y-6">
           <div>
             {/* 비밀번호 필드 */}
-            <div className="flex items-center p-4">
+            <div className="flex items-center p-4  text-left">
               <Lock className="text-indigo-500 mr-3" size={20} />
               <div className="flex-1">
                 <div className="text-sm text-gray-500">비밀번호</div>

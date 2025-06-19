@@ -689,24 +689,27 @@ const LikedRoutineTabContent = () => {
                     </div> */}
 
                     {/* 루틴 내용 */}
-                    <div className="flex-1 pr-3">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-2 flex-1">
-                          <span
-                            className="text-xs text-white px-2 py-1 rounded"
-                            style={{
-                              backgroundColor: routine.targetInfos.color,
-                            }}
-                          >
-                            {routine.targetInfos.name}
-                          </span>
-                          <Link
-                            to={`/routine/detail/${planIdx}`}
-                            className="font-medium text-gray-800 flex-1 hover:text-blue-600"
-                          >
-                            {routine.planInfos.planTitle}
-                          </Link>
-                        </div>
+                    <div className="flex-1">
+                      {/* 카테고리 (맨 위) */}
+                      <div className="mb-2 text-left">
+                        <span
+                          className="text-xs text-white px-2 py-1 rounded"
+                          style={{
+                            backgroundColor: routine.targetInfos.color,
+                          }}
+                        >
+                          {routine.targetInfos.name}
+                        </span>
+                      </div>
+
+                      {/* 제목 (카테고리 아래) */}
+                      <div className="mb-3 text-left">
+                        <Link
+                          to={`/routine/detail/${planIdx}`}
+                          className="font-medium text-gray-800 hover:text-blue-600"
+                        >
+                          {routine.planInfos.planTitle}
+                        </Link>
                       </div>
 
                       <div className="mt-3 text-xs text-gray-500">
