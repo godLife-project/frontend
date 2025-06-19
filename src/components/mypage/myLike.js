@@ -667,7 +667,7 @@ const LikedRoutineTabContent = () => {
                   className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-all"
                 >
                   <div className="flex items-center justify-between">
-                    {/* 활성/비활성 상태 표시 */}
+                    {/* 활성/비활성 상태 표시
                     <div className="flex items-center pr-3">
                       {routine.planInfos.isActive ? (
                         <div className="flex items-center space-x-1">
@@ -686,7 +686,7 @@ const LikedRoutineTabContent = () => {
                           </div>
                         </div>
                       )}
-                    </div>
+                    </div> */}
 
                     {/* 루틴 내용 */}
                     <div className="flex-1 pr-3">

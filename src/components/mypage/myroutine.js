@@ -633,7 +633,7 @@ const RoutineTabContent = () => {
             )}
           </div>
 
-          {/* 루틴 리스트 */}
+          {/* 루틴 리스트 - 개선된 레이아웃 */}
           <div className="space-y-3">
             {allRoutines.map((routine) => {
               const planIdx = routine.planInfos.planIdx;
@@ -650,11 +650,11 @@ const RoutineTabContent = () => {
                       : "border-gray-200"
                   }`}
                 >
-                  <div className="flex items-start space-x-3">
-                    {/* 체크박스 */}
+                  <div className="flex items-center space-x-4">
+                    {/* 체크박스 - 왼쪽 끝 중앙 정렬 */}
                     <button
                       onClick={() => toggleRoutineSelection(planIdx)}
-                      className="mt-1 flex-shrink-0"
+                      className="flex-shrink-0 self-center"
                     >
                       {isSelected ? (
                         <CheckSquare size={18} className="text-blue-600" />
@@ -666,60 +666,63 @@ const RoutineTabContent = () => {
                       )}
                     </button>
 
-                    {/* 루틴 내용 */}
+                    {/* 루틴 내용 - 세로 배치 */}
                     <div className="flex-1">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-2 flex-1">
-                          <span
-                            className="text-xs text-white px-2 py-1 rounded"
-                            style={{
-                              backgroundColor: routine.targetInfos.color,
-                            }}
-                          >
-                            {routine.targetInfos.name}
-                          </span>
-                          <Link
-                            to={`/routine/detail/${planIdx}`}
-                            className="font-medium text-gray-800 flex-1"
-                          >
-                            {routine.planInfos.planTitle}
-                          </Link>
-
-                          {/* 공개/비공개 토글 버튼 */}
-                          <button
-                            onClick={() => toggleRoutinePrivacy(planIdx)}
-                            disabled={isPrivacyToggling}
-                            className={`p-1 rounded hover:bg-gray-100 transition-colors ${
-                              isPrivacyToggling
-                                ? "opacity-50 cursor-not-allowed"
-                                : ""
-                            }`}
-                            title={
-                              isShared
-                                ? "공개 상태 (클릭시 비공개)"
-                                : "비공개 상태 (클릭시 공개)"
-                            }
-                          >
-                            {isPrivacyToggling ? (
-                              <div className="animate-spin w-4 h-4 border border-gray-400 border-t-transparent rounded-full" />
-                            ) : isShared ? (
-                              <Unlock size={16} className="text-green-600" />
-                            ) : (
-                              <Lock size={16} className="text-gray-400" />
-                            )}
-                          </button>
-                        </div>
+                      {/* 카테고리 (맨 위) */}
+                      <div className="mb-2 flex justify-start">
+                        <span
+                          className="text-xs text-white px-2 py-1 rounded"
+                          style={{
+                            backgroundColor: routine.targetInfos.color,
+                          }}
+                        >
+                          {routine.targetInfos.name}
+                        </span>
                       </div>
 
-                      <div className="mt-3 text-xs text-gray-500">
-                        <div className="flex items-center space-x-5">
+                      {/* 제목과 공개/비공개 버튼 */}
+                      <div className="flex items-center justify-start mb-3">
+                        <Link
+                          to={`/routine/detail/${planIdx}`}
+                          className="font-medium text-gray-800 flex-1 hover:text-blue-600 transition-colors"
+                        >
+                          {routine.planInfos.planTitle}
+                        </Link>
+
+                        {/* 공개/비공개 토글 버튼 */}
+                        <button
+                          onClick={() => toggleRoutinePrivacy(planIdx)}
+                          disabled={isPrivacyToggling}
+                          className={`ml-3 p-1 rounded hover:bg-gray-100 transition-colors ${
+                            isPrivacyToggling
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
+                          }`}
+                          title={
+                            isShared
+                              ? "공개 상태 (클릭시 비공개)"
+                              : "비공개 상태 (클릭시 공개)"
+                          }
+                        >
+                          {isPrivacyToggling ? (
+                            <div className="animate-spin w-4 h-4 border border-gray-400 border-t-transparent rounded-full" />
+                          ) : isShared ? (
+                            <Unlock size={16} className="text-green-600" />
+                          ) : (
+                            <Lock size={16} className="text-gray-400" />
+                          )}
+                        </button>
+                      </div>
+
+                      {/* 기타 정보 */}
+                      <div className="text-xs text-gray-500">
+                        <div className="flex items-center space-x-4">
                           <span>
                             등록일:{" "}
                             {new Date(
                               routine.planInfos.planSubDate
                             ).toLocaleDateString("ko-KR")}
                           </span>
-
                           <span>조회수 {routine.planInfos.viewCount}</span>
                           <span
                             className={`${

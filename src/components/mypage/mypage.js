@@ -355,7 +355,7 @@ export default function MyPageForm() {
         {/* 루틴/좋아요/챌린지 탭 */}
         <div className="mb-6">
           <div className="border-b border-gray-200 mb-4">
-            <ul className="flex flex-wrap -mb-px text-sm">
+            <ul className="flex text-xs whitespace-nowrap -mb-px justify-center">
               <li className="mr-2">
                 <button
                   className={`py-2 px-3 border-b-2 ${
@@ -365,7 +365,7 @@ export default function MyPageForm() {
                   }`}
                   onClick={() => setActiveSideTab("routines")}
                 >
-                  나의 루틴기록
+                  내 기록
                 </button>
               </li>
               <li className="mr-2">
@@ -394,7 +394,7 @@ export default function MyPageForm() {
               </li>
               <li className="mr-2">
                 <button
-                  className={`py-2 px-3 border-b-2 ${
+                  className={`whitespace-nowrap py-2 px-3 border-b-2 ${
                     activeSideTab === "mypage"
                       ? "text-blue-600 border-blue-600"
                       : "border-transparent hover:text-gray-600 hover:border-gray-300"

@@ -15,7 +15,7 @@ const ChallengeListPage = () => {
             <h1 className="text-3xl font-bold">챌린지 리스트</h1>
           </div>
 
-          <CardContent className="p-8">
+          <CardContent className="p-1">
             <div className="space-y-4">
               <ChallengeListForm />
             </div>
