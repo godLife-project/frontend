@@ -86,6 +86,58 @@ const ChallengeListForm = () => {
     { value: "challEndTime DESC", label: "마감일 늦은 순" },
   ];
 
+  // 상태 텍스트 매핑 함수
+  const getStatusText = (status) => {
+    const statusMap = {
+      IN_PROGRESS: "진행중",
+      PUBLISHED: "게시중",
+      COMPLETED: "종료됨",
+      WAITING: "대기중",
+      게시중: "게시중",
+      진행중: "진행중",
+      종료됨: "종료됨",
+      대기중: "대기중",
+      완료됨: "완료됨",
+    };
+
+    return statusMap[status] || status || "상태 정보 없음";
+  };
+
+  // 상태별 스타일 매핑 함수
+  const getStatusStyle = (status) => {
+    const normalizedStatus = getStatusText(status);
+
+    const styleMap = {
+      진행중: {
+        variant: "secondary",
+        className: "bg-blue-100 text-blue-800 border-blue-200",
+      },
+      게시중: {
+        variant: "secondary",
+        className: "bg-blue-100 text-blue-800 border-blue-200",
+      },
+      종료됨: {
+        variant: "default",
+        className: "bg-green-100 text-green-800 border-green-200",
+      },
+      완료됨: {
+        variant: "default",
+        className: "bg-green-100 text-green-800 border-green-200",
+      },
+      대기중: {
+        variant: "outline",
+        className: "bg-gray-100 text-gray-800 border-gray-200",
+      },
+    };
+
+    return (
+      styleMap[normalizedStatus] || {
+        variant: "destructive",
+        className: "bg-red-100 text-red-800 border-red-200",
+      }
+    );
+  };
+
   // 카테고리 목록 가져오기
   const fetchCategories = async () => {
     try {
@@ -534,6 +586,8 @@ const ChallengeListForm = () => {
                 console.log("전체 객체:", challenge);
               }
 
+              const statusStyle = getStatusStyle(challenge.challState);
+
               return (
                 <Card
                   key={challenge.challIdx || index}
@@ -578,26 +632,10 @@ const ChallengeListForm = () => {
                         {/* 상태 배지 (제목 오른쪽) */}
                         {challenge.challState && (
                           <Badge
-                            variant={
-                              challenge.challState === "완료됨"
-                                ? "default"
-                                : challenge.challState === "진행중"
-                                ? "secondary"
-                                : challenge.challState === "대기중"
-                                ? "outline"
-                                : "destructive"
-                            }
-                            className={`text-xs ${
-                              challenge.challState === "완료됨"
-                                ? "bg-green-100 text-green-800 border-green-200"
-                                : challenge.challState === "진행중"
-                                ? "bg-blue-100 text-blue-800 border-blue-200"
-                                : challenge.challState === "대기중"
-                                ? "bg-gray-100 text-gray-800 border-gray-200"
-                                : "bg-red-100 text-red-800 border-red-200"
-                            }`}
+                            variant={statusStyle.variant}
+                            className={`text-xs ${statusStyle.className}`}
                           >
-                            {challenge.challState}
+                            {getStatusText(challenge.challState)}
                           </Badge>
                         )}
 
