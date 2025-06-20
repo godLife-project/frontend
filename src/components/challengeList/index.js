@@ -528,9 +528,7 @@ const ChallengeListForm = () => {
         <>
           <div className="grid gap-4 mb-4">
             {challenges.map((challenge, index) => {
-              // 디버깅: 첫 번째 챌린지만 로그 출력
               if (index === 0) {
-                console.log("=== 첫 번째 챌린지 디버깅 ===");
                 console.log("challCategoryIdx:", challenge.challCategoryIdx);
                 console.log("challState:", challenge.challState);
                 console.log("전체 객체:", challenge);

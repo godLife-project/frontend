@@ -6,8 +6,9 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GoPeople, GoClock, GoTrophy } from "react-icons/go";
+import { GoPeople, GoClock, GoTrophy, GoPulse } from "react-icons/go";
 import { MdOutlineDateRange, MdVerified, MdCheck } from "react-icons/md";
+import { BsCalendarCheck } from "react-icons/bs";
 import { useToast } from "@/components/ui/use-toast";
 
 const ChallengeDetailForm = () => {
@@ -22,7 +23,13 @@ const ChallengeDetailForm = () => {
 
   const [userAuthority, setUserAuthority] = useState(null);
   const [challengeData, setChallengeData] = useState(null);
-  const [categoryName, setCategoryName] = useState("카테고리 정보 없음");
+
+  // 카테고리 관련 상태 (List 페이지와 동일)
+  const [categories, setCategories] = useState([
+    { value: "all", label: "모든 카테고리" },
+  ]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [joining, setJoining] = useState(false);
@@ -32,6 +39,7 @@ const ChallengeDetailForm = () => {
 
   // 인증 관련 상태
   const [verificationRecords, setVerificationRecords] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(null); // 선택된 날짜
 
   // 인증 폼을 위한 React Hook Form
   const verificationForm = useForm({
@@ -49,7 +57,84 @@ const ChallengeDetailForm = () => {
   const userIdx = userInfo?.userIdx || "21";
   const roleStatus = userInfo?.roleStatus || false;
 
-  // 현재 사용자가 참여자인지 확인하는 함수
+  // 카테고리 목록 가져오기 (List 페이지와 동일)
+  const fetchCategories = async () => {
+    try {
+      setCategoriesLoading(true);
+      const response = await axiosInstance.get("/categories/challenge");
+
+      // 응답 데이터 구조에 따라 처리
+      let categoryData = [];
+      if (Array.isArray(response.data)) {
+        categoryData = response.data;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        categoryData = response.data.data;
+      } else if (response.data && Array.isArray(response.data.content)) {
+        categoryData = response.data.content;
+      }
+
+      // 카테고리 옵션 생성 (모든 카테고리 옵션 추가)
+      const categoryOptions = [
+        { value: "all", label: "모든 카테고리" },
+        ...categoryData
+          .map((category) => {
+            const value =
+              category.challName || category.name || category.categoryName;
+            const label =
+              category.challName ||
+              category.name ||
+              category.categoryName ||
+              "이름 없음";
+            return { value, label };
+          })
+          .filter((option) => option.value && option.value.trim() !== ""), // 빈 값 필터링
+      ];
+
+      setCategories(categoryOptions);
+    } catch (err) {
+      console.error("카테고리 불러오기 오류:", err);
+      // 오류 발생 시 기본 옵션만 사용
+      setCategories([{ value: "all", label: "모든 카테고리" }]);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
+  // 카테고리 매핑 함수 (List 페이지와 동일)
+  const getCategoryName = (categoryValue) => {
+    if (!categoryValue && categoryValue !== 0) return "미분류";
+
+    // challCategoryIdx가 숫자인 경우 인덱스로 찾기
+    if (typeof categoryValue === "number") {
+      const category = categories[categoryValue];
+      return category ? category.label : `카테고리 ${categoryValue}`;
+    }
+
+    // 문자열인 경우 value로 찾기
+    const category = categories.find((cat) => cat.value === categoryValue);
+    return category ? category.label : categoryValue;
+  };
+
+  // 상태값을 한글로 변환하는 함수
+  const getStatusText = (status) => {
+    const statusMap = {
+      IN_PROGRESS: "진행중",
+      PUBLISHED: "게시중",
+      COMPLETED: "종료됨",
+      게시중: "게시중",
+      진행중: "진행중",
+      종료됨: "종료됨",
+    };
+
+    return statusMap[status] || status || "상태 정보 없음";
+  };
+
+  // 컴포넌트 마운트 시 카테고리 목록 가져오기
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  // 현재 사용자가 참여자인지 확인하는 함수 - useCallback으로 메모이제이션
   const checkUserParticipation = useCallback(
     (challengeData) => {
       if (!challengeData?.participants || !userIdx) {
@@ -58,8 +143,11 @@ const ChallengeDetailForm = () => {
       }
 
       const isUserParticipant = challengeData.participants.some(
-        (participant) => participant.userIdx === parseInt(userIdx)
+        (participant) => {
+          return participant.userIdx === parseInt(userIdx);
+        }
       );
+
       setIsParticipant(isUserParticipant);
     },
     [userIdx]
@@ -85,8 +173,23 @@ const ChallengeDetailForm = () => {
   // 날짜가 인증 완료된 날인지 확인
   const isDateVerified = useCallback(
     (date) => {
+      // verificationRecords가 배열인지 확인
+      if (!Array.isArray(verificationRecords)) {
+        console.warn(
+          "verificationRecords is not an array:",
+          verificationRecords
+        );
+        return false;
+      }
+
       const dateString = date.toISOString().split("T")[0];
-      return verificationRecords.some((record) => record.date === dateString);
+      return verificationRecords.some((record) => {
+        // startTime에서 날짜 부분 추출
+        const recordDate = record.startTime
+          ? record.startTime.split("T")[0]
+          : null;
+        return recordDate === dateString;
+      });
     },
     [verificationRecords]
   );
@@ -110,23 +213,46 @@ const ChallengeDetailForm = () => {
     const fetchChallengeDetail = async () => {
       try {
         setLoading(true);
+        setError(null); // 에러 상태 초기화
+
         const challIdxNumber = Number(challIdx);
-        if (!challIdxNumber || isNaN(challIdxNumber)) return;
+        if (!challIdxNumber || isNaN(challIdxNumber)) {
+          console.error("유효하지 않은 challIdx:", challIdx);
+          setError("유효하지 않은 챌린지 ID입니다.");
+          return;
+        }
 
         const response = await axiosInstance.get(
-          `/challenges/detail/${challIdxNumber}`,
-          {
-            params: {
-              userJoin: Number(userJoin),
-              duration: Number(duration),
-            },
-          }
+          `/challenges/${challIdxNumber}`
         );
-        setChallengeData(response.data);
-        checkUserParticipation(response.data);
+
+        // 응답 데이터 검증
+        if (!response.data) {
+          console.error("응답 데이터가 null 또는 undefined");
+          setError("챌린지 데이터를 불러올 수 없습니다.");
+          return;
+        }
+
+        // 필수 필드 확인
+        const requiredFields = ["challTitle", "challDescription"];
+        const missingFields = requiredFields.filter(
+          (field) => !response.data[field]
+        );
+        if (missingFields.length > 0) {
+          console.warn("누락된 필수 필드:", missingFields);
+        }
+
+        // 응답이 {success: true, challenge: {...}} 형태인 경우 처리
+        const actualChallengeData = response.data.challenge || response.data;
+
+        // challengeData 설정
+        setChallengeData(actualChallengeData);
+
+        // 참여 상태 확인 - 실제 챌린지 데이터를 직접 사용
+        checkUserParticipation(actualChallengeData);
       } catch (err) {
-        console.error("API 호출 에러:", err);
-        setError(err.message);
+        console.error("챌린지 상세정보 조회 실패:", err);
+        setError(`챌린지 정보를 불러오는데 실패했습니다: ${err.message}`);
       } finally {
         setLoading(false);
       }
@@ -134,79 +260,65 @@ const ChallengeDetailForm = () => {
 
     if (challIdx) {
       fetchChallengeDetail();
+    } else {
+      setError("챌린지 ID가 제공되지 않았습니다.");
+      setLoading(false);
     }
-  }, [challIdx, userJoin, duration, checkUserParticipation]);
+  }, [challIdx, checkUserParticipation]);
+
+  useEffect(() => {
+    if (isParticipant && !selectedDate) {
+      const today = new Date();
+      setSelectedDate(today);
+    }
+  }, [isParticipant, selectedDate]);
 
   // 인증 기록 불러오기
   useEffect(() => {
     const fetchVerificationRecords = async () => {
-      if (!isParticipant || !challIdx) return;
+      if (!isParticipant || !challIdx) {
+        return;
+      }
 
       try {
-        // 실제 API 엔드포인트로 교체 필요
         const response = await axiosInstance.get(
-          `/challenges/auth/records/${challIdx}`,
+          `/challenges/verify-records/${challIdx}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
           }
         );
-        setVerificationRecords(response.data || []);
+
+        // 응답 데이터가 배열인지 확인하고 설정
+        if (Array.isArray(response.data)) {
+          setVerificationRecords(response.data);
+        } else if (response.data && Array.isArray(response.data.data)) {
+          setVerificationRecords(response.data.data);
+        } else if (response.data && Array.isArray(response.data.records)) {
+          setVerificationRecords(response.data.records);
+        } else {
+          console.warn("예상하지 못한 응답 구조:", response.data);
+          setVerificationRecords([]);
+        }
       } catch (err) {
         console.error("인증 기록 불러오기 실패:", err);
-        // API가 없는 경우 임시 데이터 (실제 구현시 제거)
+        // API가 없는 경우 빈 배열로 설정
         setVerificationRecords([]);
       }
     };
 
     fetchVerificationRecords();
-  }, [isParticipant, challIdx, accessToken]);
+  }, [isParticipant, challIdx, userIdx, accessToken]);
 
-  // 카테고리명 불러오기
-  useEffect(() => {
-    const fetchCategoryName = async (categoryIdx) => {
-      try {
-        const response = await axiosInstance.get(`/categories/challenge`);
-        const matchedCategory = response.data.find(
-          (category) => category.challCategoryIdx === categoryIdx
-        );
-        if (matchedCategory) {
-          setCategoryName(matchedCategory.challName);
-        }
-      } catch (error) {
-        console.error("카테고리 정보 불러오기 실패:", error);
-      }
-    };
-
-    if (challengeData?.challCategoryIdx) {
-      fetchCategoryName(challengeData.challCategoryIdx);
-    }
-  }, [challengeData]);
-
-  // 날짜 선택 핸들러 (달력에서 날짜 클릭 시 - 정보 표시용)
+  // 날짜 선택 핸들러
   const handleDateSelect = (date) => {
     const dateString = date.toLocaleDateString();
     const isVerified = isDateVerified(date);
     const isTodayDate = isToday(date);
 
-    if (isVerified) {
-      toast({
-        title: "인증 완료",
-        description: `${dateString}에 이미 인증을 완료했습니다.`,
-      });
-    } else if (!isTodayDate) {
-      toast({
-        title: "인증 불가",
-        description: "오늘 날짜만 인증할 수 있습니다.",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "인증 가능",
-        description: `${dateString} 인증이 가능합니다. 아래 폼을 작성해주세요.`,
-      });
-    }
+    // 선택된 날짜 설정
+    setSelectedDate(date);
   };
 
   // 챌린지 참여 함수
@@ -229,8 +341,8 @@ const ChallengeDetailForm = () => {
       await axiosInstance.post(
         `/challenges/auth/join/${challIdx}`,
         {
-          activity: challengeData.challTitle,
-          activityTime: challengeData.totalClearTime,
+          activity: challengeData?.challTitle || "챌린지",
+          activityTime: challengeData?.totalClearTime || 0,
         },
         {
           params: params,
@@ -245,17 +357,17 @@ const ChallengeDetailForm = () => {
         description: "챌린지 참여 신청이 완료되었습니다.",
       });
 
+      // 챌린지 정보 재조회 - 일관된 엔드포인트 사용
       const updatedResponse = await axiosInstance.get(
-        `/challenges/detail/${challIdx}`,
-        {
-          params: {
-            userJoin: Number(userJoin),
-            duration: Number(duration),
-          },
-        }
+        `/challenges/${challIdx}` // 동일한 엔드포인트 사용
       );
-      setChallengeData(updatedResponse.data);
-      checkUserParticipation(updatedResponse.data);
+
+      // 응답 구조 확인 및 데이터 추출 (초기 조회와 동일한 패턴 적용)
+      const updatedChallengeData =
+        updatedResponse.data.challenge || updatedResponse.data;
+
+      setChallengeData(updatedChallengeData);
+      checkUserParticipation(updatedChallengeData);
     } catch (err) {
       console.error("챌린지 참여 실패:", err);
       toast({
@@ -273,14 +385,19 @@ const ChallengeDetailForm = () => {
     try {
       setVerifying(true);
 
-      // 오늘 날짜인지 확인
       const today = new Date();
       const todayString = today.toISOString().split("T")[0];
 
-      // 오늘 이미 인증했는지 확인
-      const isAlreadyVerified = verificationRecords.some(
-        (record) => record.date === todayString
-      );
+      // 타입 가드 추가
+      const isAlreadyVerified = Array.isArray(verificationRecords)
+        ? verificationRecords.some((record) => {
+            // startTime에서 날짜 부분 추출
+            const recordDate = record.startTime
+              ? record.startTime.split("T")[0]
+              : null;
+            return recordDate === todayString;
+          })
+        : false;
 
       if (isAlreadyVerified) {
         toast({
@@ -300,7 +417,6 @@ const ChallengeDetailForm = () => {
         return;
       }
 
-      // 시간 비교 (시:분 형식)
       const [startHour, startMinute] = data.startTime.split(":").map(Number);
       const [endHour, endMinute] = data.endTime.split(":").map(Number);
 
@@ -316,7 +432,6 @@ const ChallengeDetailForm = () => {
         return;
       }
 
-      // 오늘 날짜와 시간을 결합하여 ISO 문자열 생성
       const startDateTime = `${todayString}T${data.startTime}:00`;
       const endDateTime = `${todayString}T${data.endTime}:00`;
 
@@ -335,16 +450,18 @@ const ChallengeDetailForm = () => {
         }
       );
 
-      // 인증 기록에 추가
       const newRecord = {
-        date: todayString,
+        verifyIdx: Date.now(), // 임시 ID
         startTime: startDateTime,
         endTime: endDateTime,
+        elapsedMinutes: endTotalMinutes - startTotalMinutes,
         activity: data.activity,
-        verifiedAt: new Date().toISOString(),
       };
 
       setVerificationRecords((prev) => [...prev, newRecord]);
+
+      // 인증 완료 후 오늘 날짜를 선택된 날짜로 설정
+      setSelectedDate(today);
 
       toast({
         title: "성공",
@@ -402,10 +519,38 @@ const ChallengeDetailForm = () => {
     }
   };
 
-  // 인증 폼 입력 핸들러들 제거 (React Hook Form 사용으로 불필요)
+  // 로딩 상태
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-lg">챌린지 정보를 불러오는 중입니다...</div>
+      </div>
+    );
+  }
 
-  if (loading) return <div>챌린지 정보를 불러오는 중입니다...</div>;
-  if (error) return <div>에러 발생: {error}</div>;
+  // 에러 상태
+  if (error) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center">
+          <div className="text-lg text-red-600 mb-4">에러 발생</div>
+          <div className="text-gray-600">{error}</div>
+          <Button onClick={() => window.location.reload()} className="mt-4">
+            다시 시도
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // challengeData가 없는 경우
+  if (!challengeData) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-lg">챌린지 데이터를 불러오는 중입니다...</div>
+      </div>
+    );
+  }
 
   // 달력 컴포넌트
   const ChallengeCalendar = () => {
@@ -428,27 +573,30 @@ const ChallengeDetailForm = () => {
               const isVerified = isDateVerified(date);
               const isTodayDate = isToday(date);
               const canVerify = canVerifyDate(date);
+              const isSelected =
+                selectedDate &&
+                selectedDate.toDateString() === date.toDateString();
 
               return (
                 <div
                   key={index}
                   onClick={() => handleDateSelect(date)}
                   className={`
-                    relative p-3 border rounded-lg cursor-pointer transition-all
+                    relative aspect-square border rounded-lg cursor-pointer transition-all
+                  flex items-center justify-center
                     ${
                       isTodayDate
                         ? "border-blue-500 bg-blue-50"
                         : "border-gray-200"
                     }
                     ${isVerified ? "bg-green-100 border-green-500" : ""}
-                    ${
-                      canVerify
-                        ? "hover:bg-blue-100"
-                        : "cursor-not-allowed opacity-50"
-                    }
+                    ${isSelected ? "ring-2 ring-purple-500 bg-purple-50" : ""}
+                    ${canVerify ? "hover:bg-blue-100" : "hover:bg-gray-50"}
                   `}
                 >
-                  <span className="text-sm">{date.getDate()}</span>
+                  <span className="text-sm font-medium text-center">
+                    {date.getDate()}
+                  </span>
                   {isVerified && (
                     <div className="absolute top-1 right-1">
                       <MdCheck className="text-green-600 text-lg" />
@@ -479,27 +627,99 @@ const ChallengeDetailForm = () => {
 
   // 인증 기록 컴포넌트
   const VerificationHistory = () => {
-    if (!verificationRecords.length) return null;
+    // 타입 가드 추가
+    if (!Array.isArray(verificationRecords) || !verificationRecords.length) {
+      return null;
+    }
+
+    // 선택된 날짜가 있으면 해당 날짜의 기록만 필터링
+    let displayRecords = verificationRecords;
+    if (selectedDate) {
+      const selectedDateString = selectedDate.toISOString().split("T")[0];
+      displayRecords = verificationRecords.filter((record) => {
+        // startTime에서 날짜 부분 추출
+        const recordDate = record.startTime
+          ? record.startTime.split("T")[0]
+          : null;
+        return recordDate === selectedDateString;
+      });
+
+      // 선택된 날짜에 기록이 없으면 메시지 표시
+      if (displayRecords.length === 0) {
+        return (
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-4">
+              인증 기록 - {selectedDate.toLocaleDateString()}
+            </h3>
+            <Card className="p-4">
+              <div className="text-center py-6 text-gray-500">
+                {selectedDate.toLocaleDateString()}에는 인증 기록이 없습니다.
+              </div>
+            </Card>
+          </div>
+        );
+      }
+    }
+
+    const title = `챌린지 기록`;
 
     return (
       <div className="mt-6">
-        <h3 className="text-lg font-semibold mb-4">인증 기록</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold"> {title}</h3>
+        </div>
         <div className="space-y-3">
-          {verificationRecords.map((record, index) => (
+          {displayRecords.map((record, index) => (
             <Card key={index} className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MdCheck className="text-green-600" />
-                  <span className="font-medium">
-                    {new Date(record.date).toLocaleDateString()}
-                  </span>
+              {/* 활동 내용 */}
+              <div className="mb-4">
+                <div className="flex items-center mt-1 mb-2">
+                  <div className="w-5 h-5 mr-2 flex items-center justify-center">
+                    <BsCalendarCheck className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <span className="text-sm text-gray-600">인증일</span>
                 </div>
-                <span className="text-sm text-gray-500">
-                  {new Date(record.startTime).toLocaleTimeString()} -{" "}
-                  {new Date(record.endTime).toLocaleTimeString()}
-                </span>
+                <div className="text-sm font-semibold text-gray-900 ml-7">
+                  {selectedDate.toLocaleDateString()}
+                </div>
               </div>
-              <div className="mt-2 text-gray-700">{record.activity}</div>
+              {/* 활동 내용 */}
+              <div className="mb-4">
+                <div className="flex items-center mb-2">
+                  <div className="w-5 h-5 mr-2 flex items-center justify-center">
+                    <GoPulse className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <span className="text-sm text-gray-600">활동 내용</span>
+                </div>
+                <div className="text-sm font-semibold text-gray-900 ml-7">
+                  {record.activity}
+                </div>
+              </div>
+              {/* 참여 시간 */}
+              <div className="mb-1">
+                <div className="flex items-center mb-2">
+                  <div className="w-5 h-5 mr-2 flex items-center justify-center">
+                    <GoClock className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <span className="text-sm text-gray-600">참여 시간</span>
+                </div>
+                <div className="text-sm font-semibold text-gray-900 ml-7">
+                  {record.startTime
+                    ? new Date(record.startTime).toLocaleTimeString("ko-KR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : ""}{" "}
+                  ~{" "}
+                  {record.endTime
+                    ? new Date(record.endTime).toLocaleTimeString("ko-KR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : ""}{" "}
+                  ({record.elapsedMinutes}분)
+                </div>
+              </div>
             </Card>
           ))}
         </div>
@@ -555,12 +775,19 @@ const ChallengeDetailForm = () => {
 
   // 인증 폼
   const VerificationForm = () => {
-    // 오늘 이미 인증했는지 확인
     const today = new Date();
     const todayString = today.toISOString().split("T")[0];
-    const isAlreadyVerified = verificationRecords.some(
-      (record) => record.date === todayString
-    );
+
+    // 타입 가드 추가
+    const isAlreadyVerified = Array.isArray(verificationRecords)
+      ? verificationRecords.some((record) => {
+          // startTime에서 날짜 부분 추출
+          const recordDate = record.startTime
+            ? record.startTime.split("T")[0]
+            : null;
+          return recordDate === todayString;
+        })
+      : false;
 
     if (isAlreadyVerified) {
       return (
@@ -571,14 +798,6 @@ const ChallengeDetailForm = () => {
               <h3 className="text-lg font-semibold text-green-600">
                 오늘 인증 완료!
               </h3>
-              <p className="text-gray-600 mt-1">
-                {today.toLocaleDateString("ko-KR", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-                에 인증을 완료했습니다.
-              </p>
             </div>
           </CardHeader>
         </Card>
@@ -667,19 +886,36 @@ const ChallengeDetailForm = () => {
         {/* 카테고리 및 상태 */}
         <div className="flex flex-row items-center justify-center gap-1">
           <div className="border border-gray-300 px-2 py-1 rounded-lg text-xs inline-flex h-full">
-            {challengeData.challState}
+            {getStatusText(challengeData?.challState)}
           </div>
           <div className="border border-gray-300 px-2 py-1 rounded-lg text-xs inline-flex h-full">
-            {categoryName}
+            {/* List 페이지와 동일한 방식으로 카테고리명 표시 */}
+            {(() => {
+              const categoryValue =
+                challengeData.challCategoryIdx !== undefined
+                  ? challengeData.challCategoryIdx
+                  : challengeData.challCategory ||
+                    challengeData.categoryName ||
+                    challengeData.category ||
+                    challengeData.challName ||
+                    null;
+
+              return categoryValue !== null && categoryValue !== undefined
+                ? getCategoryName(categoryValue)
+                : "카테고리 정보 없음";
+            })()}
           </div>
         </div>
 
         {/* 제목 */}
         <div className="text-center text-2xl font-bold mb-2 mt-1">
-          {challengeData.challTitle || "제목 정보 없음"}
+          {challengeData?.challTitle || "제목 정보 없음"}
         </div>
         <div className="text-center text-gray-500">
-          등록일 : {new Date(challengeData.challCreatedAt).toLocaleDateString()}
+          등록일 :{" "}
+          {challengeData?.challCreatedAt
+            ? new Date(challengeData.challCreatedAt).toLocaleDateString()
+            : "등록일 정보 없음"}
         </div>
       </div>
 
@@ -690,8 +926,8 @@ const ChallengeDetailForm = () => {
           <span className="ml-1">참여 인원</span>
         </div>
         <span>
-          {challengeData.currentParticipants || 0}/
-          {challengeData.maxParticipants || 0}명
+          {challengeData?.currentParticipants || 0}/
+          {challengeData?.maxParticipants || 0}명
         </span>
       </div>
       <hr className="my-3 border-gray-200" />
@@ -703,8 +939,13 @@ const ChallengeDetailForm = () => {
           <span className="ml-1">기간</span>
         </div>
         <span>
-          {new Date(challengeData.challStartTime).toLocaleDateString()} ~{" "}
-          {new Date(challengeData.challEndTime).toLocaleDateString()}
+          {challengeData?.challStartTime
+            ? new Date(challengeData.challStartTime).toLocaleDateString()
+            : "시작일 없음"}{" "}
+          ~{" "}
+          {challengeData?.challEndTime
+            ? new Date(challengeData.challEndTime).toLocaleDateString()
+            : "종료일 없음"}
         </span>
       </div>
       <hr className="my-3 border-gray-200" />
@@ -715,7 +956,7 @@ const ChallengeDetailForm = () => {
           <GoClock />
           <span className="ml-1">최소 참여 시간</span>
         </div>
-        <span>{challengeData.minParticipationTime || 0}시간</span>
+        <span>{challengeData?.minParticipationTime || 0}시간</span>
       </div>
       <hr className="my-3 border-gray-200" />
 
@@ -725,7 +966,7 @@ const ChallengeDetailForm = () => {
           <GoTrophy />
           <span className="ml-1">총 클리어 시간</span>
         </div>
-        <span>{challengeData.totalClearTime || 0}시간</span>
+        <span>{challengeData?.totalClearTime || 0}시간</span>
       </div>
       <hr className="my-3 border-gray-200" />
 
@@ -734,7 +975,7 @@ const ChallengeDetailForm = () => {
         챌린지 소개
         <Card className="bg-white shadow-sm mt-3">
           <CardHeader>
-            {challengeData.challDescription || "챌린지 설명이 없습니다."}
+            {challengeData?.challDescription || "챌린지 설명이 없습니다."}
           </CardHeader>
         </Card>
       </div>
