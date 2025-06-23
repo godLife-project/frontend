@@ -40,7 +40,8 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import axiosInstance from "@/api/axiosInstance";
 
-const ChallengeListForm = () => {
+// Props 추가: onChallengeSelect, onCreateNew
+const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -69,17 +70,17 @@ const ChallengeListForm = () => {
   // 검색 및 필터링 상태
   const [searchTitle, setSearchTitle] = useState("");
   const [searchCategory, setSearchCategory] = useState("all");
-  const [sortOrder, setSortOrder] = useState("default"); // 기본값으로 "default" 사용
+  const [sortOrder, setSortOrder] = useState("default");
 
   // 페이징 상태
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const pageSize = 5; // 원하는 페이지 크기
+  const pageSize = 5;
 
   // 정렬 옵션
   const sortOptions = [
-    { value: "default", label: "기본순" }, // 백엔드 기본값 사용
+    { value: "default", label: "기본순" },
     { value: "chall_idx DESC", label: "최신순" },
     { value: "chall_idx ASC", label: "오래된순" },
     { value: "challEndTime ASC", label: "마감일 빠른 순" },
@@ -145,7 +146,6 @@ const ChallengeListForm = () => {
       const response = await axiosInstance.get("/categories/challenge");
       console.log("카테고리 API 응답:", response.data);
 
-      // 응답 데이터 구조에 따라 처리
       let categoryData = [];
       if (Array.isArray(response.data)) {
         categoryData = response.data;
@@ -155,7 +155,6 @@ const ChallengeListForm = () => {
         categoryData = response.data.content;
       }
 
-      // 카테고리 옵션 생성 (모든 카테고리 옵션 추가)
       const categoryOptions = [
         { value: "all", label: "모든 카테고리" },
         ...categoryData
@@ -169,14 +168,13 @@ const ChallengeListForm = () => {
               "이름 없음";
             return { value, label };
           })
-          .filter((option) => option.value && option.value.trim() !== ""), // 빈 값 필터링
+          .filter((option) => option.value && option.value.trim() !== ""),
       ];
 
       console.log("처리된 카테고리 옵션:", categoryOptions);
       setCategories(categoryOptions);
     } catch (err) {
       console.error("카테고리 불러오기 오류:", err);
-      // 오류 발생 시 기본 옵션만 사용
       setCategories([{ value: "all", label: "모든 카테고리" }]);
     } finally {
       setCategoriesLoading(false);
@@ -196,25 +194,20 @@ const ChallengeListForm = () => {
 
       const params = {};
 
-      // 첫 페이지가 아닐 때만 page 파라미터 추가
       if (currentPage > 0) {
         params.page = currentPage;
       }
 
-      // 페이지 크기 추가 (원하는 크기가 있을 때)
       params.size = pageSize;
 
-      // 정렬이 설정되었을 때만 추가 (기본값이 아닐 때)
       if (sortOrder && sortOrder !== "default") {
         params.sort = sortOrder;
       }
 
-      // 검색어가 있을 때만 파라미터에 추가
       if (searchTitle.trim()) {
         params.challTitle = searchTitle.trim();
       }
 
-      // 카테고리가 선택되었을 때만 추가
       if (searchCategory && searchCategory !== "all") {
         params.challCategory = searchCategory;
       }
@@ -227,22 +220,16 @@ const ChallengeListForm = () => {
 
       console.log("검색 API 응답:", response.data);
 
-      // 페이징된 응답 구조 처리
       if (response.data && typeof response.data === "object") {
-        // Spring Boot 페이징 응답 구조
         if (response.data.content && Array.isArray(response.data.content)) {
           setChallenges(response.data.content);
           setTotalPages(response.data.totalPages || 0);
           setTotalElements(response.data.totalElements || 0);
-        }
-        // 다른 구조의 응답
-        else if (Array.isArray(response.data)) {
+        } else if (Array.isArray(response.data)) {
           setChallenges(response.data);
           setTotalPages(1);
           setTotalElements(response.data.length);
-        }
-        // 데이터가 다른 필드에 있는 경우
-        else {
+        } else {
           const possibleArrays = ["data", "challenges", "items", "list"];
           let found = false;
 
@@ -286,40 +273,52 @@ const ChallengeListForm = () => {
     }
   }, [currentPage, pageSize, sortOrder, searchTitle, searchCategory]);
 
-  // 컴포넌트 마운트 및 검색 조건 변경 시 데이터 fetch
   useEffect(() => {
     fetchChallenges();
   }, [fetchChallenges]);
 
-  // 검색 실행 핸들러
   const handleSearch = () => {
-    setCurrentPage(0); // 검색 시 첫 페이지로 리셋
+    setCurrentPage(0);
     fetchChallenges();
   };
 
-  // Enter 키 검색
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
       handleSearch();
     }
   };
 
-  // 정렬 변경 핸들러
   const handleSortChange = (value) => {
     setSortOrder(value);
-    setCurrentPage(0); // 정렬 변경 시 첫 페이지로 리셋
+    setCurrentPage(0);
   };
 
-  // 페이지 변경 핸들러
   const handlePageChange = (page) => {
     if (page >= 0 && page < totalPages) {
       setCurrentPage(page);
     }
   };
 
-  // 챌린지 상세 페이지로 이동하는 핸들러
-  const handleChallengeClick = (challIdx) => {
-    navigate(`/challenge/detail/${challIdx}`);
+  // 🔥 수정된 챌린지 클릭 핸들러
+  const handleChallengeClick = (challenge) => {
+    if (onChallengeSelect) {
+      // 통합 모드일 때: 콜백 함수 사용
+      onChallengeSelect(challenge);
+    } else {
+      // 독립 모드일 때: navigate 사용
+      navigate(`/challenge/detail/${challenge.challIdx}`);
+    }
+  };
+
+  // 🔥 수정된 새 챌린지 버튼 핸들러
+  const handleCreateNewClick = () => {
+    if (onCreateNew) {
+      // 통합 모드일 때: 콜백 함수 사용
+      onCreateNew();
+    } else {
+      // 독립 모드일 때: navigate 사용
+      navigate("/challenge/write");
+    }
   };
 
   // 챌린지 삭제 함수
@@ -349,7 +348,6 @@ const ChallengeListForm = () => {
         description: "챌린지가 성공적으로 삭제되었습니다.",
       });
 
-      // 데이터 다시 불러오기
       fetchChallenges();
     } catch (err) {
       console.error("챌린지 삭제 실패:", err);
@@ -395,13 +393,11 @@ const ChallengeListForm = () => {
   const getCategoryName = (categoryValue) => {
     if (!categoryValue && categoryValue !== 0) return "미분류";
 
-    // challCategoryIdx가 숫자인 경우 인덱스로 찾기
     if (typeof categoryValue === "number") {
       const category = categories[categoryValue];
       return category ? category.label : `카테고리 ${categoryValue}`;
     }
 
-    // 문자열인 경우 value로 찾기
     const category = categories.find((cat) => cat.value === categoryValue);
     return category ? category.label : categoryValue;
   };
@@ -457,12 +453,12 @@ const ChallengeListForm = () => {
 
   return (
     <div className="container mx-auto p-4">
-      {/* 새 챌린지 버튼 */}
+      {/* 🔥 수정된 새 챌린지 버튼 */}
       <div className="flex justify-end mb-4">
         {roleStatus === true && (
           <Button
             className="bg-black text-white"
-            onClick={() => navigate("/challenge/write")}
+            onClick={handleCreateNewClick}
           >
             + 새 챌린지
           </Button>
@@ -592,14 +588,13 @@ const ChallengeListForm = () => {
                 <Card
                   key={challenge.challIdx || index}
                   className="hover:shadow-lg transition-shadow bg-white shadow-sm cursor-pointer"
-                  onClick={() => handleChallengeClick(challenge.challIdx)}
+                  onClick={() => handleChallengeClick(challenge)}
                 >
                   <CardHeader>
                     <CardTitle className="flex justify-between items-start">
                       <div className="flex items-center gap-2">
                         {/* 카테고리 배지 (제목 왼쪽) */}
                         {(() => {
-                          // challCategoryIdx를 우선적으로 사용
                           const categoryValue =
                             challenge.challCategoryIdx !== undefined
                               ? challenge.challCategoryIdx
@@ -637,14 +632,6 @@ const ChallengeListForm = () => {
                           >
                             {getStatusText(challenge.challState)}
                           </Badge>
-                        )}
-
-                        {/* 관리자 버튼들 */}
-                        {roleStatus === true && (
-                          <div className="flex gap-2">
-                            <ModifyButton challIdx={challenge.challIdx} />
-                            <DeleteButton challIdx={challenge.challIdx} />
-                          </div>
                         )}
                       </div>
                     </CardTitle>
@@ -718,4 +705,4 @@ const ChallengeListForm = () => {
   );
 };
 
-export default ChallengeListForm;
+export default ChallengeListPage;

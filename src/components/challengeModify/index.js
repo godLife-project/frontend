@@ -1,10 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import axiosInstance from "@/api/axiosInstance";
-import { useToast } from "@/components/ui/use-toast";
+import { useState, useRef, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -16,26 +10,24 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import * as z from "zod";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigate, useParams } from "react-router-dom";
+import axiosInstance from "@/api/axiosInstance";
 import {
   Form,
   FormField,
   FormItem,
+  FormLabel,
   FormControl,
   FormMessage,
-  FormLabel,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useToast } from "@/components/ui/use-toast";
 
 // 유효성 검사 스키마
-const challengeEditSchema = z.object({
-  challIdx: z.number(),
+const modifySchema = z.object({
   challTitle: z.string().min(1, "제목을 입력해주세요"),
   challDescription: z.string().min(1, "설명을 입력해주세요"),
   challCategoryIdx: z.string().min(1, "카테고리를 선택해주세요"),
@@ -48,95 +40,141 @@ const challengeEditSchema = z.object({
   userJoin: z.string().optional(),
 });
 
-const ChallengeModifyPage = () => {
+const ChallengeModifyForm = ({
+  challIdx: propChallIdx,
+  onSaveComplete,
+  onCancel,
+  isIntegrated = false,
+}) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { challIdx } = useParams();
+  const { challIdx: paramChallIdx } = useParams();
 
-  const [challengeCategories, setChallengeCategories] = useState([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // 🔥 challIdx는 props에서 우선 가져오고, 없으면 useParams에서 가져옴
+  const challIdx = propChallIdx || paramChallIdx;
+
+  const [challengeType, setChallengeType] = useState("0");
   const [titleLength, setTitleLength] = useState(0);
   const [descriptionLength, setDescriptionLength] = useState(0);
-  const [challengeData, setChallengeData] = useState(null);
-  const [challengeType, setChallengeType] = useState("0");
+  const [challengeCategories, setChallengeCategories] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // 챌린지 카테고리 및 상세 정보 로드
   useEffect(() => {
-    const fetchData = async () => {
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+      toast({
+        variant: "destructive",
+        title: "로그인이 필요합니다",
+        description: "챌린지 수정을 위해 로그인해주세요.",
+      });
+
+      if (!isIntegrated) {
+        navigate("/user/login");
+      }
+    }
+  }, [navigate, toast, isIntegrated]);
+
+  useEffect(() => {
+    const fetchChallengeCategories = async () => {
       try {
-        // 카테고리 정보 로드
-        const categoriesResponse = await axiosInstance.get(
-          "/categories/challenge"
-        );
-        setChallengeCategories(categoriesResponse.data);
-
-        // 챌린지 상세 정보 로드
-        const detailResponse = await axiosInstance.get(
-          `/challenges/detail/${challIdx}`
-        );
-        const challengeDetails = detailResponse.data;
-
-        setChallengeData(challengeDetails);
-        setChallengeType(challengeDetails.userJoin === 0 ? "0" : "1");
-
-        // 폼 기본값 설정
-        form.reset({
-          challIdx: challengeDetails.challIdx,
-          challTitle: challengeDetails.challTitle,
-          challDescription: challengeDetails.challDescription,
-          challCategoryIdx: String(challengeDetails.challCategoryIdx),
-          minParticipationTime: String(challengeDetails.minParticipationTime),
-          totalClearTime: String(challengeDetails.totalClearTime || 0),
-          maxParticipants: String(challengeDetails.maxParticipants),
-          challState: challengeDetails.userJoin === 0 ? "0" : "1",
-          challStartTime: challengeDetails.challStartTime
-            ? challengeDetails.challStartTime.split("T")[0]
-            : undefined,
-          duration: String(challengeDetails.duration || 1),
-          userJoin: String(challengeDetails.userJoin),
-        });
-
-        // 제목, 설명 길이 초기화
-        setTitleLength(challengeDetails.challTitle.length);
-        setDescriptionLength(challengeDetails.challDescription.length);
+        const response = await axiosInstance.get(`/categories/challenge`);
+        console.log("챌린지 카테고리 데이터:", response.data);
+        setChallengeCategories(response.data);
       } catch (error) {
-        console.error("데이터 로딩 실패:", error);
+        console.error("챌린지 카테고리 데이터 가져오기 실패:", error);
         toast({
           variant: "destructive",
-          title: "챌린지 정보 로딩 실패",
-          description: "챌린지 정보를 불러오는 데 실패했습니다.",
+          title: "카테고리 로딩 실패",
+          description: "카테고리 정보를 불러오는데 실패했습니다.",
         });
-        navigate("/challenge");
       }
     };
 
-    fetchData();
-  }, [challIdx, navigate, toast]);
+    fetchChallengeCategories();
+  }, [toast]);
 
-  // 폼 Hook 초기화
   const form = useForm({
-    resolver: zodResolver(challengeEditSchema),
+    resolver: zodResolver(modifySchema),
     mode: "onChange",
-    defaultValues: challengeData
-      ? {
-          challIdx: challengeData.challIdx,
-          challTitle: challengeData.challTitle,
-          challDescription: challengeData.challDescription,
-          challCategoryIdx: String(challengeData.challCategoryIdx),
-          minParticipationTime: String(challengeData.minParticipationTime),
-          totalClearTime: String(challengeData.totalClearTime || 0),
-          maxParticipants: String(challengeData.maxParticipants),
-          challState: challengeData.userJoin === 0 ? "0" : "1",
-          challStartTime: challengeData.challStartTime
-            ? challengeData.challStartTime.split("T")[0]
-            : undefined,
-          duration: String(challengeData.duration || 1),
-          userJoin: String(challengeData.userJoin),
-        }
-      : {},
+    defaultValues: {
+      challTitle: "",
+      challDescription: "",
+      challCategoryIdx: "",
+      totalClearTime: "",
+      minParticipationTime: "",
+      maxParticipants: "",
+      challState: "",
+      challStartTime: "",
+      duration: "",
+      userJoin: "",
+    },
   });
 
-  // 제목 길이 핸들러
+  const {
+    formState: { errors },
+  } = form;
+
+  // 🔥 기존 챌린지 데이터 불러오기
+  useEffect(() => {
+    const fetchChallengeData = async () => {
+      if (!challIdx) {
+        setError("챌린지 ID가 없습니다.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await axiosInstance.get(`/challenges/${challIdx}`);
+
+        const challengeData = response.data.challenge || response.data;
+
+        if (!challengeData) {
+          throw new Error("챌린지 데이터를 찾을 수 없습니다.");
+        }
+
+        // 폼에 기존 데이터 설정
+        form.reset({
+          challTitle: challengeData.challTitle || "",
+          challDescription: challengeData.challDescription || "",
+          challCategoryIdx: String(challengeData.challCategoryIdx || ""),
+          totalClearTime: String(challengeData.totalClearTime || ""),
+          minParticipationTime: String(
+            challengeData.minParticipationTime || ""
+          ),
+          maxParticipants: String(challengeData.maxParticipants || ""),
+          challState: challengeData.userJoin === 0 ? "0" : "1",
+          challStartTime: challengeData.challStartTime
+            ? new Date(challengeData.challStartTime).toISOString().split("T")[0]
+            : "",
+          duration: String(challengeData.duration || ""),
+          userJoin: String(challengeData.userJoin || ""),
+        });
+
+        // 챌린지 타입 설정
+        setChallengeType(challengeData.userJoin === 0 ? "0" : "1");
+
+        // 텍스트 길이 설정
+        setTitleLength(challengeData.challTitle?.length || 0);
+        setDescriptionLength(challengeData.challDescription?.length || 0);
+      } catch (err) {
+        console.error("챌린지 데이터 불러오기 실패:", err);
+        setError("챌린지 데이터를 불러오는데 실패했습니다.");
+        toast({
+          variant: "destructive",
+          title: "데이터 로딩 실패",
+          description: "챌린지 정보를 불러오는데 실패했습니다.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchChallengeData();
+  }, [challIdx, form, toast]);
+
   const handleTitleChange = (e) => {
     const inputValue = e.target.value;
     if (inputValue.length <= 50) {
@@ -144,7 +182,6 @@ const ChallengeModifyPage = () => {
     }
   };
 
-  // 설명 길이 핸들러
   const handleDescriptionChange = (e) => {
     const inputValue = e.target.value;
     if (inputValue.length <= 500) {
@@ -152,18 +189,16 @@ const ChallengeModifyPage = () => {
     }
   };
 
-  // 챌린지 유형 및 챌린지 상태 변경 핸들러
+  // challengeType이 변경될 때마다 challState 값 업데이트
   useEffect(() => {
     form.setValue("challState", challengeType);
-    form.setValue("userJoin", challengeType === "0" ? "0" : "1");
   }, [challengeType, form]);
 
-  // 폼 제출 핸들러
+  // 🔥 챌린지 수정 API 요청 함수
   const onSubmit = async (data) => {
     setIsSubmitting(true);
 
     try {
-      // 로그인 상태 확인
       const accessToken = localStorage.getItem("accessToken");
       if (!accessToken) {
         toast({
@@ -171,54 +206,54 @@ const ChallengeModifyPage = () => {
           title: "로그인이 필요합니다",
           description: "챌린지 수정을 위해 로그인해주세요.",
         });
-        navigate("/user/login");
+
+        if (!isIntegrated) {
+          navigate("/user/login");
+        }
         return;
       }
 
       // 데이터 형식 변환
       const submitData = {
-        challIdx: data.challIdx,
+        challIdx: parseInt(challIdx, 10),
         challTitle: data.challTitle,
         challDescription: data.challDescription,
         challCategoryIdx: parseInt(data.challCategoryIdx, 10),
         minParticipationTime: parseInt(data.minParticipationTime, 10),
+        totalClearTime: parseInt(data.totalClearTime, 10),
         maxParticipants: parseInt(data.maxParticipants, 10),
-        challState: "PUBLISHED",
+        userJoin: challengeType === "0" ? 0 : 1,
+        duration: parseInt(data.duration, 10),
       };
 
-      // 선택적으로 포함
-      if (challengeType === "0" && data.challStartTime) {
-        submitData.challStartTime = `${data.challStartTime}T10:00:00`;
+      // 시작일이 있으면 T12:00:00 형식으로 변환하여 추가
+      if (data.challStartTime) {
+        submitData.challStartTime = `${data.challStartTime}T12:00:00`;
       }
 
-      if (data.totalClearTime) {
-        submitData.totalClearTime = parseInt(data.totalClearTime, 10);
-      }
+      console.log("수정할 챌린지 데이터:", submitData);
 
-      if (data.duration) {
-        submitData.duration = parseInt(data.duration, 10);
-      }
-
-      submitData.userJoin = challengeType === "0" ? 0 : 1;
-
-      // 챌린지 수정 API 요청
       const response = await axiosInstance.patch(
-        `/admin/challenges/modify`,
+        "/admin/challenges/modify",
         submitData,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
       );
 
+      console.log("챌린지 수정 성공:", response.data);
+
       toast({
         title: "챌린지 수정 성공",
         description: "챌린지가 성공적으로 수정되었습니다!",
       });
 
-      console.log("accessToken:", accessToken);
-
-      // 성공 시 챌린지 상세 페이지로 이동
-      navigate(`/challenge/detail/${challIdx}`);
+      // 🔥 성공 시 이동 처리
+      if (isIntegrated && onSaveComplete) {
+        onSaveComplete();
+      } else {
+        navigate("/challenge");
+      }
     } catch (error) {
       console.error("챌린지 수정 중 오류 발생:", error);
       toast({
@@ -231,9 +266,34 @@ const ChallengeModifyPage = () => {
     }
   };
 
-  // 데이터 로딩 중 표시
-  if (!challengeData) {
-    return <div>로딩 중...</div>;
+  // 🔥 취소 버튼 핸들러
+  const handleCancel = () => {
+    if (isIntegrated && onCancel) {
+      onCancel();
+    } else {
+      navigate(-1);
+    }
+  };
+
+  // 로딩 상태
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-full py-10">
+        <div className="text-lg">챌린지 정보를 불러오는 중입니다...</div>
+      </div>
+    );
+  }
+
+  // 에러 상태
+  if (error) {
+    return (
+      <div className="text-center text-red-500 py-10">
+        {error}
+        <Button onClick={() => window.location.reload()} className="mt-4">
+          다시 시도
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -250,7 +310,6 @@ const ChallengeModifyPage = () => {
           })}
           className="space-y-6"
         >
-          {/* 카테고리 선택 카드 */}
           <Card className="bg-white shadow-sm">
             <CardHeader>
               <CardTitle>카테고리</CardTitle>
@@ -298,7 +357,6 @@ const ChallengeModifyPage = () => {
             </CardContent>
           </Card>
 
-          {/* 제목 입력 카드 */}
           <Card className="bg-white shadow-sm">
             <CardHeader>
               <CardTitle>제목</CardTitle>
@@ -334,7 +392,6 @@ const ChallengeModifyPage = () => {
             </CardContent>
           </Card>
 
-          {/* 설명 입력 카드 */}
           <Card className="bg-white shadow-sm">
             <CardHeader>
               <CardTitle>소개</CardTitle>
@@ -369,12 +426,11 @@ const ChallengeModifyPage = () => {
             </CardContent>
           </Card>
 
-          {/* 최소 참여 시간 및 최대 참여 인원 카드 */}
           <Card className="bg-white shadow-sm">
             <CardHeader>
-              <CardTitle>최소 참여 가능 시간 및 최대 참여 인원</CardTitle>
+              <CardTitle>최소 참여 가능 시간 및 총 클리어 시간</CardTitle>
               <CardDescription>
-                최소 참여 가능 시간과 최대 참여 인원을 설정해주세요.
+                최소 참여 가능 시간과 총 클리어 시간을 설정해주세요.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -384,11 +440,16 @@ const ChallengeModifyPage = () => {
                   name="minParticipationTime"
                   render={({ field }) => (
                     <FormItem>
-                      <Label className="text-gray-700">
+                      <FormLabel className="text-gray-700">
                         참여 가능한 최소 시간
-                      </Label>
+                      </FormLabel>
                       <FormControl>
-                        <Input {...field} type="number" min="1" />
+                        <Input
+                          {...field}
+                          type="number"
+                          id="minParticipationTime"
+                          min="1"
+                        />
                       </FormControl>
                       <FormMessage className="text-red-500 text-sm" />
                     </FormItem>
@@ -397,12 +458,19 @@ const ChallengeModifyPage = () => {
 
                 <FormField
                   control={form.control}
-                  name="maxParticipants"
+                  name="totalClearTime"
                   render={({ field }) => (
                     <FormItem>
-                      <Label className="text-gray-700">최대 참여 인원</Label>
+                      <FormLabel className="text-gray-700">
+                        총 클리어 시간
+                      </FormLabel>
                       <FormControl>
-                        <Input {...field} type="number" min="1" />
+                        <Input
+                          {...field}
+                          type="number"
+                          id="totalClearTime"
+                          min="1"
+                        />
                       </FormControl>
                       <FormMessage className="text-red-500 text-sm" />
                     </FormItem>
@@ -412,37 +480,35 @@ const ChallengeModifyPage = () => {
             </CardContent>
           </Card>
 
-          {/* 총 클리어 시간 카드 추가 */}
           <Card className="bg-white shadow-sm">
             <CardHeader>
-              <CardTitle>총 클리어 시간</CardTitle>
-              <CardDescription>총 클리어 시간을 설정해주세요.</CardDescription>
+              <CardTitle>최대 참여 가능 인원</CardTitle>
+              <CardDescription>
+                최대 참여 가능한 인원을 설정해주세요.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <FormField
                 control={form.control}
-                name="totalClearTime"
+                name="maxParticipants"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700">
-                      총 클리어 시간
-                    </FormLabel>
                     <FormControl>
                       <Input
                         {...field}
+                        className="w-full"
                         type="number"
-                        id="totalClearTime"
+                        id="maxParticipants"
                         min="1"
                       />
                     </FormControl>
-                    <FormMessage className="text-red-500 text-sm" />
+                    <FormMessage />
                   </FormItem>
                 )}
               />
             </CardContent>
           </Card>
 
-          {/* 챌린지 유형 카드 추가 */}
           <Card className="bg-white">
             <CardHeader>
               <CardTitle>챌린지 유형</CardTitle>
@@ -482,7 +548,6 @@ const ChallengeModifyPage = () => {
             </CardContent>
           </Card>
 
-          {/* 챌린지 기간 설정 카드 추가 */}
           <Card className="bg-white shadow-sm">
             <CardHeader>
               <CardTitle>챌린지 기간 설정</CardTitle>
@@ -527,9 +592,11 @@ const ChallengeModifyPage = () => {
             </CardContent>
           </Card>
 
-          {/* 제출 버튼 */}
           <div className="flex justify-end space-x-4">
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button variant="outline" type="button" onClick={handleCancel}>
+              취소
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "수정 중..." : "수정하기"}
             </Button>
           </div>
@@ -539,4 +606,4 @@ const ChallengeModifyPage = () => {
   );
 };
 
-export default ChallengeModifyPage;
+export default ChallengeModifyForm;
