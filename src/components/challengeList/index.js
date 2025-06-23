@@ -69,6 +69,7 @@ const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
 
   // 검색 및 필터링 상태
   const [searchTitle, setSearchTitle] = useState("");
+  const [searchInput, setSearchInput] = useState(""); // 검색어 임시 상태
   const [searchCategory, setSearchCategory] = useState("all");
   const [sortOrder, setSortOrder] = useState("default");
 
@@ -158,17 +159,17 @@ const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
       const categoryOptions = [
         { value: "all", label: "모든 카테고리" },
         ...categoryData
-          .map((category) => {
-            const value =
-              category.challName || category.name || category.categoryName;
+          .map((category, index) => {
+            // 🔥 수정: 인덱스나 ID를 value로 사용
+            const value = category.idx || category.id || index;
             const label =
               category.challName ||
               category.name ||
               category.categoryName ||
               "이름 없음";
-            return { value, label };
+            return { value: value.toString(), label };
           })
-          .filter((option) => option.value && option.value.trim() !== ""),
+          .filter((option) => option.label && option.label.trim() !== ""),
       ];
 
       console.log("처리된 카테고리 옵션:", categoryOptions);
@@ -194,10 +195,8 @@ const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
 
       const params = {};
 
-      if (currentPage > 0) {
-        params.page = currentPage;
-      }
-
+      // 페이지 번호 (0-based → 1-based 변환)
+      params.page = currentPage + 1;
       params.size = pageSize;
 
       if (sortOrder && sortOrder !== "default") {
@@ -208,17 +207,26 @@ const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
         params.challTitle = searchTitle.trim();
       }
 
+      // 🔥 수정: challCategoryIdx로 파라미터 이름 변경하고 숫자로 전송
       if (searchCategory && searchCategory !== "all") {
-        params.challCategory = searchCategory;
+        // searchCategory가 숫자인지 확인 후 parseInt
+        const categoryIdx = parseInt(searchCategory);
+        if (!isNaN(categoryIdx)) {
+          params.challCategoryIdx = categoryIdx;
+        }
       }
 
-      console.log("검색 파라미터:", params);
+      console.log("🔍 최종 검색 파라미터:", params);
+      console.log(
+        "📡 API 호출 URL:",
+        `/challenges/search?${new URLSearchParams(params).toString()}`
+      );
 
       const response = await axiosInstance.get("/challenges/search", {
         params,
       });
 
-      console.log("검색 API 응답:", response.data);
+      console.log("✅ 검색 API 응답:", response.data);
 
       if (response.data && typeof response.data === "object") {
         if (response.data.content && Array.isArray(response.data.content)) {
@@ -263,7 +271,9 @@ const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
         setTotalElements(0);
       }
     } catch (err) {
-      console.error("챌린지 검색 오류:", err);
+      console.error("❌ 챌린지 검색 오류:", err);
+      console.error("📋 에러 응답:", err.response?.data);
+      console.error("🔢 에러 상태코드:", err.response?.status);
       setError("챌린지를 불러오는 중 오류가 발생했습니다.");
       setChallenges([]);
       setTotalPages(0);
@@ -277,15 +287,31 @@ const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
     fetchChallenges();
   }, [fetchChallenges]);
 
-  const handleSearch = () => {
+  // 🎯 개선된 검색 관련 함수들
+  const handleSearchClear = useCallback(() => {
+    setSearchInput("");
+    setSearchTitle("");
     setCurrentPage(0);
-    fetchChallenges();
+  }, []);
+
+  const handleSearchSubmit = () => {
+    setSearchTitle(searchInput);
+    setCurrentPage(0);
   };
 
-  const handleKeyPress = (e) => {
+  const handleSearchKeyPress = (e) => {
     if (e.key === "Enter") {
-      handleSearch();
+      handleSearchSubmit();
     }
+  };
+
+  // 필터 초기화 함수
+  const handleFiltersReset = () => {
+    setSearchInput("");
+    setSearchTitle("");
+    setSearchCategory("all");
+    setSortOrder("default");
+    setCurrentPage(0);
   };
 
   const handleSortChange = (value) => {
@@ -393,13 +419,11 @@ const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
   const getCategoryName = (categoryValue) => {
     if (!categoryValue && categoryValue !== 0) return "미분류";
 
-    if (typeof categoryValue === "number") {
-      const category = categories[categoryValue];
-      return category ? category.label : `카테고리 ${categoryValue}`;
-    }
-
-    const category = categories.find((cat) => cat.value === categoryValue);
-    return category ? category.label : categoryValue;
+    // 🔥 수정: 인덱스 기반으로 카테고리 찾기
+    const category = categories.find(
+      (cat) => cat.value === categoryValue.toString()
+    );
+    return category ? category.label : `카테고리 ${categoryValue}`;
   };
 
   // 수정 버튼 컴포넌트 (관리자만)
@@ -453,7 +477,7 @@ const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
 
   return (
     <div className="container mx-auto p-4">
-      {/* 🔥 수정된 새 챌린지 버튼 */}
+      {/* 새 챌린지 버튼 */}
       <div className="flex justify-end mb-4">
         {roleStatus === true && (
           <Button
@@ -465,104 +489,205 @@ const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
         )}
       </div>
 
-      {/* 검색 섹션 */}
-      <div>
-        {/* 메인 검색창 */}
-        <div className="mb-3 bg-white">
-          <div className="relative">
-            <Input
-              type="text"
-              placeholder="챌린지 제목 검색..."
-              value={searchTitle}
-              onChange={(e) => setSearchTitle(e.target.value)}
-              onKeyPress={handleKeyPress}
-              className="pr-10 h-12 text-base"
-            />
-            <Search
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-600 w-5 h-5 cursor-pointer transition-colors"
-              onClick={handleSearch}
-              title="검색하기"
-            />
-          </div>
-        </div>
-
-        {/* 고급 필터 토글 버튼 */}
-        <div className="flex items-center justify-between pb-5">
-          <Button
-            variant="outline"
-            onClick={() => setShowAdvancedFilter(!showAdvancedFilter)}
-            className="flex items-center gap-2 border-gray-300"
-          >
-            <Filter className="w-4 h-4" />
-            고급 필터
-            {showAdvancedFilter ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
-          </Button>
-        </div>
-
-        {/* 고급 필터 영역 */}
-        {showAdvancedFilter && (
-          <div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
-              {/* 카테고리 선택 */}
-              <div>
-                <label className="block text-sm font-medium  text-gray-700 mb-2">
-                  카테고리
-                </label>
-                <Select
-                  value={searchCategory}
-                  onValueChange={setSearchCategory}
+      {/* 🎯 카드 형태로 감싼 검색 및 필터 섹션 */}
+      <div className="rounded-xl border bg-card text-card-foreground shadow mb-6">
+        <div className="p-6 space-y-4">
+          {/* 검색바 */}
+          <div className="flex space-x-2">
+            <div className="flex-1 relative">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              />
+              <Input
+                type="text"
+                placeholder="챌린지 제목을 검색하세요..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyPress={handleSearchKeyPress}
+                className="w-full pl-10 pr-10 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {/* X 아이콘 - 검색어가 있을 때만 표시 */}
+              {searchInput && (
+                <button
+                  onClick={handleSearchClear}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="카테고리 선택" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white">
-                    {categoriesLoading ? (
-                      <SelectItem value="loading" disabled>
-                        카테고리 불러오는 중...
-                      </SelectItem>
-                    ) : (
-                      categories
-                        .filter(
-                          (option) => option.value && option.value.trim() !== ""
-                        )
-                        .map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            <Button
+              onClick={handleSearchSubmit}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+            >
+              검색
+            </Button>
+          </div>
+
+          {/* 필터 토글 버튼 */}
+          <button
+            onClick={() => setShowAdvancedFilter(!showAdvancedFilter)}
+            className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            <Filter size={16} />
+            <span>{showAdvancedFilter ? "필터 숨기기" : "고급 필터"}</span>
+            {showAdvancedFilter ? (
+              <ChevronUp size={16} />
+            ) : (
+              <ChevronDown size={16} />
+            )}
+          </button>
+
+          {/* 고급 필터 패널 */}
+          {showAdvancedFilter && (
+            <div className=" p-4 rounded-lg space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 카테고리 선택 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    카테고리
+                  </label>
+                  <Select
+                    value={searchCategory}
+                    onValueChange={setSearchCategory}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="카테고리 선택" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      {categoriesLoading ? (
+                        <SelectItem value="loading" disabled>
+                          카테고리 불러오는 중...
+                        </SelectItem>
+                      ) : (
+                        categories
+                          .filter(
+                            (option) =>
+                              option.value && option.value.trim() !== ""
+                          )
+                          .map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {categoriesLoading && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      카테고리 로딩 중...
+                    </p>
+                  )}
+                </div>
+
+                {/* 정렬 선택 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    정렬 기준
+                  </label>
+                  <Select value={sortOrder} onValueChange={handleSortChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="정렬 기준" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      {sortOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          <div className="flex items-center">
+                            <ArrowUpDown className="mr-2 h-4 w-4" />
                             {option.label}
-                          </SelectItem>
-                        ))
-                    )}
-                  </SelectContent>
-                </Select>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              {/* 정렬 선택 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  정렬 기준
-                </label>
-                <Select value={sortOrder} onValueChange={handleSortChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="정렬 기준" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white">
-                    {sortOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        <div className="flex items-center">
-                          <ArrowUpDown className="mr-2 h-4 w-4" />
-                          {option.label}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* 필터 초기화 버튼 */}
+              <div className="flex justify-start">
+                <button
+                  onClick={handleFiltersReset}
+                  className="px-3 py-1 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  필터 초기화
+                </button>
               </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* 현재 적용된 필터 표시 */}
+          {(searchTitle ||
+            searchCategory !== "all" ||
+            sortOrder !== "default") && (
+            <div className="flex flex-wrap items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <span className="text-sm font-medium text-blue-800">
+                적용된 필터:
+              </span>
+
+              {searchTitle && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                  <span>검색: {searchTitle}</span>
+                  <button
+                    onClick={() => {
+                      setSearchTitle("");
+                      setSearchInput("");
+                      setCurrentPage(0);
+                    }}
+                    className="hover:bg-blue-200 rounded-full p-0.5"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+
+              {searchCategory !== "all" && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                  <span>
+                    카테고리:{" "}
+                    {categories.find((c) => c.value === searchCategory)
+                      ?.label || searchCategory}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setSearchCategory("all");
+                      setCurrentPage(0);
+                    }}
+                    className="hover:bg-blue-200 rounded-full p-0.5"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+
+              {sortOrder !== "default" && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                  <span>
+                    정렬:{" "}
+                    {sortOptions.find((s) => s.value === sortOrder)?.label ||
+                      sortOrder}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setSortOrder("default");
+                      setCurrentPage(0);
+                    }}
+                    className="hover:bg-blue-200 rounded-full p-0.5"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+
+              <button
+                onClick={handleFiltersReset}
+                className="ml-2 text-xs text-blue-600 hover:text-blue-800 underline"
+              >
+                모든 필터 제거
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 챌린지 목록 */}
@@ -633,6 +758,12 @@ const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
                             {getStatusText(challenge.challState)}
                           </Badge>
                         )}
+
+                        {/* 관리자 버튼들 */}
+                        <div className="flex items-center gap-1">
+                          <ModifyButton challIdx={challenge.challIdx} />
+                          <DeleteButton challIdx={challenge.challIdx} />
+                        </div>
                       </div>
                     </CardTitle>
                     <CardDescription className="p-2">
