@@ -193,12 +193,14 @@ const TopMenu = () => {
   // 편집 모달 관련 핸들러들
   const openEditModal = (item) => {
     console.log("편집 모달 열기:", item);
-    // TopMenu API 응답 구조에 맞춰 데이터 매핑
+    // TopMenu API 응답 구조에 맞춰 데이터 매핑 - parentIdx, categoryLevel 추가
     const mappedItem = {
       topIdx: item.topIdx,
       topName: item.name,
       topAddr: item.addr,
-      ordIdx: item.ordCol,
+      parentIdx: item.parentIdx,
+      categoryLevel: item.categoryLevel,
+      ordCol: item.ordCol,
     };
     setSelectedItem(mappedItem);
     setIsEditModalOpen(true);
@@ -209,7 +211,7 @@ const TopMenu = () => {
     setSelectedItem(null);
   };
 
-  // 편집 처리
+  // 편집 처리 - parentIdx, categoryLevel 추가
   const handleEdit = async (updatedItem) => {
     if (!selectedItem) return;
 
@@ -222,7 +224,9 @@ const TopMenu = () => {
         {
           topName: updatedItem.topName,
           topAddr: updatedItem.topAddr,
-          ordIdx: updatedItem.ordIdx,
+          parentIdx: updatedItem.parentIdx,
+          categoryLevel: updatedItem.categoryLevel,
+          ordCol: updatedItem.ordCol,
         },
         {
           headers: { Authorization: `Bearer ${accessToken}` },

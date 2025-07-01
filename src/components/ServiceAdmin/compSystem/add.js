@@ -274,6 +274,8 @@ const AddItemModal = ({ isOpen, onClose, onAdd, itemType, iconList = [] }) => {
     color: "#3B82F6", // 기본 색상
     addr: "", // 탑메뉴용 주소 필드
     ordCol: "", // 탑메뉴용 순서 필드
+    parentIdx: "", // 탑메뉴용 부모 인덱스
+    categoryLevel: "1", // 탑메뉴용 카테고리 레벨
   });
 
   // 모달이 열릴 때마다 폼 초기화
@@ -284,6 +286,8 @@ const AddItemModal = ({ isOpen, onClose, onAdd, itemType, iconList = [] }) => {
           name: "",
           addr: "",
           ordCol: "",
+          parentIdx: "",
+          categoryLevel: "1",
           iconKey: "",
           color: "#3B82F6",
         });
@@ -294,6 +298,8 @@ const AddItemModal = ({ isOpen, onClose, onAdd, itemType, iconList = [] }) => {
           color: "#3B82F6",
           addr: "",
           ordCol: "",
+          parentIdx: "",
+          categoryLevel: "1",
         });
       }
     }
@@ -345,11 +351,13 @@ const AddItemModal = ({ isOpen, onClose, onAdd, itemType, iconList = [] }) => {
         return;
       }
 
-      // 탑메뉴 탭에서는 API 형식에 맞게 변환해서 전송
+      // 탑메뉴 탭에서는 API 형식에 맞게 변환해서 전송 - 5개 필드 모두 포함
       onAdd({
         topName: formData.name,
         topAddr: formData.addr,
-        ordIdx: Number(formData.ordCol),
+        parentIdx: formData.parentIdx ? Number(formData.parentIdx) : null,
+        categoryLevel: Number(formData.categoryLevel),
+        ordCol: Number(formData.ordCol),
       });
     } else {
       // 목표/직업 탭
@@ -444,6 +452,35 @@ const AddItemModal = ({ isOpen, onClose, onAdd, itemType, iconList = [] }) => {
                   className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  부모 인덱스
+                </label>
+                <input
+                  type="number"
+                  name="parentIdx"
+                  value={formData.parentIdx}
+                  onChange={handleChange}
+                  placeholder="부모가 없으면 비워두세요"
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  카테고리 레벨
+                </label>
+                <select
+                  name="categoryLevel"
+                  value={formData.categoryLevel}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="1">1 (최상위)</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                </select>
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">

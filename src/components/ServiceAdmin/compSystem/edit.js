@@ -16,7 +16,7 @@ const EditItemModal = ({
     color: "", // 색상 필드 추가
     topName: "",
     topAddr: "",
-    ordIdx: "",
+    ordCol: "",
   });
 
   // 디버깅용: iconData 확인
@@ -38,7 +38,7 @@ const EditItemModal = ({
         setFormData({
           topName: item.topName || "",
           topAddr: item.topAddr || "",
-          ordIdx: item.ordIdx || "",
+          ordCol: item.ordCol || "",
         });
       } else {
         // 목표/직업 탭일 경우
@@ -99,7 +99,7 @@ const EditItemModal = ({
         alert("메뉴 주소는 필수 입력사항입니다.");
         return;
       }
-      if (!formData.ordIdx.toString().trim()) {
+      if (!formData.ordCol.toString().trim()) {
         alert("정렬 순서는 필수 입력사항입니다.");
         return;
       }
@@ -107,7 +107,7 @@ const EditItemModal = ({
       const topMenuData = {
         topName: formData.topName,
         topAddr: formData.topAddr,
-        ordIdx: parseInt(formData.ordIdx),
+        ordCol: parseInt(formData.ordCol),
       };
 
       console.log("=== EditItemModal에서 전송할 탑메뉴 데이터 ===");
@@ -392,8 +392,8 @@ const EditItemModal = ({
                 </label>
                 <input
                   type="number"
-                  name="ordIdx"
-                  value={formData.ordIdx}
+                  name="ordCol"
+                  value={formData.ordCol}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
