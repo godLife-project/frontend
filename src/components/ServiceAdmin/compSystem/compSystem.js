@@ -502,7 +502,6 @@
 // };
 
 // export default CompSystem;
-
 import React, { useState, useEffect, useRef } from "react";
 import { Search, X, Clock, Trash2 } from "lucide-react";
 import axiosInstance from "@/api/axiosInstance";
@@ -510,6 +509,7 @@ import ItemTable from "./ItemTable";
 import DeleteConfirmModal from "./delete";
 import EditItemModal from "./edit";
 import AddItemModal from "./add";
+import TopMenu from "../topMenu/topMenu";
 
 const CompSystem = () => {
   // 기존 상태들
@@ -629,7 +629,7 @@ const CompSystem = () => {
     loadRecentSearches();
   }, []);
 
-  // API 경로 설정 (기존과 동일)
+  // API 경로 설정 (탑메뉴 추가)
   const getApiPath = () => {
     switch (activeTab) {
       case "목표":
@@ -638,6 +638,8 @@ const CompSystem = () => {
         return "/categories/job";
       case "아이콘":
         return "/categories/admin/icon";
+      case "탑메뉴":
+        return "/admin/compSystem/topMenu";
       default:
         return "/categories/target";
     }
@@ -690,7 +692,7 @@ const CompSystem = () => {
     }
   };
 
-  // 수정된: API에서 데이터 가져오기
+  // 수정된: API에서 데이터 가져오기 (탑메뉴 처리 제거)
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
@@ -800,15 +802,20 @@ const CompSystem = () => {
   useEffect(() => {
     const loadData = async () => {
       await fetchIconData(); // 먼저 아이콘 데이터 로드
-      fetchData(); // 그 다음 현재 탭 데이터 로드
+      // 탑메뉴가 아닌 경우에만 fetchData 호출 (탑메뉴는 TopMenu 컴포넌트에서 처리)
+      if (activeTab !== "탑메뉴") {
+        fetchData(); // 그 다음 현재 탭 데이터 로드
+      }
     };
 
     loadData();
   }, []);
 
-  // 핵심: 탭이 변경될 때마다 데이터 다시 가져오기
+  // 핵심: 탭이 변경될 때마다 데이터 다시 가져오기 (탑메뉴 제외)
   useEffect(() => {
-    fetchData();
+    if (activeTab !== "탑메뉴") {
+      fetchData();
+    }
   }, [activeTab]);
 
   // 핵심: 아이콘 데이터가 변경될 때마다 로그
@@ -858,9 +865,11 @@ const CompSystem = () => {
     saveRecentSearch(term);
   };
 
-  // 핵심: 모달 열기 전에 아이콘 데이터 확인
+  // 핵심: 모달 열기 전에 아이콘 데이터 확인 (탑메뉴는 아이콘 데이터 불필요)
   const handleOpenAddModal = async () => {
-    await fetchIconData(); // 아이콘 데이터 확인 및 필요시 로드
+    if (activeTab !== "탑메뉴") {
+      await fetchIconData(); // 아이콘 데이터 확인 및 필요시 로드
+    }
     setIsAddModalOpen(true);
   };
 
@@ -877,7 +886,7 @@ const CompSystem = () => {
     setIsDeleteModalOpen(true);
   };
 
-  // 추가된 함수: 항목 추가 처리
+  // 추가된 함수: 항목 추가 처리 (탑메뉴 지원 추가)
   const handleAddItem = async (newItem) => {
     setIsLoading(true);
 
@@ -891,7 +900,14 @@ const CompSystem = () => {
 
       if (response?.status === 200 || response?.status === 201) {
         console.log(`${activeTab} 항목 추가 성공:`, response.data);
-        fetchData(); // 데이터 다시 불러오기
+
+        // 탭메뉴인 경우 페이지 새로고침으로 TopMenu 컴포넌트 데이터 갱신
+        if (activeTab === "탑메뉴") {
+          window.location.reload();
+        } else {
+          fetchData(); // 데이터 다시 불러오기
+        }
+
         setIsAddModalOpen(false);
       } else {
         console.error(`${activeTab} 항목 추가 실패:`, response);
@@ -906,6 +922,7 @@ const CompSystem = () => {
   };
 
   // 수정된 함수: 항목 수정 처리
+  // 수정된 함수: 항목 수정 처리
   const handleEditItem = async (updatedItem) => {
     setIsLoading(true);
 
@@ -915,7 +932,7 @@ const CompSystem = () => {
       let endpoint;
       let itemToUpdate = { ...updatedItem };
 
-      // 아이콘 탭인 경우와 그렇지 않은 경우를 구분
+      // 아이콘 탭인 경우
       if (activeTab === "아이콘") {
         // 아이콘은 idx가 아닌 iconKey를 식별자로 사용
         // originalIconKey를 사용하여 원래 아이콘을 식별
@@ -925,8 +942,17 @@ const CompSystem = () => {
 
         // 아이콘은 iconKey로 API 엔드포인트 구성
         endpoint = `${apiPath}/${itemToUpdate.originalIconKey}`;
-      } else {
-        // 목표/직업 탭의 경우 idx를 사용
+      }
+      // 탑메뉴 탭인 경우
+      else if (activeTab === "탑메뉴") {
+        if (selectedItem && selectedItem.topIdx) {
+          endpoint = `${apiPath}/${selectedItem.topIdx}`;
+        } else {
+          throw new Error("탑메뉴 항목의 topIdx가 없습니다.");
+        }
+      }
+      // 목표/직업 탭인 경우
+      else {
         if (selectedItem && selectedItem.idx) {
           itemToUpdate.idx = selectedItem.idx;
           endpoint = `${apiPath}/${selectedItem.idx}`;
@@ -944,7 +970,14 @@ const CompSystem = () => {
 
       if (response?.status === 200) {
         console.log(`${activeTab} 항목 수정 성공:`, response.data);
-        fetchData(); // 데이터 다시 불러오기
+
+        // 탑메뉴인 경우 페이지 새로고침으로 데이터 갱신
+        if (activeTab === "탑메뉴") {
+          window.location.reload();
+        } else {
+          fetchData(); // 데이터 다시 불러오기
+        }
+
         setIsEditModalOpen(false);
         setSelectedItem(null);
       } else {
@@ -1051,6 +1084,14 @@ const CompSystem = () => {
         >
           아이콘
         </button>
+        <button
+          className={`px-6 py-3 rounded-md ${
+            activeTab === "탑메뉴" ? "bg-blue-500 text-white" : "bg-gray-200"
+          }`}
+          onClick={() => handleTabChange("탑메뉴")}
+        >
+          탑메뉴
+        </button>
         <div className="flex-grow"></div>
         <button
           className="px-6 py-3 bg-blue-500 text-white rounded-md"
@@ -1060,113 +1101,122 @@ const CompSystem = () => {
         </button>
       </div>
 
-      {/* 검색 */}
-      <div className="mb-6 relative">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <Search size={20} className="text-gray-400" />
+      {/* 탑메뉴가 아닌 경우 검색 표시 */}
+      {activeTab !== "탑메뉴" && (
+        <div className="mb-6 relative">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <Search size={20} className="text-gray-400" />
+            </div>
+            <input
+              ref={searchInputRef}
+              type="text"
+              className="w-full pl-10 pr-10 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="검색어를 입력하세요."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              onFocus={handleSearchFocus}
+              onKeyDown={handleSearchKeyDown}
+            />
+            {/* 검색어 지우기 버튼 */}
+            {searchTerm && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setShowRecentSearches(false);
+                  searchInputRef.current?.focus();
+                }}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors"
+                title="검색어 지우기"
+              >
+                <X size={20} />
+              </button>
+            )}
           </div>
-          <input
-            ref={searchInputRef}
-            type="text"
-            className="w-full pl-10 pr-10 py-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="검색어를 입력하세요."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            onFocus={handleSearchFocus}
-            onKeyDown={handleSearchKeyDown}
-          />
-          {/* 검색어 지우기 버튼 */}
-          {searchTerm && (
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setShowRecentSearches(false);
-                searchInputRef.current?.focus();
-              }}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors"
-              title="검색어 지우기"
-            >
-              <X size={20} />
-            </button>
-          )}
-        </div>
 
-        {/* 최근 검색어 드롭다운 */}
-        {showRecentSearches && recentSearches.length > 0 && (
-          <div
-            ref={recentSearchesRef}
-            className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-60 overflow-y-auto"
-          >
-            <div className="p-3 border-b bg-gray-50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center text-sm text-gray-600">
-                  <Clock size={16} className="mr-1" />
-                  <span>최근 검색어</span>
+          {/* 최근 검색어 드롭다운 */}
+          {showRecentSearches && recentSearches.length > 0 && (
+            <div
+              ref={recentSearchesRef}
+              className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg z-50 max-h-60 overflow-y-auto"
+            >
+              <div className="p-3 border-b bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Clock size={16} className="mr-1" />
+                    <span>최근 검색어</span>
+                  </div>
+                  <button
+                    onClick={clearAllRecentSearches}
+                    className="text-xs text-gray-500 hover:text-red-500 flex items-center"
+                    title="전체 삭제"
+                  >
+                    <Trash2 size={12} className="mr-1" />
+                    전체삭제
+                  </button>
                 </div>
-                <button
-                  onClick={clearAllRecentSearches}
-                  className="text-xs text-gray-500 hover:text-red-500 flex items-center"
-                  title="전체 삭제"
-                >
-                  <Trash2 size={12} className="mr-1" />
-                  전체삭제
-                </button>
+              </div>
+              <div className="py-1">
+                {recentSearches.map((term, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 group"
+                  >
+                    <button
+                      className="flex-1 text-left text-sm text-gray-700 hover:text-blue-600"
+                      onClick={() => handleRecentSearchClick(term)}
+                    >
+                      {term}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeRecentSearch(term);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 ml-2 text-gray-400 hover:text-red-500 transition-opacity"
+                      title="삭제"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
-            <div className="py-1">
-              {recentSearches.map((term, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 group"
-                >
-                  <button
-                    className="flex-1 text-left text-sm text-gray-700 hover:text-blue-600"
-                    onClick={() => handleRecentSearchClick(term)}
-                  >
-                    {term}
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeRecentSearch(term);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 ml-2 text-gray-400 hover:text-red-500 transition-opacity"
-                    title="삭제"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
+          )}
+        </div>
+      )}
+
+      {/* 탑메뉴인 경우 TopMenu 컴포넌트, 아닌 경우 기존 로직 */}
+      {activeTab === "탑메뉴" ? (
+        <TopMenu />
+      ) : (
+        <>
+          {/* 로딩 및 에러 상태 */}
+          {isLoading && (
+            <div className="flex justify-center py-8">
+              <p className="text-gray-500">데이터를 불러오는 중...</p>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              <p>{error}</p>
+            </div>
+          )}
 
-      {/* 로딩 및 에러 상태 */}
-      {isLoading && (
-        <div className="flex justify-center py-8">
-          <p className="text-gray-500">데이터를 불러오는 중...</p>
-        </div>
-      )}
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          <p>{error}</p>
-        </div>
-      )}
-
-      {/* 테이블 컴포넌트 */}
-      {!isLoading && !error && (
-        <ItemTable
-          items={filteredData}
-          currentPage={currentPage}
-          setCurrentPage={setCurrentPage}
-          searchTerm={searchTerm}
-          onEdit={openEditModal}
-          onDelete={openDeleteModal}
-          itemType={activeTab}
-          iconItems={iconData} // 아이콘 데이터 전달
-        />
+          {/* 테이블 컴포넌트 */}
+          {!isLoading && !error && (
+            <ItemTable
+              items={filteredData}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+              searchTerm={searchTerm}
+              onEdit={openEditModal}
+              onDelete={openDeleteModal}
+              itemType={activeTab}
+              iconItems={iconData} // 아이콘 데이터 전달
+            />
+          )}
+        </>
       )}
 
       {/* 모달 컴포넌트들 */}

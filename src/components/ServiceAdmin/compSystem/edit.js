@@ -14,6 +14,9 @@ const EditItemModal = ({
     iconKey: "",
     originalIconKey: "",
     color: "", // 색상 필드 추가
+    topName: "",
+    topAddr: "",
+    ordIdx: "",
   });
 
   // 디버깅용: iconData 확인
@@ -30,6 +33,12 @@ const EditItemModal = ({
           iconKey: item.iconKey || "", // 변경할 새 아이콘키 (사용자 입력용)
           originalIconKey: item.iconKey || "", // 원래 아이콘키 (수정 불가)
           color: item.color || "#3B82F6", // 현재 색상
+        });
+      } else if (itemType === "탑메뉴") {
+        setFormData({
+          topName: item.topName || "",
+          topAddr: item.topAddr || "",
+          ordIdx: item.ordIdx || "",
         });
       } else {
         // 목표/직업 탭일 경우
@@ -56,7 +65,11 @@ const EditItemModal = ({
     e.preventDefault();
 
     // 데이터 유효성 검사
-    if (itemType !== "아이콘" && !formData.name.trim()) {
+    if (
+      itemType !== "아이콘" &&
+      itemType !== "탑메뉴" &&
+      !formData.name.trim()
+    ) {
       alert("이름은 필수 입력사항입니다.");
       return;
     }
@@ -66,18 +79,42 @@ const EditItemModal = ({
         alert("아이콘키는 필수 입력사항입니다.");
         return;
       }
-
       if (!formData.color.trim()) {
         alert("색상은 필수 입력사항입니다.");
         return;
       }
-
       // 아이콘 탭에서는 iconKey, originalIconKey, color 모두 API로 전송
       onEdit({
         iconKey: formData.iconKey,
         originalIconKey: formData.originalIconKey,
         color: formData.color,
       });
+    } else if (itemType === "탑메뉴") {
+      // 탑메뉴 필수 입력 검사
+      if (!formData.topName.trim()) {
+        alert("메뉴 이름은 필수 입력사항입니다.");
+        return;
+      }
+      if (!formData.topAddr.trim()) {
+        alert("메뉴 주소는 필수 입력사항입니다.");
+        return;
+      }
+      if (!formData.ordIdx.toString().trim()) {
+        alert("정렬 순서는 필수 입력사항입니다.");
+        return;
+      }
+
+      const topMenuData = {
+        topName: formData.topName,
+        topAddr: formData.topAddr,
+        ordIdx: parseInt(formData.ordIdx),
+      };
+
+      console.log("=== EditItemModal에서 전송할 탑메뉴 데이터 ===");
+      console.log("현재 formData:", formData);
+      console.log("전송할 데이터:", topMenuData);
+
+      onEdit(topMenuData);
     } else {
       // 목표/직업 탭에서는 name과 iconKey만 전송
       onEdit({
@@ -112,6 +149,8 @@ const EditItemModal = ({
         return "직업 수정";
       case "아이콘":
         return "아이콘 수정";
+      case "탑메뉴":
+        return "탑메뉴 수정";
       default:
         return "항목 수정";
     }
@@ -126,8 +165,8 @@ const EditItemModal = ({
         <h2 className="text-xl font-semibold mb-4">{getModalTitle()}</h2>
 
         <form onSubmit={handleSubmit}>
-          {/* 아이콘 탭이 아닌 경우에만 이름 필드 표시 */}
-          {itemType !== "아이콘" && (
+          {/* 아이콘, 탑메뉴 탭이 아닌 경우에만 이름 필드 표시 */}
+          {itemType !== "아이콘" && itemType !== "탑메뉴" && (
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 이름
@@ -253,7 +292,7 @@ const EditItemModal = ({
           )}
 
           {/* 목표/직업 탭인 경우 아이콘키 선택 */}
-          {itemType !== "아이콘" && (
+          {itemType !== "아이콘" && itemType !== "탑메뉴" && (
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 아이콘키
@@ -310,6 +349,58 @@ const EditItemModal = ({
                 </div>
               )}
             </div>
+          )}
+
+          {/* 탑메뉴 전용 입력 필드 */}
+          {itemType === "탑메뉴" && (
+            <>
+              {/* 탑메뉴 이름 */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  메뉴 이름
+                </label>
+                <input
+                  type="text"
+                  name="topName"
+                  value={formData.topName}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              {/* 주소 */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  메뉴 주소
+                </label>
+                <input
+                  type="text"
+                  name="topAddr"
+                  value={formData.topAddr}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="/example"
+                  required
+                />
+              </div>
+
+              {/* 정렬 순서 */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  정렬 순서
+                </label>
+                <input
+                  type="number"
+                  name="ordIdx"
+                  value={formData.ordIdx}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                  min="0"
+                />
+              </div>
+            </>
           )}
 
           <div className="flex justify-end space-x-2 mt-6">
