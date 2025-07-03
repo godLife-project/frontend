@@ -271,9 +271,6 @@ const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
         setTotalElements(0);
       }
     } catch (err) {
-      console.error("❌ 챌린지 검색 오류:", err);
-      console.error("📋 에러 응답:", err.response?.data);
-      console.error("🔢 에러 상태코드:", err.response?.status);
       setError("챌린지를 불러오는 중 오류가 발생했습니다.");
       setChallenges([]);
       setTotalPages(0);
@@ -287,7 +284,6 @@ const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
     fetchChallenges();
   }, [fetchChallenges]);
 
-  // 🎯 개선된 검색 관련 함수들
   const handleSearchClear = useCallback(() => {
     setSearchInput("");
     setSearchTitle("");
@@ -325,7 +321,7 @@ const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
     }
   };
 
-  // 🔥 수정된 챌린지 클릭 핸들러
+  //  수정된 챌린지 클릭 핸들러
   const handleChallengeClick = (challenge) => {
     if (onChallengeSelect) {
       // 통합 모드일 때: 콜백 함수 사용
@@ -336,7 +332,7 @@ const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
     }
   };
 
-  // 🔥 수정된 새 챌린지 버튼 핸들러
+  //  수정된 새 챌린지 버튼 핸들러
   const handleCreateNewClick = () => {
     if (onCreateNew) {
       // 통합 모드일 때: 콜백 함수 사용
@@ -419,7 +415,6 @@ const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
   const getCategoryName = (categoryValue) => {
     if (!categoryValue && categoryValue !== 0) return "미분류";
 
-    // 🔥 수정: 인덱스 기반으로 카테고리 찾기
     const category = categories.find(
       (cat) => cat.value === categoryValue.toString()
     );
@@ -489,7 +484,7 @@ const ChallengeListPage = ({ onChallengeSelect, onCreateNew }) => {
         )}
       </div>
 
-      {/* 🎯 카드 형태로 감싼 검색 및 필터 섹션 */}
+      {/*  카드 형태로 감싼 검색 및 필터 섹션 */}
       <div className="rounded-xl border bg-card text-card-foreground shadow mb-6">
         <div className="p-6 space-y-4">
           {/* 검색바 */}

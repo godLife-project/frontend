@@ -95,10 +95,10 @@ function AppContent() {
           path="/challenge/modify/:challIdx"
           element={<ChallengModifyPage />}
         />
-        <Route
+        {/* <Route
           path="/challenge/list/:challIdx"
           element={<ChallengDetailPage />}
-        />
+        /> */}
         <Route
           path="/challenge/detail/:challIdx"
           element={<ChallengDetailPage />}
