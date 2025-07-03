@@ -524,9 +524,18 @@ function Home(props) {
           </span>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <Code size={16} style={{ color: plan.jobDefault.color }} />
-          <span className="text-sm text-gray-700">{plan.jobDefault.name}</span>
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-600">추천직업</span>
+          <div className="flex items-center space-x-1 text-sm text-gray-700">
+            <span>{plan.jobDefault.name}</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-600">생성일</span>
+          <div className="flex items-center space-x-1 text-sm text-gray-700">
+            <Calendar size={14} />
+            <span>{formatDate(plan.planInfos.planSubDate)}</span>
+          </div>
         </div>
       </div>
 
@@ -545,7 +554,6 @@ function Home(props) {
             <span>{plan.planInfos.forkCount}</span>
           </div>
         </div>
-        <div className="text-xs">{formatDate(plan.planInfos.planSubDate)}</div>
       </div>
     </div>
   );
