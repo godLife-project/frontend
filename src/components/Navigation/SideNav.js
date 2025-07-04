@@ -8,6 +8,7 @@ import { Menu } from "lucide-react";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -23,23 +24,23 @@ import {
 const MenuItem = ({ item }) => {
   const navigate = useNavigate();
 
-  if (item.submenu) {
+  if (item.children && item.children.length > 0) {
     return (
       <Accordion type="single" collapsible>
-        <AccordionItem value={item.topName} className="border-b">
+        <AccordionItem value={item.name} className="border-b">
           <AccordionTrigger className="py-2 hover:no-underline">
-            {item.topName}
+            {item.name}
           </AccordionTrigger>
           <AccordionContent>
             <div className="pl-4 space-y-2">
-              {item.submenu.map((subItem) => (
+              {item.children.map((subItem) => (
                 <Button
-                  key={subItem.href}
+                  key={subItem.topIdx}
                   variant="ghost"
                   className="w-full justify-start text-sm"
-                  onClick={() => navigate(subItem.href)}
+                  onClick={() => navigate(subItem.addr)}
                 >
-                  {subItem.label || subItem.topName}
+                  {subItem.name}
                 </Button>
               ))}
             </div>
@@ -51,13 +52,13 @@ const MenuItem = ({ item }) => {
 
   return (
     <Accordion type="single">
-      <AccordionItem value={item.topName} className="border-b">
+      <AccordionItem value={item.name} className="border-b">
         <AccordionTrigger
           className="py-2 hover:no-underline"
           hasSubmenu={false}
-          onClick={() => navigate(item.topAddr)}
+          onClick={() => navigate(item.addr)}
         >
-          {item.topName}
+          {item.name}
         </AccordionTrigger>
       </AccordionItem>
     </Accordion>
@@ -80,8 +81,8 @@ const SideNav = ({ categories }) => {
             </SheetHeader>
             <nav className="flex-1 overflow-y-auto px-6 py-4">
               <ul className="space-y-3">
-                {categories.map((item, index) => (
-                  <li key={item.topAddr || index}>
+                {categories.map((item) => (
+                  <li key={item.topIdx}>
                     <MenuItem item={item} />
                   </li>
                 ))}
