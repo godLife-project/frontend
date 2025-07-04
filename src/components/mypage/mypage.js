@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import axiosInstance from "@/api/axiosInstance";
 import RoutineTabContent from "./myroutine";
 import LikedRoutineTabContent from "./myLike";
-
+import QnAList from "../QnA/QnaList";
 export default function MyPageForm() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -445,18 +445,7 @@ export default function MyPageForm() {
             {activeSideTab === "mypage" && <PasswordSection />}
           </div>
 
-          {activeSideTab === "chat" && (
-            <div className="p-5 text-center">
-              <Trophy size={32} className="mx-auto text-gray-400 mb-2" />
-              <p className="text-sm text-gray-500">문의내역이 없습니다.</p>
-              <button
-                className="mt-3 text-xs px-3 py-1 bg-blue-600 text-white rounded-lg"
-                // onClick={() => navigate(``)}
-              >
-                1:1 문의하기
-              </button>
-            </div>
-          )}
+          {activeSideTab === "chat" && <QnAList />}
         </div>
       </div>
     </div>
