@@ -2,17 +2,20 @@ import { useState, useEffect, useRef } from "react";
 import { Award, Save, X, Heart, CheckCircle, Trophy } from "lucide-react";
 import MyProfileForm from "./myprofile";
 import PasswordSection from "./Security Settings";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import axiosInstance from "@/api/axiosInstance";
 import RoutineTabContent from "./myroutine";
 import LikedRoutineTabContent from "./myLike";
 import QnAList from "../QnA/QnaList";
+
 export default function MyPageForm() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
   // 에러 알림이 표시되었는지 추적하는 ref
   const errorNotifiedRef = useRef(false);
   // 재시도 횟수를 추적하는 ref 추가
@@ -41,6 +44,18 @@ export default function MyPageForm() {
     userJob: "",
     targetIdx: "",
   });
+
+  // URL 파라미터에서 tab 값을 확인하여 기본 탭 설정
+  const getInitialTab = () => {
+    const tabParam = searchParams.get("tab");
+    return tabParam || "routines";
+  };
+
+  const [activeSideTab, setActiveSideTab] = useState(getInitialTab());
+  const [editing, setEditing] = useState({
+    userNick: false,
+  });
+  const [tempData, setTempData] = useState({ ...userData });
 
   useEffect(() => {
     if (!accessToken) {
@@ -74,6 +89,14 @@ export default function MyPageForm() {
     // 처음 데이터 로드 시도
     fetchUserData();
   }, []); // 의존성 배열 비움 - 컴포넌트 마운트 시 한 번만 실행
+
+  // URL 파라미터 변경 시 탭 업데이트
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam) {
+      setActiveSideTab(tabParam);
+    }
+  }, [searchParams]);
 
   const fetchUserData = async () => {
     setLoading(true);
@@ -176,12 +199,6 @@ export default function MyPageForm() {
         return "정보 없음";
     }
   };
-
-  const [activeSideTab, setActiveSideTab] = useState("routines");
-  const [editing, setEditing] = useState({
-    userNick: false,
-  });
-  const [tempData, setTempData] = useState({ ...userData });
 
   // 수정 시작 핸들러
   const handleEdit = (field) => {
@@ -380,7 +397,7 @@ export default function MyPageForm() {
                   좋아요
                 </button>
               </li>
-              <li>
+              {/* <li>
                 <button
                   className={`py-2 px-3 border-b-2 ${
                     activeSideTab === "challenges"
@@ -391,7 +408,7 @@ export default function MyPageForm() {
                 >
                   챌린지
                 </button>
-              </li>
+              </li> */}
               <li className="mr-2">
                 <button
                   className={`whitespace-nowrap py-2 px-3 border-b-2 ${

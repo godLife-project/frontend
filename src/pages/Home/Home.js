@@ -618,11 +618,11 @@ function Home(props) {
       </div>
       <div className="flex justify-center space-x-3">
         <button
-          onClick={() => navigate("/user/signup")}
+          onClick={() => navigate("/user/login")}
           className="inline-flex items-center space-x-2 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
         >
           <LogIn size={16} />
-          <span>회원가입</span>
+          <span>로그인</span>
         </button>
       </div>
     </div>

@@ -48,20 +48,25 @@ const QnACreate = () => {
     const fetchCategories = async () => {
       setIsLoading(true);
       try {
-        const response = await axiosInstance.get('/categories/qna');
+        const response = await axiosInstance.get("/categories/qna");
         if (response.status === 200) {
           setCategories(response.data);
           // 기본값 설정
           if (response.data && response.data.length > 0) {
             setParentCategory(response.data[0].parentIdx.toString());
-            if (response.data[0].childCategory && response.data[0].childCategory.length > 0) {
-              setCategory(response.data[0].childCategory[0].categoryIdx.toString());
+            if (
+              response.data[0].childCategory &&
+              response.data[0].childCategory.length > 0
+            ) {
+              setCategory(
+                response.data[0].childCategory[0].categoryIdx.toString()
+              );
             }
           }
         }
       } catch (error) {
-        console.error('카테고리 로딩 오류:', error);
-        setError('카테고리를 불러오는 중 오류가 발생했습니다.');
+        console.error("카테고리 로딩 오류:", error);
+        setError("카테고리를 불러오는 중 오류가 발생했습니다.");
       } finally {
         setIsLoading(false);
       }
@@ -73,9 +78,9 @@ const QnACreate = () => {
   // 부모 카테고리 변경 핸들러
   const handleParentCategoryChange = (value) => {
     setParentCategory(value);
-    
+
     // 선택된 부모 카테고리의 첫 번째 자식 카테고리로 기본값 설정
-    const parent = categories.find(p => p.parentIdx.toString() === value);
+    const parent = categories.find((p) => p.parentIdx.toString() === value);
     if (parent && parent.childCategory && parent.childCategory.length > 0) {
       setCategory(parent.childCategory[0].categoryIdx.toString());
     } else {
@@ -86,7 +91,9 @@ const QnACreate = () => {
   // 현재 선택된 부모 카테고리의 자식 카테고리 목록 가져오기
   const getChildCategories = () => {
     if (!parentCategory) return [];
-    const parent = categories.find(p => p.parentIdx.toString() === parentCategory);
+    const parent = categories.find(
+      (p) => p.parentIdx.toString() === parentCategory
+    );
     return parent ? parent.childCategory : [];
   };
 
@@ -128,15 +135,19 @@ const QnACreate = () => {
       console.log("전송 데이터:", requestData);
 
       // API 호출
-      const response = await axiosInstance.post("/qna/auth/create", requestData, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-      });
+      const response = await axiosInstance.post(
+        "/qna/auth/create",
+        requestData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
 
       // 성공 시 목록 페이지로 이동
       if (response.status === 201 || response.status === 200) {
-        navigate("/qna/list");
+        navigate("/user/mypage?tab=chat");
       } else {
         setError("문의 등록 중 오류가 발생했습니다.");
       }
@@ -156,7 +167,10 @@ const QnACreate = () => {
     // 기본 카테고리 설정
     if (categories && categories.length > 0) {
       setParentCategory(categories[0].parentIdx.toString());
-      if (categories[0].childCategory && categories[0].childCategory.length > 0) {
+      if (
+        categories[0].childCategory &&
+        categories[0].childCategory.length > 0
+      ) {
         setCategory(categories[0].childCategory[0].categoryIdx.toString());
       }
     }
@@ -192,8 +206,8 @@ const QnACreate = () => {
               <label htmlFor="parentCategory" className="text-sm font-medium">
                 대분류
               </label>
-              <Select 
-                value={parentCategory} 
+              <Select
+                value={parentCategory}
                 onValueChange={handleParentCategoryChange}
                 disabled={isLoading}
               >
@@ -202,8 +216,8 @@ const QnACreate = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-white border shadow-md">
                   {categories.map((parent) => (
-                    <SelectItem 
-                      key={parent.parentIdx} 
+                    <SelectItem
+                      key={parent.parentIdx}
                       value={parent.parentIdx.toString()}
                     >
                       {parent.parentName}
@@ -218,8 +232,8 @@ const QnACreate = () => {
               <label htmlFor="category" className="text-sm font-medium">
                 세부 카테고리
               </label>
-              <Select 
-                value={category} 
+              <Select
+                value={category}
                 onValueChange={setCategory}
                 disabled={isLoading || !parentCategory}
               >
@@ -228,8 +242,8 @@ const QnACreate = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-white border shadow-md">
                   {getChildCategories().map((child) => (
-                    <SelectItem 
-                      key={child.categoryIdx} 
+                    <SelectItem
+                      key={child.categoryIdx}
                       value={child.categoryIdx.toString()}
                     >
                       {child.categoryName}
@@ -295,7 +309,7 @@ const QnACreate = () => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/qna/list")}
+                onClick={() => navigate("/user/mypage?tab=chat")}
                 disabled={isSubmitting}
               >
                 취소

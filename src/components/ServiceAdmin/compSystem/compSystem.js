@@ -639,9 +639,7 @@ const CompSystem = () => {
       case "아이콘":
         return "/categories/admin/icon";
       case "탑메뉴":
-        return "/admin/compSystem/topMenu";
-      default:
-        return "/categories/target";
+        return "/categories/topMenu";
     }
   };
 
@@ -921,7 +919,6 @@ const CompSystem = () => {
     }
   };
 
-  // 수정된 함수: 항목 수정 처리
   // 수정된 함수: 항목 수정 처리
   const handleEditItem = async (updatedItem) => {
     setIsLoading(true);

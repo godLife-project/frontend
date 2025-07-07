@@ -1,9 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Search, X, Clock, Trash2 } from "lucide-react";
+import {
+  Search,
+  X,
+  Clock,
+  Trash2,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { MdOutlineMode, MdOutlineDelete } from "react-icons/md";
 import axiosInstance from "@/api/axiosInstance";
 import DeleteConfirmModal from "../compSystem/delete";
-import EditItemModal from "../compSystem/edit"; // EditItemModal 추가
+import EditItemModal from "../compSystem/edit";
 
 const TopMenu = () => {
   // 상태 관리
@@ -13,7 +20,8 @@ const TopMenu = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // 편집 모달 상태 추가
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [expandedItems, setExpandedItems] = useState(new Set()); // 확장된 항목 관리
 
   // 최근 검색어 관련 상태
   const [recentSearches, setRecentSearches] = useState([]);
@@ -22,8 +30,6 @@ const TopMenu = () => {
   const recentSearchesRef = useRef(null);
 
   const RECENT_SEARCH_KEY = "recentSearches_topMenu";
-
-  // 모달 상태 (필요시 구현)
   const [selectedItem, setSelectedItem] = useState(null);
 
   // 최근 검색어 관련 함수들
@@ -105,7 +111,7 @@ const TopMenu = () => {
     fetchData();
   }, []);
 
-  // 데이터 가져오기
+  // 데이터 가져오기 (기존 API 사용)
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
@@ -137,6 +143,14 @@ const TopMenu = () => {
             topMenuData.length,
             "개 항목"
           );
+          console.log(
+            "children 데이터 확인:",
+            topMenuData.map((item) => ({
+              name: item.name,
+              hasChildren: !!item.children,
+              childrenCount: item.children?.length || 0,
+            }))
+          );
           setItemData(topMenuData);
         } else {
           console.error(
@@ -157,6 +171,50 @@ const TopMenu = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 확장/축소 토글
+  const toggleExpanded = (topIdx) => {
+    const newExpanded = new Set(expandedItems);
+    if (newExpanded.has(topIdx)) {
+      newExpanded.delete(topIdx);
+    } else {
+      newExpanded.add(topIdx);
+    }
+    setExpandedItems(newExpanded);
+  };
+
+  // 데이터를 평면화하는 함수 (검색과 페이지네이션을 위해)
+  const flattenData = (data) => {
+    const flattened = [];
+
+    data.forEach((item) => {
+      // 부모 항목 추가
+      flattened.push({
+        ...item,
+        level: 0,
+        isParent: item.children && item.children.length > 0,
+        isExpanded: expandedItems.has(item.topIdx),
+        displayName: item.name,
+        displayAddr: item.addr,
+      });
+
+      // children이 있고 확장된 상태라면 자식 항목들 추가
+      if (item.children && expandedItems.has(item.topIdx)) {
+        item.children.forEach((child) => {
+          flattened.push({
+            ...child,
+            level: 1,
+            isParent: false,
+            parentId: item.topIdx,
+            displayName: child.name,
+            displayAddr: child.addr,
+          });
+        });
+      }
+    });
+
+    return flattened;
   };
 
   // 검색 관련 핸들러들
@@ -193,11 +251,11 @@ const TopMenu = () => {
   // 편집 모달 관련 핸들러들
   const openEditModal = (item) => {
     console.log("편집 모달 열기:", item);
-    // TopMenu API 응답 구조에 맞춰 데이터 매핑 - parentIdx, categoryLevel 추가
+    // TopMenu API 응답 구조에 맞춰 데이터 매핑
     const mappedItem = {
       topIdx: item.topIdx,
-      topName: item.name,
-      topAddr: item.addr,
+      topName: item.displayName || item.name,
+      topAddr: item.displayAddr || item.addr,
       parentIdx: item.parentIdx,
       categoryLevel: item.categoryLevel,
       ordCol: item.ordCol,
@@ -211,7 +269,7 @@ const TopMenu = () => {
     setSelectedItem(null);
   };
 
-  // 편집 처리 - parentIdx, categoryLevel 추가
+  // 편집 처리
   const handleEdit = async (updatedItem) => {
     if (!selectedItem) return;
 
@@ -282,24 +340,35 @@ const TopMenu = () => {
   // 검색어로 필터링된 데이터
   const filteredData = itemData.filter((item) => {
     const searchLower = searchTerm.toLowerCase();
-    return (
+    const matchesParent =
       item.name?.toLowerCase().includes(searchLower) ||
-      item.addr?.toLowerCase().includes(searchLower)
+      item.addr?.toLowerCase().includes(searchLower);
+
+    // 부모가 매치되거나 자식 중에 매치되는 것이 있으면 표시
+    const matchesChildren = item.children?.some(
+      (child) =>
+        child.name?.toLowerCase().includes(searchLower) ||
+        child.addr?.toLowerCase().includes(searchLower)
     );
+
+    return matchesParent || matchesChildren;
   });
+
+  // 평면화된 데이터
+  const flattenedData = flattenData(filteredData);
 
   // 페이지네이션
   const itemsPerPage = 10;
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedItems = filteredData.slice(startIndex, endIndex);
+  const paginatedItems = flattenedData.slice(startIndex, endIndex);
 
   // 테이블 행 렌더링
   const renderTableRows = () => {
-    if (!filteredData || filteredData.length === 0) {
+    if (!flattenedData || flattenedData.length === 0) {
       return (
         <tr>
-          <td colSpan="5" className="px-6 py-4 text-center">
+          <td colSpan="6" className="px-6 py-4 text-center">
             {searchTerm ? "검색 결과가 없습니다." : "데이터가 없습니다."}
           </td>
         </tr>
@@ -307,33 +376,91 @@ const TopMenu = () => {
     }
 
     return paginatedItems.map((item, index) => (
-      <tr key={item.topIdx || index} className="border-b hover:bg-gray-50">
+      <tr
+        key={`${item.topIdx}-${item.level}-${index}`}
+        className="border-b hover:bg-gray-50"
+      >
         <td className="px-6 py-4">{item.topIdx}</td>
-        <td className="px-6 py-4 font-medium">{item.name}</td>
         <td className="px-6 py-4">
-          <code className="bg-gray-100 px-2 py-1 rounded text-sm">
-            {item.addr || "-"}
+          <div
+            className="flex items-center"
+            style={{ paddingLeft: `${item.level * 20}px` }}
+          >
+            {item.isParent && (
+              <button
+                onClick={() => toggleExpanded(item.topIdx)}
+                className="mr-2 p-1 hover:bg-gray-200 rounded transition-colors"
+                title={item.isExpanded ? "접기" : "펼치기"}
+              >
+                {item.isExpanded ? (
+                  <ChevronDown size={16} className="text-gray-600" />
+                ) : (
+                  <ChevronRight size={16} className="text-gray-600" />
+                )}
+              </button>
+            )}
+            {!item.isParent && item.level > 0 && (
+              <div className="mr-2 w-6 h-4 flex items-center justify-center">
+                <div className="w-3 h-px bg-gray-300"></div>
+              </div>
+            )}
+            <span
+              className={`font-medium ${
+                item.level > 0 ? "text-gray-600 text-sm" : "text-gray-900"
+              }`}
+            >
+              {item.displayName}
+            </span>
+            {item.level > 0 && (
+              <span className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
+                하위
+              </span>
+            )}
+          </div>
+        </td>
+        <td className="px-6 py-4">
+          <code
+            className={`px-2 py-1 rounded text-sm ${
+              item.level > 0 ? "bg-gray-50 text-gray-600" : "bg-gray-100"
+            }`}
+          >
+            {item.displayAddr || "-"}
           </code>
         </td>
         <td className="px-6 py-4">
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              item.level > 0
+                ? "bg-gray-100 text-gray-600"
+                : "bg-blue-100 text-blue-800"
+            }`}
+          >
             {item.ordCol}
           </span>
         </td>
+        <td className="px-6 py-4">
+          {item.children && item.children.length > 0 ? (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              {item.children.length}개
+            </span>
+          ) : (
+            <span className="text-gray-400 text-sm">-</span>
+          )}
+        </td>
         <td className="px-6 py-4 space-x-2">
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <button
-              className="flex items-center rounded-md shadow px-3 py-1 hover:bg-gray-50 transition-colors"
+              className="flex items-center rounded-md shadow px-3 py-1 hover:bg-gray-50 transition-colors text-sm"
               onClick={() => openEditModal(item)}
             >
-              <MdOutlineMode className="mr-1" />
+              <MdOutlineMode className="mr-1" size={14} />
               수정
             </button>
             <button
-              className="flex items-center bg-red-500 text-white rounded-md px-3 py-1 hover:bg-red-600 transition-colors"
+              className="flex items-center bg-red-500 text-white rounded-md px-3 py-1 hover:bg-red-600 transition-colors text-sm"
               onClick={() => openDeleteModal(item)}
             >
-              <MdOutlineDelete className="mr-1" />
+              <MdOutlineDelete className="mr-1" size={14} />
               삭제
             </button>
           </div>
@@ -438,42 +565,91 @@ const TopMenu = () => {
         </div>
       )}
 
+      {/* 통계 정보 */}
+      {!isLoading && !error && itemData.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center space-x-4">
+              <span className="text-blue-700">
+                전체 메뉴: <strong>{itemData.length}개</strong>
+              </span>
+              <span className="text-blue-700">
+                하위메뉴:{" "}
+                <strong>
+                  {itemData.reduce(
+                    (acc, item) => acc + (item.children?.length || 0),
+                    0
+                  )}
+                  개
+                </strong>
+              </span>
+            </div>
+            <span className="text-blue-600 text-xs">
+              💡 메뉴명 옆 화살표를 클릭하여 하위메뉴를 확장/축소할 수 있습니다
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* 테이블 */}
       {!isLoading && !error && (
         <div className="bg-white rounded-md shadow overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b">
-                <th className="px-6 py-3 text-left  text-gray-900">ID</th>
-                <th className="px-6 py-3 text-left  text-gray-900">메뉴명</th>
-                <th className="px-6 py-3  text-gray-900">주소</th>
-                <th className="px-6 py-3   text-gray-900">순서</th>
-                <th className="px-6 py-3   text-gray-900">작업</th>
+              <tr className="border-b bg-gray-50">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  ID
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  메뉴명
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  주소
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  순서
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  하위메뉴
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  작업
+                </th>
               </tr>
             </thead>
-            <tbody>{renderTableRows()}</tbody>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {renderTableRows()}
+            </tbody>
           </table>
 
           {/* 페이지네이션 */}
-          <div className="flex justify-center p-4 border-t">
-            <button
-              className="px-4 py-2 mx-1 rounded-md border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-            >
-              이전
-            </button>
-            <button className="px-4 py-2 mx-1 rounded-md bg-blue-500 text-white">
-              {currentPage}
-            </button>
-            <button
-              className="px-4 py-2 mx-1 rounded-md border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={endIndex >= filteredData.length}
-            >
-              다음
-            </button>
-          </div>
+          {flattenedData.length > itemsPerPage && (
+            <div className="flex justify-between items-center p-4 border-t bg-gray-50">
+              <div className="text-sm text-gray-700">
+                {startIndex + 1}-{Math.min(endIndex, flattenedData.length)} /{" "}
+                {flattenedData.length}개 항목
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  className="px-4 py-2 rounded-md border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                >
+                  이전
+                </button>
+                <span className="px-4 py-2 rounded-md bg-blue-500 text-white">
+                  {currentPage}
+                </span>
+                <button
+                  className="px-4 py-2 rounded-md border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={endIndex >= flattenedData.length}
+                >
+                  다음
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

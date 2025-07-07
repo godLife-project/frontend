@@ -17,6 +17,7 @@ import FaqCategory from "@/components/ServiceAdmin/faqPage/faqCategory";
 import ChallengeManager from "@/components/ServiceAdmin/contentsPage/ChallengeM";
 import RoutineManager from "@/components/ServiceAdmin/contentsPage/RoutineM";
 import UserManager from "./AdminUser";
+import QnaAdminDashboard from "../QnA/QnADashboard";
 
 const AdminDashboard = () => {
   const [menuCollapsed, setMenuCollapsed] = useState(false);
@@ -269,7 +270,7 @@ const AdminDashboard = () => {
         )}
 
         {/* 메인 컨텐츠 - 풀페이지 컴포넌트일 때는 패딩 제거 */}
-        <main className={`flex-1 ${isFullPageComponent ? "" : "p-6"}`}>
+        <main className={`flex-1  ${isFullPageComponent ? "" : "p-6"}`}>
           {/* 컴포넌트 관리 페이지 */}
           {activePage === "컴포넌트 관리" && <CompSystem />}
 
@@ -286,15 +287,7 @@ const AdminDashboard = () => {
 
           {activePage === "FAQ 관리" && <FaqCategory />}
 
-          {activePage === "1:1 문의" && (
-            <div className="bg-white p-6 rounded-md shadow">
-              <h2 className="text-xl font-semibold mb-4">1:1 문의</h2>
-              <p className="mb-4">여기에 1:1 문의 관련 컨텐츠가 표시됩니다.</p>
-              <button className="px-4 py-2 bg-blue-500 text-white rounded-md">
-                문의 답변하기
-              </button>
-            </div>
-          )}
+          {activePage === "1:1 문의" && <QnaAdminDashboard />}
         </main>
       </div>
     </div>
