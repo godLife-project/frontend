@@ -13,7 +13,7 @@ const Login = () => {
         setError(''); // 초기화
         // 로그인 처리 로직 추가 (API 호출 등)
         try {
-            const response = await fetch('http://localhost:9090/api/login', {
+            const response = await fetch('http://localhost:9090/api/user/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
