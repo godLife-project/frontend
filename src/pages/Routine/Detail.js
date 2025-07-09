@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Lock, Edit, Trash2, AlertCircle } from "lucide-react";
+import { BiChevronLeftCircle } from "react-icons/bi";
 
 // API 및 유틸리티
 import axiosInstance from "../../api/axiosInstance";
@@ -348,6 +349,13 @@ export default function RoutineDetailPage() {
         <Card className="overflow-hidden shadow-lg">
           {/* 헤더 부분 */}
           <div className="relative">
+            <div className="absolute top-4 left-4 z-10 ">
+              <BiChevronLeftCircle
+                className="cursor-pointer text-white transition-colors"
+                onClick={() => navigate(-1)}
+                size={30}
+              />
+            </div>
             <RoutineHeader
               routineData={routineData}
               getStatusBadgeStyle={getStatusBadgeStyle}

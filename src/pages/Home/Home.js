@@ -214,6 +214,16 @@ function Home(props) {
     }
   };
 
+  const handleMyPlanClick = (myplan) => {
+    const planIdx = myplan.myPlanInfos.planIdx;
+
+    if (planIdx) {
+      navigate(`/routine/detail/${planIdx}`);
+    } else {
+      console.error("planIdx를 찾을 수 없습니다:", myplan);
+    }
+  };
+
   const handleChallengeClick = (challenge) => {
     const challIdx = challenge.challIdx;
 
@@ -258,6 +268,14 @@ function Home(props) {
       (cat) => cat.value === categoryValue.toString()
     );
     return category ? category.label : `카테고리 ${categoryValue}`;
+  };
+
+  // 제목 줄임 함수 추가
+  const truncateTitle = (title, maxLength = 10) => {
+    if (!title) return "";
+    return title.length > maxLength
+      ? title.substring(0, maxLength) + "..."
+      : title;
   };
 
   // 공통 스와이프 카드 컴포넌트
@@ -408,8 +426,11 @@ function Home(props) {
   };
 
   // 내 루틴 카드 내용
-  const MyPlanCardContent = ({ myplan }) => (
-    <>
+  const MyPlanCardContent = ({ myplan, onClick }) => (
+    <div
+      className="cursor-pointer hover:bg-gray-50 transition-colors rounded-lg p-2 -m-2"
+      onClick={() => onClick && onClick(myplan)}
+    >
       {/* 불꽃 표시 */}
       {myplan.myPlanInfos.fireState && (
         <div className="absolute top-4 right-4">
@@ -432,8 +453,11 @@ function Home(props) {
             />
           </div>
           <div>
-            <h3 className="font-bold text-lg text-gray-800">
-              {myplan.myPlanInfos.planTitle}
+            <h3
+              className="font-bold text-lg text-gray-800"
+              title={myplan.myPlanInfos.planTitle}
+            >
+              {truncateTitle(myplan.myPlanInfos.planTitle)}
             </h3>
           </div>
         </div>
@@ -442,7 +466,7 @@ function Home(props) {
       <div className="space-y-3 mb-4">
         {/* 상태 표시 */}
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-600">상태:</span>
+          <span className="text-sm font-medium text-gray-600">상태</span>
           <span
             className={`px-2 py-1 rounded-full text-xs ${
               myplan.myPlanInfos.isActive
@@ -457,7 +481,7 @@ function Home(props) {
         {/* 반복 요일 */}
         {myplan.myPlanInfos.repeatDays && (
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-600">반복:</span>
+            <span className="text-sm font-medium text-gray-600">반복</span>
             <span className="text-sm text-gray-700">
               {formatRepeatDays(myplan.myPlanInfos.repeatDays)}
             </span>
@@ -466,7 +490,7 @@ function Home(props) {
 
         {/* 유지 기간 */}
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-600">기간:</span>
+          <span className="text-sm font-medium text-gray-600">기간</span>
           <div className="flex items-center space-x-1">
             <Clock size={14} className="text-gray-500" />
             <span className="text-sm text-gray-700">
@@ -477,20 +501,21 @@ function Home(props) {
 
         {/* 경험치 */}
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-600">경험치:</span>
+          <span className="text-sm font-medium text-gray-600">경험치</span>
           <span className="text-sm font-semibold text-blue-600">
             {myplan.myPlanInfos.certExp} XP
           </span>
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-sm text-gray-500 pt-4 border-t">
-        <div className="flex items-center space-x-1">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-gray-600">종료일</span>
+        <div className="flex items-center space-x-1 text-sm text-gray-700">
           <Calendar size={14} />
-          <span>종료: {formatDate(myplan.myPlanInfos.planSubEnd)}</span>
+          <span>{formatDate(myplan.myPlanInfos.planSubEnd)}</span>
         </div>
       </div>
-    </>
+    </div>
   );
 
   // 공개 루틴 카드 내용
@@ -508,8 +533,11 @@ function Home(props) {
             <BookOpen size={20} style={{ color: plan.targetInfos.color }} />
           </div>
           <div>
-            <h3 className="font-bold text-lg text-gray-800">
-              {plan.planInfos.planTitle}
+            <h3
+              className="font-bold text-lg text-gray-800"
+              title={plan.planInfos.planTitle}
+            >
+              {truncateTitle(plan.planInfos.planTitle)}
             </h3>
             <p className="text-sm text-gray-500">{plan.planInfos.userNick}</p>
           </div>
@@ -570,8 +598,11 @@ function Home(props) {
             <Users size={20} className="text-white" />
           </div>
           <div>
-            <h3 className="font-bold text-lg text-gray-800">
-              {challenge.challTitle}
+            <h3
+              className="font-bold text-lg text-gray-800"
+              title={challenge.challTitle}
+            >
+              {truncateTitle(challenge.challTitle)}
             </h3>
           </div>
         </div>
@@ -662,7 +693,10 @@ function Home(props) {
                 onPrev={myprevPlan}
                 onNext={mynextPlan}
               >
-                <MyPlanCardContent myplan={myplans[currentMyPlanIndex]} />
+                <MyPlanCardContent
+                  myplan={myplans[currentMyPlanIndex]}
+                  onClick={handleMyPlanClick}
+                />
               </SwipeCard>
             </div>
           ) : (
