@@ -10,8 +10,10 @@ import {
   Shield,
   AlertTriangle,
   Users,
+  Home,
+  LogOut,
 } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import CompSystem from "@/components/ServiceAdmin/compSystem/compSystem";
 import FaqCategory from "@/components/ServiceAdmin/faqPage/faqCategory";
 import ChallengeManager from "@/components/ServiceAdmin/contentsPage/ChallengeM";
@@ -21,10 +23,11 @@ import QnaAdminDashboard from "../QnA/QnADashboard";
 
 const AdminDashboard = () => {
   const [menuCollapsed, setMenuCollapsed] = useState(false);
-  const [activePage, setActivePage] = useState("컴포넌트 관리");
+  const [activePage, setActivePage] = useState("");
   const [contentMenuExpanded, setContentMenuExpanded] = useState(false);
   const [userMenuExpanded, setUserMenuExpanded] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const toggleMenu = () => {
     setMenuCollapsed(!menuCollapsed);
@@ -36,6 +39,10 @@ const AdminDashboard = () => {
 
   const toggleUserMenu = () => {
     setUserMenuExpanded(!userMenuExpanded);
+  };
+
+  const handleGoHome = () => {
+    navigate("/");
   };
 
   // URL 파라미터에 따라 활성 페이지 설정
@@ -258,6 +265,17 @@ const AdminDashboard = () => {
             </li>
           </ul>
         </nav>
+
+        {/* 하단 나가기 버튼 */}
+        <div className=" border-blue-500">
+          <button
+            onClick={handleGoHome}
+            className="w-full flex items-center p-3 space-x-3 text-left hover:bg-blue-700 rounded-md transition-colors"
+          >
+            <Home size={20} />
+            {!menuCollapsed && <span>나가기</span>}
+          </button>
+        </div>
       </div>
 
       {/* 메인 콘텐츠 영역 */}

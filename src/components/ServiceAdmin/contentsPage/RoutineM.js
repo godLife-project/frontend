@@ -1,17 +1,21 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { Search, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, RotateCcw } from "lucide-react";
 import axiosInstance from "@/api/axiosInstance";
+import { useToast } from "@/components/ui/use-toast";
 
-const AdminRoutineList = ({
-  onRoutineSelect,
-  onAddNew,
-  isStandalone = true,
-}) => {
+const AdminRoutineList = ({ onRoutineSelect, isStandalone = true }) => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
   // 상태 관리
   const [routines, setRoutines] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // 카테고리 상태 추가
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
 
   // 검색 및 필터
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,9 +30,68 @@ const AdminRoutineList = ({
   const [pageSize, setPageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
 
-  const navigate = useNavigate();
+  // 로그인 체크
+  useEffect(() => {
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+      toast({
+        variant: "destructive",
+        title: "로그인이 필요합니다",
+        description: "관리자 루틴 관리를 위해 로그인해주세요.",
+      });
+      if (!isStandalone) {
+        navigate("/user/login");
+      }
+    }
+  }, [navigate, toast, isStandalone]);
 
-  // 루틴 데이터 가져오기 - axios params 사용
+  // 카테고리 목록 가져오기
+  const fetchCategories = async () => {
+    try {
+      setCategoriesLoading(true);
+      const accessToken = localStorage.getItem("accessToken");
+
+      if (!accessToken) {
+        toast({
+          variant: "destructive",
+          title: "로그인이 필요합니다",
+          description: "카테고리 정보를 불러오기 위해 로그인해주세요.",
+        });
+        return;
+      }
+
+      const response = await axiosInstance.get("/categories/challenge", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      console.log("카테고리 데이터:", response.data);
+
+      // 응답 데이터 구조에 따라 처리
+      let categoryData = [];
+      if (Array.isArray(response.data)) {
+        categoryData = response.data;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        categoryData = response.data.data;
+      } else if (response.data && Array.isArray(response.data.content)) {
+        categoryData = response.data.content;
+      }
+
+      setCategories(categoryData);
+      console.log("✅ 카테고리 로드 성공:", categoryData);
+    } catch (err) {
+      console.error("❌ 카테고리 로드 실패:", err);
+      toast({
+        variant: "destructive",
+        title: "카테고리 로딩 실패",
+        description: "카테고리 정보를 불러오는데 실패했습니다.",
+      });
+      setCategories([]);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
+  // 루틴 데이터 가져오기
   const fetchRoutines = useCallback(
     async (page = 1) => {
       setLoading(true);
@@ -36,6 +99,18 @@ const AdminRoutineList = ({
 
       try {
         const accessToken = localStorage.getItem("accessToken");
+
+        if (!accessToken) {
+          toast({
+            variant: "destructive",
+            title: "로그인이 필요합니다",
+            description: "루틴 목록을 불러오기 위해 로그인해주세요.",
+          });
+          if (!isStandalone) {
+            navigate("/user/login");
+          }
+          return;
+        }
 
         // 요청 파라미터 구성
         const params = {
@@ -72,30 +147,63 @@ const AdminRoutineList = ({
 
         console.log("API 응답:", response);
 
-        if (response?.data?.status === 200) {
-          const {
-            plans = [],
-            totalPages = 1,
-            pageSize = 10,
-            currentPage = 1,
-          } = response.data;
+        if (response?.data?.status === 200 || response?.data) {
+          const responseData = response.data;
+
+          // 응답 데이터 구조에 따라 처리
+          let plans = [];
+          let totalPages = 1;
+          let pageSize = 10;
+          let currentPage = 1;
+
+          if (responseData.plans) {
+            plans = responseData.plans;
+            totalPages = responseData.totalPages || 1;
+            pageSize = responseData.pageSize || 10;
+            currentPage = responseData.currentPage || 1;
+          } else if (Array.isArray(responseData)) {
+            plans = responseData;
+          } else if (responseData.data && Array.isArray(responseData.data)) {
+            plans = responseData.data;
+          } else if (
+            responseData.content &&
+            Array.isArray(responseData.content)
+          ) {
+            plans = responseData.content;
+            totalPages = responseData.totalPages || 1;
+            pageSize = responseData.size || 10;
+            currentPage = responseData.number + 1 || 1;
+          }
 
           setRoutines(plans);
           setTotalPages(totalPages);
           setPageSize(pageSize);
           setCurrentPage(currentPage);
-          setTotalCount(totalPages * pageSize); // 대략적인 계산
+          setTotalCount(totalPages * pageSize);
 
           console.log("✅ 데이터 로드 성공:", {
             count: plans.length,
             totalPages,
             currentPage,
           });
+
+          if (plans.length === 0 && searchTerm) {
+            toast({
+              title: "검색 결과 없음",
+              description: "검색 조건에 맞는 루틴이 없습니다.",
+            });
+          }
         } else {
           console.error("루틴 목록 조회 실패:", response?.data?.message);
           setError(
             response?.data?.message || "데이터를 불러오는데 실패했습니다."
           );
+          toast({
+            variant: "destructive",
+            title: "데이터 로딩 실패",
+            description:
+              response?.data?.message || "루틴 목록을 불러오는데 실패했습니다.",
+          });
         }
       } catch (err) {
         console.error("❌ API 요청 실패:", err);
@@ -104,6 +212,10 @@ const AdminRoutineList = ({
 
         if (err.response?.status === 401) {
           errorMessage = "로그인이 필요합니다.";
+          localStorage.removeItem("accessToken");
+          if (!isStandalone) {
+            navigate("/user/login");
+          }
         } else if (err.response?.status === 403) {
           errorMessage = "접근 권한이 없습니다.";
         } else if (err.response?.status === 404) {
@@ -114,22 +226,29 @@ const AdminRoutineList = ({
 
         setError(errorMessage);
         setRoutines([]);
+
+        toast({
+          variant: "destructive",
+          title: "오류 발생",
+          description: errorMessage,
+        });
       } finally {
         setLoading(false);
       }
     },
-    [pageSize, searchTerm, filters]
+    [pageSize, searchTerm, filters, navigate, toast, isStandalone]
   );
 
   // 초기 로드 및 상태 변경시 데이터 로드
   useEffect(() => {
+    fetchCategories();
     fetchRoutines(currentPage);
   }, [filters.targetIdx, filters.sort]);
 
-  // 검색어 변경시 디바운싱 처리 (UserManager와 동일한 방식)
+  // 검색어 변경시 디바운싱 처리
   useEffect(() => {
     const timer = setTimeout(() => {
-      setCurrentPage(1); // 검색시 첫 페이지로 이동
+      setCurrentPage(1);
       fetchRoutines(1);
     }, 500);
 
@@ -137,8 +256,7 @@ const AdminRoutineList = ({
   }, [searchTerm]);
 
   // 검색 처리
-  const handleSearch = (e) => {
-    e.preventDefault();
+  const handleSearch = () => {
     setCurrentPage(1);
     fetchRoutines(1);
   };
@@ -163,18 +281,12 @@ const AdminRoutineList = ({
     if (onRoutineSelect) {
       onRoutineSelect(planIdx);
     } else {
-      navigate(`/admin/routine/detail/${planIdx}`);
+      // 루틴 상세 페이지로 이동
+      navigate(`/routine/detail/${planIdx}`);
     }
   };
 
-  // 새 루틴 추가 (기존 함수명 유지, 실제 구현은 폼/모달 필요)
-  const handleAddNew = () => {
-    // TODO: 루틴 추가 폼/모달 열기
-    alert("루틴 추가 기능은 별도 폼/모달에서 구현해야 합니다.");
-    // handleAddRoutine(); // 실제 데이터 입력 후 호출
-  };
-
-  // 날짜 포맷팅 (UserManager와 동일)
+  // 날짜 포맷팅
   const formatDate = (dateString) => {
     if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString("ko-KR", {
@@ -182,6 +294,19 @@ const AdminRoutineList = ({
       month: "2-digit",
       day: "2-digit",
     });
+  };
+
+  // 카테고리 이름 매핑
+  const getCategoryName = (targetIdx) => {
+    const category = categories.find(
+      (cat) => (cat.targetIdx || cat.challCateIdx || cat.id) === targetIdx
+    );
+    return category
+      ? category.targetName ||
+          category.challName ||
+          category.name ||
+          category.title
+      : `카테고리 ${targetIdx}`;
   };
 
   // 루틴 카드 렌더링
@@ -192,8 +317,13 @@ const AdminRoutineList = ({
       onClick={() => handleRoutineClick(routine.planIdx)}
     >
       <div className="flex justify-between items-start mb-4">
-        <h3 className="text-lg font-semibold text-gray-800 line-clamp-2">
-          {routine.planTitle}
+        <h3
+          className="text-lg font-semibold text-gray-800 line-clamp-2"
+          title={routine.planTitle}
+        >
+          {routine.planTitle.length > 10
+            ? routine.planTitle.substring(0, 10) + "..."
+            : routine.planTitle}
         </h3>
         <span className="text-xs text-gray-500 ml-2 whitespace-nowrap">
           ID: {routine.planIdx}
@@ -206,8 +336,10 @@ const AdminRoutineList = ({
           <span className="font-medium">{routine.userIdx}</span>
         </div>
         <div className="flex justify-between">
-          <span>카테고리 ID:</span>
-          <span className="font-medium">{routine.targetIdx}</span>
+          <span>카테고리:</span>
+          <span className="font-medium text-blue-600">
+            {getCategoryName(routine.targetIdx)}
+          </span>
         </div>
         <div className="flex justify-between">
           <span>등록일:</span>
@@ -217,7 +349,7 @@ const AdminRoutineList = ({
     </div>
   );
 
-  // 페이지네이션 렌더링 (UserManager와 동일한 스타일)
+  // 페이지네이션 렌더링
   const renderPagination = () => {
     if (totalPages <= 1) return null;
 
@@ -307,21 +439,16 @@ const AdminRoutineList = ({
       {/* 헤더 */}
       <div className="flex justify-between items-center mb-6">
         <div>
+          <h1 className="text-2xl font-bold text-gray-900">관리자 루틴 관리</h1>
           <p className="text-gray-600 mt-1">
-            총 {routines.length}개의 루틴 (페이지 {currentPage}/{totalPages})
+            총 {totalCount}개의 루틴 (페이지 {currentPage}/{totalPages})
           </p>
         </div>
-        <button
-          onClick={handleAddNew}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus size={20} /> 추천 루틴 추가
-        </button>
       </div>
 
       {/* 검색 및 필터 */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-        <form onSubmit={handleSearch} className="flex gap-4 items-end">
+        <div className="flex gap-4 items-end">
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               검색어
@@ -335,6 +462,7 @@ const AdminRoutineList = ({
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 placeholder="루틴 제목으로 검색..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -343,7 +471,7 @@ const AdminRoutineList = ({
 
           <div className="w-48">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              카테고리 ID
+              카테고리
             </label>
             <select
               value={filters.targetIdx}
@@ -351,9 +479,24 @@ const AdminRoutineList = ({
                 setFilters((prev) => ({ ...prev, targetIdx: e.target.value }))
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={categoriesLoading}
             >
               <option value="">전체</option>
-              {/* 실제 카테고리 목록은 API에서 가져와서 동적으로 렌더링 */}
+              {categories.map((category) => (
+                <option
+                  key={
+                    category.targetIdx || category.challCateIdx || category.id
+                  }
+                  value={
+                    category.targetIdx || category.challCateIdx || category.id
+                  }
+                >
+                  {category.targetName ||
+                    category.challName ||
+                    category.name ||
+                    category.title}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -374,7 +517,7 @@ const AdminRoutineList = ({
           </div>
 
           <button
-            type="submit"
+            onClick={handleSearch}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             검색
@@ -388,7 +531,7 @@ const AdminRoutineList = ({
           >
             <RotateCcw size={20} />
           </button>
-        </form>
+        </div>
       </div>
 
       {/* 로딩 및 에러 상태 */}
