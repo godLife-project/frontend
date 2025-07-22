@@ -832,8 +832,8 @@ function Home(props) {
     // 기본 API들 (토큰 없이 호출)
     const apiPromises = [
       axiosInstance.get("/list/plan/latest"),
-      // 챌린지는 search API 사용 (파라미터 없이 기본 데이터)
-      axiosInstance.get("/challenges/search"),
+      // 챌린지는 latest API 사용
+      axiosInstance.get("/challenges/latest"),
       axiosInstance.get("/categories/challenge"),
     ];
 
@@ -857,11 +857,11 @@ function Home(props) {
         // 플랜 데이터 설정
         console.log("플랜 API 응답:", responses[0].data);
         const planData = responses[0].data.plans || [];
-        
+
         // 🔍 각 플랜의 데이터 구조 자세히 분석
         console.log("=== 플랜 데이터 구조 분석 ===");
         console.log("총 플랜 개수:", planData.length);
-        
+
         planData.forEach((plan, index) => {
           console.log(`\n--- 플랜 ${index + 1} 분석 ---`);
           console.log("전체 구조:", plan);
@@ -872,29 +872,28 @@ function Home(props) {
             type: typeof plan.planInfos?.repeatDays,
             isNull: plan.planInfos?.repeatDays === null,
             isUndefined: plan.planInfos?.repeatDays === undefined,
-            isEmpty: plan.planInfos?.repeatDays === ""
+            isEmpty: plan.planInfos?.repeatDays === "",
           });
           console.log("planInfos 전체:", plan.planInfos);
-          
+
           // 관리자인지 일반 유저인지 구분할 수 있는 필드들 확인
           console.log("구분 필드들:", {
             userRole: plan.userRole,
             isAdmin: plan.isAdmin,
             userNick: plan.planInfos?.userNick,
             userId: plan.planInfos?.userId,
-            planType: plan.planType
+            planType: plan.planType,
           });
         });
-        
+
         setPlans(planData);
 
-        // 챌린지 데이터 처리 (search API 방식으로 변경)
+        // 챌린지 데이터 처리 (latest API 방식으로 변경)
         const challengeResponse = responses[1].data;
-        console.log("챌린지 API 상태:", responses[1].status);
         console.log("챌린지 API 응답:", challengeResponse);
 
         let challengeData = [];
-        // search API 응답 구조에 맞게 처리
+        // latest API 응답 구조에 맞게 처리
         if (challengeResponse && typeof challengeResponse === "object") {
           if (
             challengeResponse.content &&
@@ -916,7 +915,6 @@ function Home(props) {
         }
 
         console.log("처리된 챌린지 데이터:", challengeData);
-        console.log("챌린지 데이터 길이:", challengeData.length);
         setChallenges(challengeData);
 
         const categoryResponse = responses[2].data;
@@ -1015,16 +1013,15 @@ function Home(props) {
       isNull: plan.planInfos?.repeatDays === null,
       isUndefined: plan.planInfos?.repeatDays === undefined,
       isEmpty: plan.planInfos?.repeatDays === "",
-      length: plan.planInfos?.repeatDays?.length
+      length: plan.planInfos?.repeatDays?.length,
     });
     console.log("planInfos:", plan.planInfos);
     console.log("targetInfos:", plan.targetInfos);
     console.log("jobDefault:", plan.jobDefault);
-    
+
     const planIdx = plan.planInfos.planIdx;
 
     if (planIdx) {
-      console.log(`🚀 네비게이트: /routine/detail/${planIdx}`);
       navigate(`/routine/detail/${planIdx}`);
     } else {
       console.error("planIdx를 찾을 수 없습니다:", plan);
@@ -1063,14 +1060,14 @@ function Home(props) {
       input: repeatDays,
       type: typeof repeatDays,
       isNull: repeatDays === null,
-      isUndefined: repeatDays === undefined
+      isUndefined: repeatDays === undefined,
     });
-    
+
     if (!repeatDays || repeatDays === null || repeatDays === undefined) {
       console.log("❌ repeatDays가 없어서 빈 문자열 반환");
       return "";
     }
-    
+
     const dayMap = {
       mon: "월",
       tue: "화",
@@ -1087,7 +1084,7 @@ function Home(props) {
         .map((day) => dayMap[day.trim()])
         .filter(Boolean)
         .join(", ");
-      
+
       console.log("✅ formatRepeatDays 결과:", result);
       return result;
     } catch (error) {
@@ -1361,9 +1358,9 @@ function Home(props) {
       title: plan.planInfos?.planTitle,
       author: plan.planInfos?.userNick,
       repeatDays: plan.planInfos?.repeatDays,
-      hasRepeatDays: !!plan.planInfos?.repeatDays
+      hasRepeatDays: !!plan.planInfos?.repeatDays,
     });
-    
+
     return (
       <div
         className="cursor-pointer hover:bg-gray-50 transition-colors rounded-lg p-2 -m-2"
@@ -1403,17 +1400,19 @@ function Home(props) {
               <span>{plan.jobDefault.name}</span>
             </div>
           </div>
-          
+
           {/* 🔍 repeatDays 표시 추가 - 디버깅용 */}
           {plan.planInfos?.repeatDays && (
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-600">반복요일</span>
+              <span className="text-sm font-medium text-gray-600">
+                반복요일
+              </span>
               <span className="text-sm text-gray-700">
                 {formatRepeatDays(plan.planInfos.repeatDays)}
               </span>
             </div>
           )}
-          
+
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-600">생성일</span>
             <div className="flex items-center space-x-1 text-sm text-gray-700">
@@ -1534,12 +1533,15 @@ function Home(props) {
   console.log("challenges.length:", challenges.length);
   console.log("myplans.length:", myplans.length);
   console.log("challengeCategories:", challengeCategories);
-  
+
   // 🔍 현재 표시되는 플랜 정보
   if (plans.length > 0) {
     console.log("현재 표시 플랜 인덱스:", currentPlanIndex);
     console.log("현재 표시 플랜:", plans[currentPlanIndex]);
-    console.log("현재 플랜 repeatDays:", plans[currentPlanIndex]?.planInfos?.repeatDays);
+    console.log(
+      "현재 플랜 repeatDays:",
+      plans[currentPlanIndex]?.planInfos?.repeatDays
+    );
   }
 
   return (

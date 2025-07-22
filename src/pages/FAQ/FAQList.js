@@ -45,7 +45,7 @@ export default function FAQPage() {
 
         // API 호출
         const response = await axiosInstance.get(
-          "/admin/compSystem/faqCategory",
+          "/categories/faq",
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
