@@ -17,6 +17,7 @@ const EditItemModal = ({
     topName: "",
     topAddr: "",
     ordCol: "",
+    categoryLevel: "", // 카테고리 레벨 필드 추가
   });
 
   // 디버깅용: iconData 확인
@@ -39,6 +40,7 @@ const EditItemModal = ({
           topName: item.topName || "",
           topAddr: item.topAddr || "",
           ordCol: item.ordCol || "",
+          categoryLevel: item.categoryLevel || "", // 카테고리 레벨 추가
         });
       } else {
         // 목표/직업 탭일 경우
@@ -103,11 +105,16 @@ const EditItemModal = ({
         alert("정렬 순서는 필수 입력사항입니다.");
         return;
       }
+      if (!formData.categoryLevel.toString().trim()) {
+        alert("카테고리 수준은 필수 입력사항입니다.");
+        return;
+      }
 
       const topMenuData = {
         topName: formData.topName,
         topAddr: formData.topAddr,
         ordCol: parseInt(formData.ordCol),
+        categoryLevel: parseInt(formData.categoryLevel),
       };
 
       console.log("=== EditItemModal에서 전송할 탑메뉴 데이터 ===");
@@ -399,6 +406,24 @@ const EditItemModal = ({
                   required
                   min="0"
                 />
+              </div>
+
+              {/* 카테고리 수준 */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  카테고리 수준
+                </label>
+                <select
+                  name="categoryLevel"
+                  value={formData.categoryLevel}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">카테고리 수준을 선택하세요</option>
+                  <option value="1">1 (대분류)</option>
+                  <option value="2">2 (소분류)</option>
+                </select>
               </div>
             </>
           )}
