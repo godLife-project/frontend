@@ -57,15 +57,12 @@ export default function FAQEditPage() {
         // 로그인 상태 확인 및 토큰 가져오기
         const accessToken = localStorage.getItem("accessToken");
 
-        const response = await axiosInstance.get(
-          "/admin/compSystem/faqCategory",
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const response = await axiosInstance.get("/categories/faq", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
 
         console.log("API 응답 전체 데이터:", response.data);
 

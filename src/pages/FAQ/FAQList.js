@@ -44,39 +44,24 @@ export default function FAQPage() {
         setCategories([{ key: "all", label: "전체" }]);
 
         // API 호출
-        const response = await axiosInstance.get(
-          "/categories/faq",
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const response = await axiosInstance.get("/categories/faq", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
 
         console.log("API 응답 전체 데이터:", response.data);
 
-        // API 응답에서 카테고리 데이터 추출
-        let categoryData = [];
-
-        if (response.data && Array.isArray(response.data.faqCategory)) {
-          categoryData = response.data.faqCategory;
-          console.log(
-            "faqCategory 배열에서 카테고리 데이터 추출:",
-            categoryData
-          );
-        }
+        // API 응답이 바로 배열 형태
+        const categoryData = response.data;
 
         // 카테고리 데이터 변환 및 적용
         if (categoryData && categoryData.length > 0) {
           const apiCategories = categoryData.map((cat) => ({
-            key:
-              cat.faqCategoryIdx?.toString() ||
-              cat.categoryIdx?.toString() ||
-              "unknown",
-            label: cat.faqCategoryName || cat.categoryName || "알 수 없음",
-            originalValue:
-              cat.faqCategoryName || cat.categoryName || "알 수 없음",
+            key: cat.faqCategoryIdx.toString(),
+            label: cat.faqCategoryName,
+            originalValue: cat.faqCategoryName,
           }));
 
           const formattedCategories = [
@@ -87,9 +72,7 @@ export default function FAQPage() {
           setCategories(formattedCategories);
           console.log("적용된 카테고리 데이터:", formattedCategories);
         } else {
-          console.log(
-            "카테고리 데이터가 비어있거나 API 응답 구조가 예상과 다릅니다."
-          );
+          console.log("카테고리 데이터가 비어있습니다.");
         }
       } catch (err) {
         console.error("카테고리 데이터를 가져오는 중 오류 발생:", err);
@@ -283,6 +266,7 @@ export default function FAQPage() {
       setDeleting(false);
     }
   };
+
   // 작성 버튼 (관리자만)
   const WriteButtons = () => {
     if (roleStatus === true) {
@@ -323,125 +307,129 @@ export default function FAQPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-extrabold tracking-tight mb-2">FAQ</h1>
-      <p className="text-muted-foreground mb-4">
-        자주 묻는 질문들을 확인하세요
-      </p>
+    <div className="min-h-screen bg-gradient-to-br bg-white py-8">
+      <div className="max-w-3xl mx-auto px-4">
+        <h1 className="text-3xl font-extrabold tracking-tight mb-2">FAQ</h1>
+        <p className="text-muted-foreground mb-4">
+          자주 묻는 질문들을 확인하세요
+        </p>
 
-      <Input
-        placeholder="궁금한 내용을 검색해보세요"
-        className="mb-6"
-        value={search}
-        onChange={(e) => {
-          setSearch(e.target.value);
-          setPage(1);
-        }}
-      />
+        <Input
+          placeholder="궁금한 내용을 검색해보세요"
+          className="mb-6"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+        />
 
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex flex-wrap gap-2">
-          {categoryLoading ? (
-            <p className="text-sm text-gray-400">카테고리 로딩 중...</p>
-          ) : (
-            <>
-              {/* 카테고리 버튼들을 명확하게 표시 */}
-              {categories.map((cat) => (
-                <button
-                  key={cat.key}
-                  onClick={() => handleCategoryChange(cat.key)}
-                  className={`px-4 py-2 rounded text-sm border ${
-                    category === cat.key
-                      ? "bg-black text-white border-black"
-                      : "bg-transparent text-gray-700 border-gray-300"
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </>
-          )}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-wrap gap-2">
+            {categoryLoading ? (
+              <p className="text-sm text-gray-400">카테고리 로딩 중...</p>
+            ) : (
+              <>
+                {/* 카테고리 버튼들을 명확하게 표시 */}
+                {categories.map((cat) => (
+                  <button
+                    key={cat.key}
+                    onClick={() => handleCategoryChange(cat.key)}
+                    className={`px-4 py-2 rounded text-sm border ${
+                      category === cat.key
+                        ? "bg-black text-white border-black"
+                        : "bg-transparent text-gray-700 border-gray-300"
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+
+          <WriteButtons />
+        </div>
+        {loading ? (
+          <p className="text-center text-gray-400 py-12">로딩 중...</p>
+        ) : error ? (
+          <p className="text-center text-red-500 py-12">{error}</p>
+        ) : paginated.length === 0 ? (
+          <p className="text-center text-gray-400 py-12">
+            검색 결과가 없습니다.
+          </p>
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {paginated.map((faq) => (
+              <div
+                key={faq.faqIdx}
+                className="py-4 cursor-pointer"
+                onClick={() => handleFaqClick(faq.faqIdx)}
+              >
+                <div className="flex justify-between items-center text-sm mb-1">
+                  <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                    {getCategoryName(faq)}
+                  </span>
+                  <div className="flex gap-2">
+                    <ModifyButtons faqIdx={faq.faqIdx} />
+                    <DeleteButtons faqIdx={faq.faqIdx} />
+                  </div>
+                </div>
+                <div className="font-semibold text-base flex justify-between items-center">
+                  {faq.faqTitle}
+                  <span className="text-gray-400 text-xl">
+                    {openId === faq.faqIdx ? "−" : "+"}
+                  </span>
+                </div>
+                {openId === faq.faqIdx && (
+                  <div className="text-sm text-gray-600 mt-3 pl-1">
+                    {detailLoading && !faqDetails[faq.faqIdx] ? (
+                      <p className="text-gray-400">답변을 불러오는 중...</p>
+                    ) : (
+                      <p>{getFaqAnswer(faq.faqIdx)}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex justify-end mt-6 mb-4">
+          <button
+            onClick={() => navigate("/inquiry")}
+            className="text-black text-sm font-medium"
+          >
+            더 궁금한 것이 있으신가요?{" "}
+            <span className="font-bold hover:text-black hover:underline">
+              1:1 문의
+            </span>
+          </button>
         </div>
 
-        <WriteButtons />
-      </div>
-      {loading ? (
-        <p className="text-center text-gray-400 py-12">로딩 중...</p>
-      ) : error ? (
-        <p className="text-center text-red-500 py-12">{error}</p>
-      ) : paginated.length === 0 ? (
-        <p className="text-center text-gray-400 py-12">검색 결과가 없습니다.</p>
-      ) : (
-        <div className="divide-y divide-gray-200">
-          {paginated.map((faq) => (
-            <div
-              key={faq.faqIdx}
-              className="py-4 cursor-pointer"
-              onClick={() => handleFaqClick(faq.faqIdx)}
+        {/* 페이지네이션 */}
+        {!loading && !error && totalPages > 1 && (
+          <div className="flex justify-center items-center gap-4 mt-8 text-sm">
+            <button
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              disabled={page === 1}
+              className="px-3 py-1 border rounded disabled:opacity-30"
             >
-              <div className="flex justify-between items-center text-sm mb-1">
-                <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                  {getCategoryName(faq)}
-                </span>
-                <div className="flex gap-2">
-                  <ModifyButtons faqIdx={faq.faqIdx} />
-                  <DeleteButtons faqIdx={faq.faqIdx} />
-                </div>
-              </div>
-              <div className="font-semibold text-base flex justify-between items-center">
-                {faq.faqTitle}
-                <span className="text-gray-400 text-xl">
-                  {openId === faq.faqIdx ? "−" : "+"}
-                </span>
-              </div>
-              {openId === faq.faqIdx && (
-                <div className="text-sm text-gray-600 mt-3 pl-1">
-                  {detailLoading && !faqDetails[faq.faqIdx] ? (
-                    <p className="text-gray-400">답변을 불러오는 중...</p>
-                  ) : (
-                    <p>{getFaqAnswer(faq.faqIdx)}</p>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="flex justify-end mt-6 mb-4">
-        <button
-          onClick={() => navigate("/inquiry")}
-          className="text-black text-sm font-medium"
-        >
-          더 궁금한 것이 있으신가요?{" "}
-          <span className="font-bold hover:text-black hover:underline">
-            1:1 문의
-          </span>
-        </button>
+              이전
+            </button>
+            <span>
+              {page} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+              disabled={page === totalPages}
+              className="px-3 py-1 border rounded disabled:opacity-30"
+            >
+              다음
+            </button>
+          </div>
+        )}
       </div>
-
-      {/* 페이지네이션 */}
-      {!loading && !error && totalPages > 1 && (
-        <div className="flex justify-center items-center gap-4 mt-8 text-sm">
-          <button
-            onClick={() => setPage((p) => Math.max(p - 1, 1))}
-            disabled={page === 1}
-            className="px-3 py-1 border rounded disabled:opacity-30"
-          >
-            이전
-          </button>
-          <span>
-            {page} / {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-            disabled={page === totalPages}
-            className="px-3 py-1 border rounded disabled:opacity-30"
-          >
-            다음
-          </button>
-        </div>
-      )}
     </div>
   );
 }
