@@ -49,10 +49,16 @@ const NavItem = ({ item }) => {
 };
 
 const TopNav = ({ categories }) => {
+  const navigate = useNavigate();
+
+  const handleLogoClick = () => {
+    navigate("/");
+  };
+
   return (
     <div className="h-16 items-center px-4 flex">
       {/* 로고 - 모든 화면에서 보임 */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2" onClick={handleLogoClick}>
         <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
           <span className="text-white font-semibold">G</span>
         </div>

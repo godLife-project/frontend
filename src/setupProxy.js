@@ -1,7 +1,7 @@
 const { createProxyMiddleware } = require("http-proxy-middleware");
 
 // Ngrok 서버 주소를 상수로 관리
-const NGROK_SERVER = "https://7793c1dd4a9b.ngrok-free.app/";
+const NGROK_SERVER = "https://bcfb403a62eb.ngrok-free.app/";
 
 module.exports = function (app) {
   // 일반 HTTP 요청 프록시
