@@ -21,6 +21,9 @@ const TopNavbar = () => {
 
       if (response.status === 200) {
         localStorage.removeItem("accessToken"); // ✅ accessToken 제거
+        localStorage.removeItem("userName");
+        localStorage.removeItem("userNick");
+        localStorage.removeItem("nickTag");
         alert("로그아웃되었습니다.");
         navigate("/login"); // ✅ 로그인 페이지로 이동
       }

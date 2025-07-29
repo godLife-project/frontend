@@ -42,6 +42,7 @@ const Login = () => {
         if (data.userNick) {
           localStorage.setItem('userNick', data.userNick);
           localStorage.setItem('userName', data.userName);
+          localStorage.setItem('nickTag', data.nickTag);
         }
 
         navigate('/');

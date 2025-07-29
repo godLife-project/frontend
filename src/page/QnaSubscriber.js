@@ -267,10 +267,18 @@ const ChatRoom = () => {
         // 6. 완료된 문의 리스트 조회
         stompClient.subscribe('/user/queue/completed/qna/list', (message) => {
           const received = JSON.parse(message.body);
-          console.log("채팅 메세지 수신 : ", received)
+          console.log("완료된 문의 리스트 수신 : ", received)
         });
 
-        stompClient.send('/pub/get/complete/qnaList', {
+        // 7. 상담원 통계 조회
+        stompClient.subscribe('/user/queue/qna/admin/statistics', (message) => {
+          const received = JSON.parse(message.body);
+          console.log("상담원 통계 수신 : ", received)
+        });
+
+
+
+        stompClient.send('/pub/get/complete/qnaList/init', {
           Authorization: `Bearer ${accessToken}`,
         });
 
@@ -280,6 +288,9 @@ const ChatRoom = () => {
           Authorization: `Bearer ${accessToken}`,
         });
         stompClient.send('/pub/get/access/serviceCenter', {}, JSON.stringify({}));
+        stompClient.send('/pub/get/qna/statistics/init', {
+          Authorization: `Bearer ${accessToken}`,
+        });
       },
       (error) => {
         console.error('❌ STOMP 연결 실패:', error);
@@ -657,7 +668,9 @@ const ChatRoom = () => {
                           <strong>답변 목록:</strong>
                           {qnaComments[qna.qnaIdx]?.length > 0 ? (
                             qnaComments[qna.qnaIdx].map((comment, index) => {
-                              const isMine = comment.userName === localStorage.getItem("userName");
+                              const isMine =
+                                comment.userNick === localStorage.getItem("userNick") &&
+                                comment.nickTag === localStorage.getItem("nickTag");
 
                               const commentContainerStyle = {
                                 display: 'flex',
@@ -686,7 +699,7 @@ const ChatRoom = () => {
                                 <div key={comment.qnaReplyIdx} style={commentContainerStyle}>
                                   <div style={commentBoxStyle}>
                                     <div style={infoStyle}>
-                                      작성자: {comment.userName} | 작성일: {comment.createdAt}
+                                      작성자: {comment.userNick} {comment.nickTag} | 작성일: {comment.createdAt}
                                     </div>
                                     <div style={{
                                       backgroundColor: '#fefefe',
