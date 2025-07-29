@@ -1,9 +1,9 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: "/axios/api", // Spring Boot 백엔드 API 주소
+  baseURL: "http://52.78.45.234/api", // Spring Boot 백엔드 API 주소
   headers: {
-    "ngrok-skip-browser-warning": "true",
+    //"ngrok-skip-browser-warning": "true",
     "Content-Type": "application/json; charset=UTF-8",
     Accept: "application/json; charset=UTF-8",
   },
