@@ -254,6 +254,7 @@ export default function RoutineForm({
       <form
         onSubmit={form.handleSubmit(handleFormSubmit)}
         className="space-y-6"
+        lang="ko"
       >
         {isForkData && forkIdx && (
           <div className="bg-purple-50 border border-purple-200 p-3 rounded-md text-purple-700 text-sm">
