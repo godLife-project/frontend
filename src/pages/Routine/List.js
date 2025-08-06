@@ -1,4 +1,4 @@
-// pages/PublicRoutineList.jsx
+// pages/PublicRoutineList.jsx - HTTP 상태코드별 처리 개선
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import RoutineList from "@/components/routine/list/RoutineList";
@@ -77,7 +77,12 @@ const PublicRoutineList = () => {
       const response = await axiosInstance.get(url);
       console.log("공개 루틴 데이터:", response.data);
 
-      if (response.data && response.data.plans) {
+      // 204 No Content - 조회된 내용이 없음 (정상적인 상황)
+      if (response.status === 204) {
+        setRoutines([]);
+        setTotalPages(1);
+        setTotalPosts(0);
+      } else if (response.data && response.data.plans) {
         setRoutines(response.data.plans);
         setTotalPages(response.data.totalPages);
         setTotalPosts(response.data.totalPosts);
@@ -87,7 +92,12 @@ const PublicRoutineList = () => {
       }
     } catch (error) {
       console.error("공개 루틴 목록 조회 실패:", error);
-      setError("루틴 목록을 불러오는데 문제가 발생했습니다.");
+
+      // 400번대, 500번대 에러만 에러로 처리
+      const status = error.response?.status;
+      if (status >= 400) {
+        setError("루틴 목록을 불러오는데 문제가 발생했습니다.");
+      }
     } finally {
       setIsLoading(false);
     }
