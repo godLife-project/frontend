@@ -1,0 +1,44 @@
+name: Deploy React to Nginx Docker
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build React app
+        run: npm run build
+
+      - name: Copy build files to remote server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          username: ${{ secrets.EC2_USER }}
+          host: ${{ secrets.GODLIFE_SERVER_IP }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "build/*"
+          target: "/home/${{ secrets.EC2_USER }}/react-build"
+
+      - name: Docker cp and reload Nginx container
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          username: ${{ secrets.EC2_USER }}
+          host: ${{ secrets.GODLIFE_SERVER_IP }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo docker cp /home/${{ secrets.EC2_USER }}/react-build/. nginxserver:/usr/share/nginx/html
+            sudo docker exec nginxserver nginx -s reload
