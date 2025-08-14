@@ -199,7 +199,7 @@ export default function FAQEditPage() {
         description: "FAQ 목록으로 이동합니다.",
       });
 
-      navigate("/faq");
+      navigate("/adminBoard?tab=faq");
     } catch (error) {
       console.error("FAQ 수정 중 오류 발생:", error);
       toast({
@@ -356,7 +356,7 @@ export default function FAQEditPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate(`/faq`)}
+                  onClick={() => navigate("/adminBoard?tab=faq")}
                 >
                   취소
                 </Button>
