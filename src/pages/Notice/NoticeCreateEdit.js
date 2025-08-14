@@ -647,10 +647,12 @@ const NoticeCreateEdit = () => {
         isPopup: isPopup ? "Y" : "N",
         popupStartDate:
           isPopup && popupStartDate
-            ? format(popupStartDate, "yyyy-MM-dd")
+            ? format(popupStartDate, "yyyy-MM-dd HH:mm:ss")
             : null,
         popupEndDate:
-          isPopup && popupEndDate ? format(popupEndDate, "yyyy-MM-dd") : null,
+          isPopup && popupEndDate
+            ? format(popupEndDate, "yyyy-MM-dd HH:mm:ss")
+            : null,
       };
 
       console.log("전송할 데이터:", noticeData);
