@@ -1,5 +1,5 @@
 // components/Navigation/SideNav.js
-import { React, useEffect } from "react";
+import { React, useEffect, useState } from "react";
 import { useApi } from "../../hooks/useApi";
 
 import { useNavigate } from "react-router-dom";
@@ -21,8 +21,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-const MenuItem = ({ item }) => {
+const MenuItem = ({ item, onMenuClick }) => {
   const navigate = useNavigate();
+
+  const handleClick = (addr) => {
+    navigate(addr);
+    onMenuClick(); // 메뉴 클릭 시 사이드메뉴 닫기
+  };
 
   if (item.children && item.children.length > 0) {
     return (
@@ -38,7 +43,7 @@ const MenuItem = ({ item }) => {
                   key={subItem.topIdx}
                   variant="ghost"
                   className="w-full justify-start text-sm"
-                  onClick={() => navigate(subItem.addr)}
+                  onClick={() => handleClick(subItem.addr)}
                 >
                   {subItem.name}
                 </Button>
@@ -56,7 +61,7 @@ const MenuItem = ({ item }) => {
         <AccordionTrigger
           className="py-2 hover:no-underline"
           hasSubmenu={false}
-          onClick={() => navigate(item.addr)}
+          onClick={() => handleClick(item.addr)}
         >
           {item.name}
         </AccordionTrigger>
@@ -66,9 +71,15 @@ const MenuItem = ({ item }) => {
 };
 
 const SideNav = ({ categories }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleMenuClick = () => {
+    setIsOpen(false);
+  };
+
   return (
     <div className="md:hidden fixed top-4 right-4 z-50">
-      <Sheet>
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger asChild>
           <Button variant="outline" size="icon">
             <Menu className="h-5 w-5" />
@@ -83,7 +94,7 @@ const SideNav = ({ categories }) => {
               <ul className="space-y-3">
                 {categories.map((item) => (
                   <li key={item.topIdx}>
-                    <MenuItem item={item} />
+                    <MenuItem item={item} onMenuClick={handleMenuClick} />
                   </li>
                 ))}
               </ul>

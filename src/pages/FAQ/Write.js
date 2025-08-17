@@ -127,7 +127,7 @@ export default function FAQWritePage() {
           title: "로그인이 필요합니다",
           description: "FAQ 작성을 위해 로그인해주세요.",
         });
-        navigate("/user/login");
+        navigate(`/user/login`);
         return;
       }
 
@@ -155,7 +155,7 @@ export default function FAQWritePage() {
         description: "FAQ 목록으로 이동합니다.",
       });
 
-      navigate("/faq");
+      navigate(`/adminBoard?tab=faq`);
     } catch (error) {
       console.error("FAQ 작성 중 오류 발생:", error);
       toast({
@@ -184,7 +184,7 @@ export default function FAQWritePage() {
         <Button
           variant="ghost"
           className="mb-6 pl-2"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/adminBoard?tab=faq")}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           뒤로 가기
@@ -212,7 +212,7 @@ export default function FAQWritePage() {
       <Button
         variant="ghost"
         className="mb-6 pl-2"
-        onClick={() => navigate(-1)}
+        onClick={() => navigate(`/adminBoard?tab=faq`)}
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         뒤로 가기
@@ -312,7 +312,7 @@ export default function FAQWritePage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate(`/faq`)}
+                  onClick={() => navigate(`/adminBoard?tab=faq`)}
                 >
                   취소
                 </Button>

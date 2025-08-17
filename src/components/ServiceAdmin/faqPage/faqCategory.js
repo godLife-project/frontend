@@ -45,39 +45,24 @@ export default function FAQPage() {
         setCategories([{ key: "all", label: "전체" }]);
 
         // API 호출
-        const response = await axiosInstance.get(
-          "/admin/compSystem/faqCategory",
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const response = await axiosInstance.get("/categories/faq", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+        });
 
         console.log("API 응답 전체 데이터:", response.data);
 
-        // API 응답에서 카테고리 데이터 추출
-        let categoryData = [];
-
-        if (response.data && Array.isArray(response.data.faqCategory)) {
-          categoryData = response.data.faqCategory;
-          console.log(
-            "faqCategory 배열에서 카테고리 데이터 추출:",
-            categoryData
-          );
-        }
+        // API 응답이 바로 배열 형태 (첫 번째 코드와 동일하게 처리)
+        const categoryData = response.data;
 
         // 카테고리 데이터 변환 및 적용
         if (categoryData && categoryData.length > 0) {
           const apiCategories = categoryData.map((cat) => ({
-            key:
-              cat.faqCategoryIdx?.toString() ||
-              cat.categoryIdx?.toString() ||
-              "unknown",
-            label: cat.faqCategoryName || cat.categoryName || "알 수 없음",
-            originalValue:
-              cat.faqCategoryName || cat.categoryName || "알 수 없음",
+            key: cat.faqCategoryIdx.toString(),
+            label: cat.faqCategoryName,
+            originalValue: cat.faqCategoryName,
           }));
 
           const formattedCategories = [
@@ -88,9 +73,7 @@ export default function FAQPage() {
           setCategories(formattedCategories);
           console.log("적용된 카테고리 데이터:", formattedCategories);
         } else {
-          console.log(
-            "카테고리 데이터가 비어있거나 API 응답 구조가 예상과 다릅니다."
-          );
+          console.log("카테고리 데이터가 비어있습니다.");
         }
       } catch (err) {
         console.error("카테고리 데이터를 가져오는 중 오류 발생:", err);
