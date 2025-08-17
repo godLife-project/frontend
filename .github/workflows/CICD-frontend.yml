@@ -40,5 +40,5 @@ jobs:
           host: ${{ secrets.GODLIFE_SERVER_IP }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            sudo docker cp /home/${{ secrets.EC2_USER }}/react-build/. nginxserver:/usr/share/nginx/html
+            sudo docker cp /home/${{ secrets.EC2_USER }}/react-build/build/. nginxserver:/usr/share/nginx/html
             sudo docker exec nginxserver nginx -s reload
