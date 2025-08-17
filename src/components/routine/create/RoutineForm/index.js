@@ -275,9 +275,19 @@ export default function RoutineForm({
 
         {/* 제출 버튼 (읽기 전용 모드가 아닐 때만) */}
         {!isReadOnly && (
-          <Button type="submit" className="w-full bg-blue-500">
-            {isEditMode ? "루틴 저장하기" : "루틴 생성하기"}
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              onClick={() => navigate(-1)}
+              variant="outline"
+              className="flex-1"
+            >
+              취소
+            </Button>
+            <Button type="submit" className="w-1/2 bg-blue-500">
+              {isEditMode ? "루틴 저장하기" : "루틴 생성하기"}
+            </Button>
+          </div>
         )}
       </form>
 
