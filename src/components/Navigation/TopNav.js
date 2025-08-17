@@ -51,9 +51,27 @@ const NavItem = ({ item }) => {
 const TopNav = ({ categories }) => {
   const navigate = useNavigate();
 
+  // 권한 확인 함수 추가
+  const getUserRole = () => {
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken || accessToken === "null") return "user";
+
+    const userInfo = localStorage.getItem("userInfo");
+    if (!userInfo) return "user";
+
+    try {
+      const parsedUserInfo = JSON.parse(userInfo);
+      return parsedUserInfo.roleStatus === true ? "admin" : "user";
+    } catch {
+      return "user";
+    }
+  };
+
   const handleLogoClick = () => {
     navigate("/");
   };
+
+  const userRole = getUserRole(); // 권한 확인
 
   return (
     <div className="h-16 items-center px-4 flex">
@@ -68,11 +86,15 @@ const TopNav = ({ categories }) => {
       {/* 데스크톱 네비게이션 - 데스크톱에서만 보임 */}
       <nav className="hidden md:flex flex-1 ml-8">
         <ul className="flex items-center gap-6">
-          {categories.map((item) => (
-            <li key={item.topIdx}>
-              <NavItem item={item} />
-            </li>
-          ))}
+          {categories
+            .filter(
+              (item) => userRole === "admin" || item.addr !== "/adminBoard"
+            ) // 필터링 추가
+            .map((item) => (
+              <li key={item.topIdx}>
+                <NavItem item={item} />
+              </li>
+            ))}
         </ul>
       </nav>
 

@@ -73,9 +73,27 @@ const MenuItem = ({ item, onMenuClick }) => {
 const SideNav = ({ categories }) => {
   const [isOpen, setIsOpen] = useState(false);
 
+  // 권한 확인 함수 추가
+  const getUserRole = () => {
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken || accessToken === "null") return "user";
+
+    const userInfo = localStorage.getItem("userInfo");
+    if (!userInfo) return "user";
+
+    try {
+      const parsedUserInfo = JSON.parse(userInfo);
+      return parsedUserInfo.roleStatus === true ? "admin" : "user";
+    } catch {
+      return "user";
+    }
+  };
+
   const handleMenuClick = () => {
     setIsOpen(false);
   };
+
+  const userRole = getUserRole(); // 권한 확인
 
   return (
     <div className="md:hidden fixed top-4 right-4 z-50">
@@ -92,11 +110,16 @@ const SideNav = ({ categories }) => {
             </SheetHeader>
             <nav className="flex-1 overflow-y-auto px-6 py-4">
               <ul className="space-y-3">
-                {categories.map((item) => (
-                  <li key={item.topIdx}>
-                    <MenuItem item={item} onMenuClick={handleMenuClick} />
-                  </li>
-                ))}
+                {categories
+                  .filter(
+                    (item) =>
+                      userRole === "admin" || item.addr !== "/adminBoard"
+                  ) // 필터링 추가
+                  .map((item) => (
+                    <li key={item.topIdx}>
+                      <MenuItem item={item} onMenuClick={handleMenuClick} />
+                    </li>
+                  ))}
               </ul>
             </nav>
           </div>
