@@ -397,7 +397,7 @@ export default function FAQPage() {
 
         <div className="flex justify-end mt-6 mb-4">
           <button
-            onClick={() => navigate("/inquiry")}
+            onClick={() => navigate("/qna/create")}
             className="text-black text-sm font-medium"
           >
             더 궁금한 것이 있으신가요?{" "}
