@@ -161,7 +161,7 @@ export default function RoutineForm({
     };
 
     // jobIdx가 999가 아니고 jobEtcCateDTO가 설정된 경우 null로 변경
-    if (requestData.jobIdx !== 999 && requestData.jobEtcCateDTO) {
+    if (requestData.jobIdx !== 19 && requestData.jobEtcCateDTO) {
       requestData.jobEtcCateDTO = null;
     }
 

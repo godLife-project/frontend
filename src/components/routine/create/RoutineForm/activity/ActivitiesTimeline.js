@@ -38,14 +38,19 @@ function ActivitiesTimeline({
 
     // 모든 시작 시간을 분으로 변환하여 정렬
     const processedActivities = activities.map((activity) => {
-      const [hours, minutes] = activity.setTime.split(":").map(Number);
-      const startMinutes = hours * 60 + minutes;
+      let startMinutes = null;
+      let formattedStart = null;
+
+      if (activity.setTime) { // null 체크
+        const [hours, minutes] = activity.setTime.split(":").map(Number);
+        startMinutes = hours * 60 + minutes;
+        formattedStart = formatTime(startMinutes);
+      }
 
       return {
         ...activity,
-        // id 필드는 사용하지 않음 - 서버의 activityIdx만 사용
         startMinutes,
-        formattedStart: formatTime(startMinutes),
+        formattedStart,
       };
     });
 

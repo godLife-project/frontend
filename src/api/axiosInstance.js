@@ -2,7 +2,7 @@ import axios from "axios";
 import { reissueToken } from "./reissueToken";
 
 const axiosInstance = axios.create({
-  baseURL: "http://52.78.45.234/api", // Spring Boot 백엔드 API 주소
+  baseURL: "http://localhost:9090/api", // Spring Boot 백엔드 API 주소
   headers: {
     //"ngrok-skip-browser-warning": "true",
     "Content-Type": "application/json; charset=UTF-8",
@@ -10,6 +10,15 @@ const axiosInstance = axios.create({
   },
   withCredentials: true, // 필요한 경우 (JWT, 세션 사용 시)
 });
+
+axiosInstance.interceptors.request.use(
+  (config) => {
+    console.log("++++++++++++++ api 요청 +++++++++++++++++++");
+    console.log(config);
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 axiosInstance.interceptors.response.use(
   (response) => response,

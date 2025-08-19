@@ -1,5 +1,5 @@
 // src/components/routine/RoutineForm/hooks/useFormSections.js
-import { useState, useEffect, useMemo } from "react"; // useMemo 추가
+import { useState, useEffect, useCallback, useMemo } from "react"; // useMemo 추가
 import axiosInstance from "../../../../../api/axiosInstance";
 import {
   Card,
@@ -59,13 +59,11 @@ export default function useFormSections({
   };
 
   // 카테고리 및 아이콘 데이터 가져오는 함수
-  const fetchCategoryData = async () => {
+  const fetchCategoryData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // 로컬 스토리지에서 먼저 데이터 확인
       const hasLocalData = getDataFromLocalStorage();
 
-      // 로컬 데이터가 없으면 API 호출
       if (!hasLocalData) {
         console.log("API에서 카테고리 데이터 가져오기");
         const [jobsResponse, targetsResponse, jobIconsResponse] =
@@ -75,37 +73,29 @@ export default function useFormSections({
             axiosInstance.get("/categories/icon"),
           ]);
 
-        // 상태 업데이트
         setJobs(jobsResponse.data);
         setTargets(targetsResponse.data);
         setJobIcons(jobIconsResponse.data);
 
-        // 로컬 스토리지에 저장
-        localStorage.setItem(
-          "jobCategories",
-          JSON.stringify(jobsResponse.data)
-        );
-        localStorage.setItem(
-          "targetCategories",
-          JSON.stringify(targetsResponse.data)
-        );
+        localStorage.setItem("jobCategories", JSON.stringify(jobsResponse.data));
+        localStorage.setItem("targetCategories", JSON.stringify(targetsResponse.data));
         localStorage.setItem("jobIcons", JSON.stringify(jobIconsResponse.data));
       } else {
         console.log("로컬 스토리지에서 카테고리 데이터 가져옴");
       }
     } catch (error) {
       console.error("카테고리 데이터 로드 실패:", error);
-      // 에러 발생 시 로컬 스토리지 데이터 사용 시도
       getDataFromLocalStorage();
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []); // 🔹 useCallback으로 메모이제이션
 
   // 초기 데이터 로드
   useEffect(() => {
     fetchCategoryData();
-  }, []);
+  }, [fetchCategoryData]); // 🔹 의존성 배열에 포함
+
 
   // isReadOnly가 변경될 때 아이콘 데이터 다시 로드하는 useEffect 추가
   useEffect(() => {
@@ -136,8 +126,8 @@ export default function useFormSections({
 
   const handleJobChange = useMemo(() => {
     return (jobIdx) => {
-      // jobIdx가 999가 아닌 경우(일반 옵션 선택) jobEtcCateDTO를 null로 설정
-      if (jobIdx !== 999) {
+      // jobIdx가 19가 아닌 경우(일반 옵션 선택) jobEtcCateDTO를 null로 설정
+      if (jobIdx !== 19) {
         form.setValue("jobEtcCateDTO", null);
       }
     };
@@ -146,8 +136,8 @@ export default function useFormSections({
   const handleCustomJobSelected = useMemo(() => {
     return (jobEtcData) => {
       if (jobEtcData) {
-        // 직접 입력 시에는 jobIdx를 999로 설정
-        form.setValue("jobIdx", 999);
+        // 직접 입력 시에는 jobIdx를 19로 설정
+        form.setValue("jobIdx", 19);
         form.setValue("jobEtcCateDTO", jobEtcData);
       }
     };

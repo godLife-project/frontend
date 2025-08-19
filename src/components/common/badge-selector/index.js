@@ -32,7 +32,7 @@ export default function BadgeSelector({
   onCustomJobSelected = () => {}, // 직접 입력된 직업 정보를 부모 컴포넌트에 전달하기 위한 콜백 함수
   onChange,
   readOnly = false,
-  customIdxValue = 999, // 직접 입력 시 사용할 인덱스 값 (기본값: 999)
+  customIdxValue = 19, // 직접 입력 시 사용할 인덱스 값 (기본값: 999)
 }) {
   // 커스텀 옵션을 포함한 전체 옵션 상태
   const [options, setOptions] = useState(initialOptions);
