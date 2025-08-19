@@ -1,5 +1,5 @@
 // src/components/routine/RoutineForm/hooks/useFormSections.js
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react"; // useMemo 추가
 import axiosInstance from "../../../../../api/axiosInstance";
 import {
   Card,
@@ -134,61 +134,182 @@ export default function useFormSections({
     }
   }, [isReadOnly]);
 
-  const handleJobChange = (jobIdx) => {
-    // jobIdx가 999가 아닌 경우(일반 옵션 선택) jobEtcCateDTO를 null로 설정
-    if (jobIdx !== 999) {
-      form.setValue("jobEtcCateDTO", null);
-    }
-  };
+  const handleJobChange = useMemo(() => {
+    return (jobIdx) => {
+      // jobIdx가 999가 아닌 경우(일반 옵션 선택) jobEtcCateDTO를 null로 설정
+      if (jobIdx !== 999) {
+        form.setValue("jobEtcCateDTO", null);
+      }
+    };
+  }, [form]);
 
-  const handleCustomJobSelected = (jobEtcData) => {
-    if (jobEtcData) {
-      // 직접 입력 시에는 jobIdx를 999로 설정
-      form.setValue("jobIdx", 999);
-      form.setValue("jobEtcCateDTO", jobEtcData);
-    }
-  };
+  const handleCustomJobSelected = useMemo(() => {
+    return (jobEtcData) => {
+      if (jobEtcData) {
+        // 직접 입력 시에는 jobIdx를 999로 설정
+        form.setValue("jobIdx", 999);
+        form.setValue("jobEtcCateDTO", jobEtcData);
+      }
+    };
+  }, [form]);
 
   // 제목 섹션 컴포넌트
-  const TitleSectionCard = () => (
-    <Card className="bg-white">
-      <CardHeader>
-        <CardTitle>
-          루틴 제목
-          {!isReadOnly && <span className="text-red-500 ml-1">*</span>}
-        </CardTitle>
-        <CardDescription>
-          {isReadOnly ? "루틴 제목" : "루틴에 적절한 제목을 입력해주세요."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <TitleSection
-          control={form.control}
-          required={!isReadOnly}
-          readOnly={isReadOnly}
-        />
-      </CardContent>
-    </Card>
-  );
-
-  // 직업 선택 섹션 컴포넌트
-  const JobSectionCard = () => {
-    // 여기에 콘솔 로그 추가
-    console.log("JobSectionCard 렌더링:", {
-      isReadOnly,
-      jobsLength: jobs.length,
-      iconsLength: jobIcons.length,
-      jobIconsData: jobIcons,
-    });
-
-    return (
+  const TitleSectionCard = useMemo(() => {
+    return () => (
       <Card className="bg-white">
         <CardHeader>
-          <CardTitle>추천 직업</CardTitle>
+          <CardTitle>
+            루틴 제목
+            {!isReadOnly && <span className="text-red-500 ml-1">*</span>}
+          </CardTitle>
+          <CardDescription>
+            {isReadOnly ? "루틴 제목" : "루틴에 적절한 제목을 입력해주세요."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TitleSection
+            control={form.control}
+            required={!isReadOnly}
+            readOnly={isReadOnly}
+          />
+        </CardContent>
+      </Card>
+    );
+  }, [form.control, isReadOnly]);
+
+  // 직업 선택 섹션 컴포넌트
+  const JobSectionCard = useMemo(() => {
+    return () => {
+      // 여기에 콘솔 로그 추가
+      console.log("JobSectionCard 렌더링:", {
+        isReadOnly,
+        jobsLength: jobs.length,
+        iconsLength: jobIcons.length,
+        jobIconsData: jobIcons,
+      });
+
+      return (
+        <Card className="bg-white">
+          <CardHeader>
+            <CardTitle>추천 직업</CardTitle>
+            <CardDescription>
+              {isReadOnly
+                ? "이 루틴의 추천 직업"
+                : "루틴에 맞는 직업을 선택하면 다른 사람들이 루틴을 찾아보기 좋아요!"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="py-4 text-center">로딩 중...</div>
+            ) : (
+              <BadgeSelector
+                control={form.control}
+                name="jobIdx"
+                options={jobs}
+                availableIcons={jobIcons}
+                maxVisible={10}
+                onCustomJobSelected={handleCustomJobSelected}
+                onChange={handleJobChange}
+                readOnly={isReadOnly}
+                key={`job-selector-${isReadOnly}`}
+              />
+            )}
+          </CardContent>
+        </Card>
+      );
+    };
+  }, [
+    form.control,
+    isReadOnly,
+    jobs,
+    jobIcons,
+    isLoading,
+    handleJobChange,
+    handleCustomJobSelected,
+  ]);
+
+  // 루틴 지속 기간과 중요도 섹션
+  const DurationAndImportanceSection = useMemo(() => {
+    return () => (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 루틴 지속 기간 섹션 */}
+        <Card className="bg-white">
+          <CardHeader>
+            <CardTitle>루틴 지속 기간(일)</CardTitle>
+            <CardDescription>
+              {isReadOnly
+                ? "루틴의 지속 기간"
+                : "루틴을 지속할 기간을 설정해 주세요."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DateInput
+              control={form.control}
+              name="endTo"
+              min={7}
+              required={!isReadOnly}
+              readOnly={isReadOnly}
+            />
+          </CardContent>
+        </Card>
+
+        {/* 루틴 중요도 섹션 */}
+        <Card className="bg-white">
+          <CardHeader>
+            <CardTitle>루틴 중요도</CardTitle>
+            <CardDescription>
+              {isReadOnly ? "루틴의 중요도" : "루틴의 중요도를 선택하세요"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <StarRating
+              control={form.control}
+              name="planImp"
+              maxRating={10}
+              required={!isReadOnly}
+              readOnly={isReadOnly}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }, [form.control, isReadOnly]);
+
+  // 반복 요일 섹션
+  const RepeatDaysCard = useMemo(() => {
+    return () => (
+      <Card className="bg-white">
+        <CardHeader>
+          <CardTitle>반복 요일</CardTitle>
+          <CardDescription>
+            {isReadOnly ? "루틴의 반복 요일" : "루틴의 반복 주기를 선택하세요"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DaySelector
+            control={form.control}
+            name="repeatDays"
+            required={!isReadOnly}
+            readOnly={isReadOnly}
+          />
+        </CardContent>
+      </Card>
+    );
+  }, [form.control, isReadOnly]);
+
+  // 관심사 선택 섹션
+  const InterestSectionCard = useMemo(() => {
+    return () => (
+      <Card className="bg-white">
+        <CardHeader>
+          <CardTitle>
+            추천 관심사
+            {!isReadOnly && <span className="text-red-500 ml-1">*</span>}
+          </CardTitle>
           <CardDescription>
             {isReadOnly
-              ? "이 루틴의 추천 직업"
-              : "루틴에 맞는 직업을 선택하면 다른 사람들이 루틴을 찾아보기 좋아요!"}
+              ? "이 루틴의 추천 관심사"
+              : "루틴에 맞는 관심사를 선택해주세요"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -197,160 +318,71 @@ export default function useFormSections({
           ) : (
             <BadgeSelector
               control={form.control}
-              name="jobIdx"
-              options={jobs}
+              name="targetIdx"
+              options={targets}
               availableIcons={jobIcons}
               maxVisible={10}
-              onCustomJobSelected={handleCustomJobSelected}
-              onChange={handleJobChange}
+              required={true}
               readOnly={isReadOnly}
-              key={`job-selector-${isReadOnly}`}
+              allowCustomInput={false} // 직접 입력 기능 비활성화
+              key={`interest-selector-${isReadOnly}`} // 읽기 모드 변경 시 컴포넌트 리렌더링
             />
           )}
         </CardContent>
       </Card>
     );
-  };
-
-  // 루틴 지속 기간과 중요도 섹션
-  const DurationAndImportanceSection = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {/* 루틴 지속 기간 섹션 */}
-      <Card className="bg-white">
-        <CardHeader>
-          <CardTitle>루틴 지속 기간(일)</CardTitle>
-          <CardDescription>
-            {isReadOnly
-              ? "루틴의 지속 기간"
-              : "루틴을 지속할 기간을 설정해 주세요."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DateInput
-            control={form.control}
-            name="endTo"
-            min={7}
-            required={!isReadOnly}
-            readOnly={isReadOnly}
-          />
-        </CardContent>
-      </Card>
-
-      {/* 루틴 중요도 섹션 */}
-      <Card className="bg-white">
-        <CardHeader>
-          <CardTitle>루틴 중요도</CardTitle>
-          <CardDescription>
-            {isReadOnly ? "루틴의 중요도" : "루틴의 중요도를 선택하세요"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <StarRating
-            control={form.control}
-            name="planImp"
-            maxRating={10}
-            required={!isReadOnly}
-            readOnly={isReadOnly}
-          />
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  // 반복 요일 섹션
-  const RepeatDaysCard = () => (
-    <Card className="bg-white">
-      <CardHeader>
-        <CardTitle>반복 요일</CardTitle>
-        <CardDescription>
-          {isReadOnly ? "루틴의 반복 요일" : "루틴의 반복 주기를 선택하세요"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <DaySelector
-          control={form.control}
-          name="repeatDays"
-          required={!isReadOnly}
-          readOnly={isReadOnly}
-        />
-      </CardContent>
-    </Card>
-  );
-
-  // 관심사 선택 섹션
-  const InterestSectionCard = () => (
-    <Card className="bg-white">
-      <CardHeader>
-        <CardTitle>
-          추천 관심사
-          {!isReadOnly && <span className="text-red-500 ml-1">*</span>}
-        </CardTitle>
-        <CardDescription>
-          {isReadOnly
-            ? "이 루틴의 추천 관심사"
-            : "루틴에 맞는 관심사를 선택해주세요"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="py-4 text-center">로딩 중...</div>
-        ) : (
-          <BadgeSelector
-            control={form.control}
-            name="targetIdx"
-            options={targets}
-            availableIcons={jobIcons}
-            maxVisible={10}
-            required={true}
-            readOnly={isReadOnly}
-            allowCustomInput={false} // 직접 입력 기능 비활성화
-            key={`interest-selector-${isReadOnly}`} // 읽기 모드 변경 시 컴포넌트 리렌더링
-          />
-        )}
-      </CardContent>
-    </Card>
-  );
+  }, [form.control, isReadOnly, targets, jobIcons, isLoading]);
 
   // 공유 설정 섹션
-  const ShareSettingsCard = () => (
-    <Card className="bg-white">
-      <CardHeader>
-        <CardTitle>공유설정</CardTitle>
-        <CardDescription>
-          다른 사용자에게 루틴을 공유하고 싶다면 switch on 해주세요
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ShareSetSection control={form.control} />
-      </CardContent>
-    </Card>
-  );
+  const ShareSettingsCard = useMemo(() => {
+    return () => (
+      <Card className="bg-white">
+        <CardHeader>
+          <CardTitle>공유설정</CardTitle>
+          <CardDescription>
+            다른 사용자에게 루틴을 공유하고 싶다면 switch on 해주세요
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ShareSetSection control={form.control} />
+        </CardContent>
+      </Card>
+    );
+  }, [form.control]);
 
   // 활동 목록 섹션
-  const ActivitiesSectionCard = () => (
-    <Card className="bg-white">
-      <CardHeader>
-        <CardTitle>
-          활동 목록
-          {!isReadOnly && <span className="text-red-500 ml-1">*</span>}
-        </CardTitle>
-        <CardDescription>
-          {isReadOnly
-            ? "이 루틴에 포함된 활동들"
-            : "루틴에 포함할 활동들을 추가해주세요"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ActivitiesSection
-          control={form.control}
-          readOnly={isReadOnly}
-          isActive={isActive}
-          certifiedActivities={certifiedActivities}
-          onCertifyActivity={onCertifyActivity}
-        />
-      </CardContent>
-    </Card>
-  );
+  const ActivitiesSectionCard = useMemo(() => {
+    return () => (
+      <Card className="bg-white">
+        <CardHeader>
+          <CardTitle>
+            활동 목록
+            {!isReadOnly && <span className="text-red-500 ml-1">*</span>}
+          </CardTitle>
+          <CardDescription>
+            {isReadOnly
+              ? "이 루틴에 포함된 활동들"
+              : "루틴에 포함할 활동들을 추가해주세요"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ActivitiesSection
+            control={form.control}
+            readOnly={isReadOnly}
+            isActive={isActive}
+            certifiedActivities={certifiedActivities}
+            onCertifyActivity={onCertifyActivity}
+          />
+        </CardContent>
+      </Card>
+    );
+  }, [
+    form.control,
+    isReadOnly,
+    isActive,
+    certifiedActivities,
+    onCertifyActivity,
+  ]);
 
   return {
     TitleSectionCard,
