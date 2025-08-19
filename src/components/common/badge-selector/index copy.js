@@ -22,7 +22,7 @@ export default function BadgeSelector({
   onCustomJobSelected = null,
   onChange = null,
 }) {
-  const customIdxValue = 999; // 직접 입력 옵션의 idx 값
+  const customIdxValue = 19; // 직접 입력 옵션의 idx 값
   const {
     field,
     fieldState: { error },
