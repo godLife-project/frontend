@@ -2,7 +2,8 @@ import axios from "axios";
 import { reissueToken } from "./reissueToken";
 
 const axiosInstance = axios.create({
-  baseURL: "http://52.78.45.234/api", // Spring Boot 백엔드 API 주소
+  baseURL: "http://localhost:9090/api", // Spring Boot 백엔드 API 주소 [개발환경]
+  //baseURL: "http://52.78.45.234/api", // Spring Boot 백엔드 API 주소 [EC2]
   headers: {
     //"ngrok-skip-browser-warning": "true",
     "Content-Type": "application/json; charset=UTF-8",
@@ -13,8 +14,14 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
   (config) => {
-    console.log("++++++++++++++ api 요청 +++++++++++++++++++");
-    console.log(config);
+    //console.log("++++++++++++++ api 요청 +++++++++++++++++++");
+    // JWT 토큰 가져오기 (로컬 스토리지)
+    const token = localStorage.getItem("accessToken");
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    //console.log(config);
     return config;
   },
   (error) => Promise.reject(error)

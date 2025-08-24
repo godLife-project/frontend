@@ -70,12 +70,6 @@ export default function useRoutineDetail(planIdx, navigate) {
       const userInfoString = localStorage.getItem("userInfo");
       const token = localStorage.getItem("accessToken");
 
-      if (!userInfoString && !token) {
-        // 로그인하지 않은 상태에서 비공개 루틴에 접근 시도
-        navigate("/user/login");
-        return;
-      }
-
       // 루틴 데이터 가져오기
       const response = await axiosInstance.get(`/plan/detail/${planIdx}`);
       const routineData = response.data.message;
@@ -85,12 +79,6 @@ export default function useRoutineDetail(planIdx, navigate) {
         // 사용자 정보 가져오기
         const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
         const currentUserIdx = userInfo ? userInfo.userIdx : null;
-
-        if (!currentUserIdx) {
-          // 로그인은 되어 있지만 userInfo가 없는 경우
-          navigate("/login");
-          return;
-        }
 
         // 루틴 작성자와 현재 사용자가 다른 경우
         if (parseInt(currentUserIdx) !== routineData.userIdx) {
