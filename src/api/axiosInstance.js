@@ -2,8 +2,8 @@ import axios from "axios";
 import { reissueToken } from "./reissueToken";
 
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:9090/api", // Spring Boot 백엔드 API 주소 [개발환경]
-  //baseURL: "http://52.78.45.234/api", // Spring Boot 백엔드 API 주소 [EC2]
+//  baseURL: "http://localhost:9090/api", // Spring Boot 백엔드 API 주소 [개발환경]
+  baseURL: "http://52.78.45.234/api", // Spring Boot 백엔드 API 주소 [EC2]
   headers: {
     //"ngrok-skip-browser-warning": "true",
     "Content-Type": "application/json; charset=UTF-8",
